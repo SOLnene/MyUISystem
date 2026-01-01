@@ -1,0 +1,66 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e7c8105d09d0c8a4d8ef680cf3076760, type: 3}
+  m_Name: Claymore_Exotic
+  m_EditorClassIdentifier: 
+  id: 933896005
+  key: Claymore_Exotic
+  itemName: Exotic
+  desc: "\u81EA\u52A8\u751F\u6210\u7684\u7269\u54C1"
+  iconPath: ui_equipicon_claymore_exotic
+  category: 0
+  itemRarity: 2
+  stars: 3
+  baseAttack: 90
+  baseCritRate: 0.196
+  baseCritDamage: 0.938
+  rankInfos:
+  - rank: 0
+    maxLevel: 20
+    goldCost: 0
+    requirements:
+    - materialKey: mat_claymore_1
+      count: 6
+    - materialKey: gold
+      count: 3000
+    attackAddFlat: 15
+    attackAddPercent: 0.02
+  - rank: 1
+    maxLevel: 40
+    goldCost: 0
+    requirements:
+    - materialKey: mat_claymore_2
+      count: 12
+    - materialKey: gold
+      count: 6000
+    attackAddFlat: 30
+    attackAddPercent: 0.04
+  - rank: 2
+    maxLevel: 60
+    goldCost: 0
+    requirements:
+    - materialKey: mat_claymore_3
+      count: 18
+    - materialKey: gold
+      count: 9000
+    attackAddFlat: 45
+    attackAddPercent: 0.06
+  - rank: 3
+    maxLevel: 80
+    goldCost: 0
+    requirements:
+    - materialKey: mat_claymore_4
+      count: 24
+    - materialKey: gold
+      count: 12000
+    attackAddFlat: 60
+    attackAddPercent: 0.08
