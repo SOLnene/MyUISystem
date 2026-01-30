@@ -25,18 +25,11 @@ public abstract class Singleton<T> where T:new()
                     if (_instance == null)
                     {
                         _instance = new T();
-                        //延迟初始化
-                        (_instance as Singleton<T>).Init();
                     }
                 }
             }
             return _instance;
         }
-    }
-
-    public virtual void Init()
-    {
-        
     }
     
 }

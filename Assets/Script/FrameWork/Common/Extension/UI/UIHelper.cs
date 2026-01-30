@@ -34,6 +34,7 @@ public static class UIHelper
         // 添加你的自定义点击处理器
         var clickHandler = go.AddComponent<FullScreenClickHandler>();
         clickHandler.onClick = onClick;
+        //避免遮挡
         go.transform.SetAsFirstSibling();
         return go;
     }

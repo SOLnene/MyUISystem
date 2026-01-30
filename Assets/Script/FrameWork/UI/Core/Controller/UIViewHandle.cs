@@ -49,6 +49,7 @@ public class UIViewHandle
 
     public int order;
     
+    //todo:自定义管理类，不再暴露AsyncOperationHandle
     public AsyncOperationHandle Load(object data = null, Action callback = null)
     {
         isLoading = true;

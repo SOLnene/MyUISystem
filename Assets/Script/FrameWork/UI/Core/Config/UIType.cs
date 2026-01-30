@@ -13,5 +13,7 @@ public enum UIType
 		WeaponDetailView,
 		ItemSelectPopupView,
 		GachaView,
+		GachaResultPopup,
+		GachaResultDetailPopup,
 		Max,
 }

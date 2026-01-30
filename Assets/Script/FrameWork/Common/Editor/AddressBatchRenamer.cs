@@ -12,7 +12,7 @@ public class AddressableWeaponRenamerWindow : EditorWindow
     private bool toLowerCase = true;
     private int modifiedCount = 0;
 
-    [MenuItem("Tools/Addressables/武器图标批量命名工具")]
+    [MenuItem("Tools/Addressables/图标批量命名工具")]
     public static void ShowWindow()
     {
         GetWindow<AddressableWeaponRenamerWindow>("Weapon Icon Renamer");

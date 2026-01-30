@@ -70,9 +70,12 @@ public class UIManager : SingletonMono<UIManager>
 
     async UniTask StartAsync()
     {
+        //todo:ui无关的都拿到GameBootstrap中
+        ResourceManager.Instance.Init();
         await ResourceManager.Instance.InitAsync();
         await InitUIConfig();
         await GameDatabase.Init();
+        await GameContext.Instance.Init();
         //preload
         await EnsureSlotPrefabLoaded();
         await EnsureSpritesLoaded("Assets/AssetsPackage/UI/Sprite/TouchIcon/UI_TouchIcon_Plus.png");

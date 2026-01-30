@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UniRx;
 public class GameContext: Singleton<GameContext>
@@ -8,13 +9,23 @@ public class GameContext: Singleton<GameContext>
     public BackpackViewModel BackpackVM { get; private set; }
 
     public InventoryRepository InventoryRepository { get; private set; }
-    public override void Init()
+    //全项目只有一个实现
+    public GachaService GachaService { get; private set; }
+    //可能有多个不同的实现
+    public IGachaVisualProvider GachaVisualProvider { get; private set; }
+    public async UniTask Init()
     {
-        base.Init();
+        await GameDatabase.Init();
         //backpackVM = new BackpackViewModel();
         var model = new BackpackModel();
+        //todo:改为使用 Installer + DI 容器注入
         BackpackVM = new BackpackViewModel(model);
         InventoryRepository = new InventoryRepository(model, BackpackVM);
+
+        LocalGachaSchedule gachaSchedule = new LocalGachaSchedule();
+        GachaPoolProvider poolProvider = new GachaPoolProvider(GameDatabase.GachaPoolDatabase, gachaSchedule);
+        GachaService = new GachaService(poolProvider);
+        GachaVisualProvider = new GachaVisualProvider(GameDatabase.CharaVisualDatabase);
     }
 }
 

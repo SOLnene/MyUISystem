@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -24,7 +25,11 @@ public class ResourceManager : Singleton<ResourceManager>
     /// 缓存每个资源的加载句柄，无论该资源已经完成加载还是仍在加载中
     /// </summary>
     Dictionary<string, AsyncOperationHandle> assetHandles = new Dictionary<string, AsyncOperationHandle>();
-
+    /// <summary>
+    /// 维护加载canceltoken
+    /// </summary>
+    private Dictionary<string, CancellationTokenSource> loadingCTS = new Dictionary<string, CancellationTokenSource>();
+    
     /// <summary>
     /// 常驻资源路径集合
     /// </summary>
@@ -46,9 +51,8 @@ public class ResourceManager : Singleton<ResourceManager>
     
     InstancePool instancePool;
 
-    public override void Init()
+    public void Init()
     {
-        base.Init();
         instancePool = new InstancePool();
     }
 
@@ -103,7 +107,7 @@ public class ResourceManager : Singleton<ResourceManager>
     /// <summary>
     /// 使用 UniTask 异步加载资源（无回调）
     /// </summary>
-    public async UniTask<T> LoadAssetAsync<T>(string path, bool autoUnload = false) where T : class
+    public async UniTask<T> LoadAssetAsync<T>(string path,CancellationTokenSource token = default, bool autoUnload = false) where T : class
     {
         if (string.IsNullOrEmpty(path))
         {
@@ -120,12 +124,16 @@ public class ResourceManager : Singleton<ResourceManager>
             }
             else
             {
-                await handle.Task;
-                return handle.Result as T;
+                // 等待完成或取消
+                return await handle.Task as T;
             }
         }
         else
         {
+            // 新建 CTS
+            var cts = new CancellationTokenSource();
+            loadingCTS[path] = cts;
+            
             loadingAssetsCount++;
             assetRefCounts[path] = 1;
 
@@ -136,11 +144,13 @@ public class ResourceManager : Singleton<ResourceManager>
             {
                 var result = await newHandle.Task;
                 loadingAssetsCount--;
+                loadingCTS.Remove(path);
                 return result;
             }
             catch (Exception e)
             {
                 loadingAssetsCount--;
+                loadingCTS.Remove(path);
                 Debug.LogError($"[ResourceManager.LoadAssetAsync] 加载失败: {path}\n{e}");
                 return null;
             }
@@ -148,10 +158,65 @@ public class ResourceManager : Singleton<ResourceManager>
     }
 
     /// <summary>
-    /// 使用 UniTask 异步实例化对象
+    /// 取消某条路径加载
     /// </summary>
-    public async UniTask<GameObject> InstantiateAsync(string path, Transform parent = null, bool active = true)
+    public void CancelLoad(string path)
     {
+        if (loadingCTS.TryGetValue(path, out var cts))
+        {
+            cts.Cancel();
+            cts.Dispose();
+            loadingCTS.Remove(path);
+        }
+    }
+
+    /// <summary>
+    /// 取消所有正在加载的资源（如关闭页面）
+    /// </summary>
+    public void CancelAll()
+    {
+        foreach (var cts in loadingCTS.Values)
+        {
+            cts.Cancel();
+            cts.Dispose();
+        }
+        loadingCTS.Clear();
+    }
+    
+    /// <summary>
+    /// 兼容
+    /// </summary>
+    /// <param name="path"></param>
+    /// <param name="callback"></param>
+    /// <param name="parent"></param>
+    /// <param name="active"></param>
+    public void InstantiateItem(string path, Action<GameObject> callback = null, 
+        Transform parent = null, 
+        bool active = true,
+        CancellationToken cancellationToken = default)
+    {
+        InternalInstantiateItemAsync(path,parent,active,cancellationToken).ContinueWith(go =>
+        {
+            callback?.Invoke(go);
+        }).Forget(Debug.LogException);
+    }
+    
+    public UniTask<GameObject> InstantiateItemAsync(string path, Transform parent = null, bool active = true,
+        CancellationToken cancellationToken = default)
+    {
+        return InternalInstantiateItemAsync(path, parent, active,cancellationToken);
+    }
+    
+    /// <summary>
+    /// 使用 UniTask 异步实例化对象
+    /// 仅不需要复杂管理的item
+    /// </summary>
+    public async UniTask<GameObject> InternalInstantiateItemAsync(string path
+        , Transform parent = null
+        , bool active = true,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
         // 1. 确保资源已加载
         var prefab = await LoadAssetAsync<GameObject>(path);
         if (prefab == null)
@@ -159,7 +224,7 @@ public class ResourceManager : Singleton<ResourceManager>
             Debug.LogError($"[ResourceManager.InstantiateAsync] 无法实例化: {path}");
             return null;
         }
-
+        cancellationToken.ThrowIfCancellationRequested();
         // 2. 先尝试对象池
         var pooled = instancePool.Get(path);
         GameObject result;
@@ -172,16 +237,18 @@ public class ResourceManager : Singleton<ResourceManager>
         {
             result = pooled;
             result.transform.SetParent(parent, false);
-            result.SetActive(active);
         }
-
+        result.SetActive(active);
         instanceIdToPath[result.GetInstanceID()] = path;
         assetRefCounts[path]++;
 
         return result;
     }
 
+    
+    
 #endregion
+    //todo:不再暴露AsyncOperationHandle
     public AsyncOperationHandle InstantiateAsync(string path, Action<UnityEngine.GameObject> callback, bool isActive = true)
     {
         AsyncOperationHandle operationHandle = default;

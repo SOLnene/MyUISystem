@@ -6,6 +6,8 @@ using System.Text.RegularExpressions;
 using Newtonsoft.Json;
 using SkierFramework;
 using UnityEditor;
+using UnityEditor.AddressableAssets;
+using UnityEditor.AddressableAssets.Settings;
 using UnityEngine;
 
 
@@ -196,11 +198,24 @@ public class UIConfigWindow : EditorWindow
                                 string newBindingPath = $"{saveUIPath}/{uiName}.binding.cs";
                                 File.WriteAllText(newBindingPath,uiBindingScriptContent);
 
+                                //设置addressable路径
+                                string address = $"ui/{(isWindow ? "popup" : "view")}/{uiName.ToLower()}";
+
+                                var entry = AddressableAssetSettingsDefaultObject
+                                    .Settings
+                                    .CreateOrMoveEntry(
+                                        AssetDatabase.AssetPathToGUID(
+                                            AssetDatabase.GetAssetPath(uiPrefab)),
+                                        AddressableAssetSettingsDefaultObject.Settings.DefaultGroup
+                                        );
+                                
                                 //生成json文件
+                                //todo:检查流程是否正确（runtime下是否正确更新）
+                                //TODO:自动更新addressable路径
                                 var jsonData = new UIConfigData()
                                 {
                                     uiType = uiName,
-                                    uiPath = AssetDatabase.GetAssetPath(uiPrefab),
+                                    uiPath = address,//AssetDatabase.GetAssetPath(uiPrefab),
                                     uiLayer = layer.ToString(),
                                     isWindow = isWindow
                                         
@@ -219,6 +234,10 @@ public class UIConfigWindow : EditorWindow
                                 Debug.Log("UI创建成功"+newPath);
                                 AssetDatabase.SaveAssets();
                                 AssetDatabase.Refresh();
+                                //通知更新
+                                EditorUtility.SetDirty(AddressableAssetSettingsDefaultObject.Settings);
+                                AssetDatabase.SaveAssets();
+                                AddressableAssetSettings.BuildPlayerContent();
                             }
                             GUI.color = defaultColor;
                         }
@@ -420,7 +439,16 @@ public class UIConfigWindow : EditorWindow
         }
         string uiBindingScriptContent = Regex.Replace(File.ReadAllText(uiViewBindingTemplatePath), "UIXXXView", uiName);
         uiBindingScriptContent = Regex.Replace(uiBindingScriptContent, "//UIControlData", uiControlData != null ? GUIUtility.systemCopyBuffer : "");
-        string newBindingPath = $"{saveUIPath}/{uiName}.binding.cs";
+
+        string mainScriptPath = GetUIScriptPath(uiName, true);
+        if (string.IsNullOrEmpty(mainScriptPath))
+        {
+            Debug.LogError($"未找到{uiName}.cs,无法更新绑定代码");
+            return;
+        }
+
+        string dir = Path.GetDirectoryName(mainScriptPath);
+        string newBindingPath = Path.Combine(dir, $"{uiName}.binding.cs");
         File.WriteAllText(newBindingPath,uiBindingScriptContent);
     }
 

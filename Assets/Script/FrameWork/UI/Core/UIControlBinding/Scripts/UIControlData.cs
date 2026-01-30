@@ -145,7 +145,8 @@ namespace SkierFramework
             {"BackpackTopView",typeof(BackpackTopView)},
             {"BackpackMiddleView",typeof(BackpackMiddleView)},
             {"WeaponDetailMiddleView",typeof(WeaponDetailMiddleView)},
-            {"SingleResultView",typeof(SingleResultView)},
+            {"GachaPoolTabView",typeof(GachaPoolTabView)},
+            {"GachaTopHubView",typeof(GachaTopHubView)},
             //////////////////////////////////////
 
             { "Image", typeof(Image)},

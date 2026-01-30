@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.Serialization;
 using UniRx;
@@ -30,10 +31,11 @@ public class BackpackEntry : MonoBehaviour
         
     }
 
-    public void Init()
+    public async UniTask Init()
     {
+        await GameContext.Instance.Init();
         InitTop();
-
+       
         var backpackVM = GameContext.Instance.BackpackVM;
         
         topView.Bind(backpackVM.topVM);

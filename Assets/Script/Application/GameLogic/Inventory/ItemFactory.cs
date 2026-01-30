@@ -137,7 +137,7 @@ public static class ItemFactory
     
     public static async UniTask<ItemSlotView> InstantiateItemSlot(ItemSlotViewModel viewModel, Transform parent)
     {
-        var prefab = await ResourceManager.Instance.InstantiateAsync("Assets/AssetsPackage/UI/Prefab/ItemSlot.prefab", parent,false);
+        var prefab = await ResourceManager.Instance.InstantiateItemAsync("Assets/AssetsPackage/UI/Prefab/ItemSlot.prefab", parent,false);
         if (prefab == null)
         {
             Debug.LogError("加载 ItemSlot 预制体失败");
