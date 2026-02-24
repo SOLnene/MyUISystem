@@ -165,7 +165,7 @@ public class ItemSlotView : MonoBehaviour,IPointerEnterHandler,IPointerExitHandl
     
     async UniTask LoadIconAsync(string iconPath,int requestVersion)
     {
-        Debug.Log($"[LoadIconAsync] 开始加载 {iconPath}, ver={requestVersion}");
+        //Debug.Log($"[LoadIconAsync] 开始加载 {iconPath}, ver={requestVersion}");
 
         var sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(iconPath);
 
@@ -175,7 +175,7 @@ public class ItemSlotView : MonoBehaviour,IPointerEnterHandler,IPointerExitHandl
             return;
         }
 
-        Debug.Log($"[LoadIconAsync] 加载成功: {sprite.name} ({sprite.texture?.name})");
+        //Debug.Log($"[LoadIconAsync] 加载成功: {sprite.name} ({sprite.texture?.name})");
     
         // 检查版本、状态是否被回收
         if (this == null || vm == null || requestVersion != iconRequestVersion || vm.iconPath.Value != iconPath)
@@ -185,7 +185,7 @@ public class ItemSlotView : MonoBehaviour,IPointerEnterHandler,IPointerExitHandl
         }
 
         icon.sprite = sprite;
-        Debug.Log($"[LoadIconAsync] 已赋值给 Image: {icon.sprite?.name}");
+        //Debug.Log($"[LoadIconAsync] 已赋值给 Image: {icon.sprite?.name}");
     }
     
     public void SetStarLevel(int level)

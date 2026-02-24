@@ -18,9 +18,10 @@ MonoBehaviour:
   m_GUID: 69205d498754d524caf098831d67d788
   m_SerializeEntries:
   - m_GUID: f6ed4691041955945b9f15281a3c5720
-    m_Address: Assets/AssetsPackage/UI/Prefab/UILoadingView.prefab
+    m_Address: ui/popup/uiloadingview
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 12abd58eaf31e1141b51ad57145b51fb
     m_Address: Assets/AssetsPackage/UI/UIConfig.json
@@ -28,14 +29,16 @@ MonoBehaviour:
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fe914375709fa5f49a3bbf43f7c0f3dd
-    m_Address: Assets/AssetsPackage/UI/Prefab/UIStartView.prefab
+    m_Address: ui/popup/uistartview
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 4c97b0e133d531344bd54ccd0c4e40f8
-    m_Address: Assets/AssetsPackage/UI/Prefab/Hub/HubRoot.prefab
+    m_Address: ui/popup/hubroot
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: aa7fdabb4ebd27f499fe9bb681bfde02
     m_Address: Assets/Sprite/Backpack/UI_IconStar.png
@@ -48,14 +51,16 @@ MonoBehaviour:
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 6df63b977199af34cbaa7a0f707b73a9
-    m_Address: Assets/AssetsPackage/UI/Prefab/Component/WeaponDetailView.prefab
+    m_Address: ui/popup/equipdetailview
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: fb1cfb0f3d8f8304ca35a204417e3a64
-    m_Address: Assets/AssetsPackage/UI/Prefab/ItemSelectPopupView.prefab
+    m_Address: ui/popup/itemselectpopupview
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: cc747b32f016a2c4383ec2a36aa3da68
     m_Address: Assets/AssetsPackage/UI/Prefab/ItemSlot.prefab
@@ -68,9 +73,10 @@ MonoBehaviour:
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 672357e8241442448a8b7c38fbaccb9b
-    m_Address: Assets/AssetsPackage/UI/Prefab/Gacha/GachaView.prefab
+    m_Address: ui/popup/gachaview
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 60b46b4497432124aa6ab2ae2dd7d5da
     m_Address: ui_gacha_equipicon_claymore_mitsurugi
@@ -259,14 +265,16 @@ MonoBehaviour:
     - ui_gacha_result
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2a262c7705852e04a9b800b9464288a6
-    m_Address: Assets/AssetsPackage/UI/Prefab/Gacha/GachaResultPopup.prefab
+    m_Address: ui/popup/gacharesultpopup
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: ad5e8edea554e3943be239228aef0e2f
-    m_Address: Assets/AssetsPackage/UI/Prefab/Gacha/GachaResultDetailPopup.prefab
+    m_Address: ui/popup/gacharesultdetailpopup
     m_ReadOnly: 0
-    m_SerializedLabels: []
+    m_SerializedLabels:
+    - UI
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 2acddcce582c12b4b8108a448eacb871
     m_Address: chara_ui_gacha_avatarimg_layla
@@ -1352,6 +1360,23 @@ MonoBehaviour:
     FlaggedDuringContentUpdateRestriction: 0
   - m_GUID: 5bf1e32ff74a30c4cbdeb9509ba03485
     m_Address: gachapoolimageequip
+    m_ReadOnly: 0
+    m_SerializedLabels: []
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 3ecd8035b1c75f44fb1d27f67e41f3a9
+    m_Address: ui/popup/gacharesultrevealview
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - UI
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: edc72a3b7cd19594387e406789d17779
+    m_Address: ui/view/characterdetailview
+    m_ReadOnly: 0
+    m_SerializedLabels:
+    - UI
+    FlaggedDuringContentUpdateRestriction: 0
+  - m_GUID: 70c1ea4c7c478e64b9d53c8b2328be4d
+    m_Address: characterdatabase
     m_ReadOnly: 0
     m_SerializedLabels: []
     FlaggedDuringContentUpdateRestriction: 0

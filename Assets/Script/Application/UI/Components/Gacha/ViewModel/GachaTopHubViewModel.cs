@@ -20,7 +20,10 @@ public class GachaTopHubViewModel : IDisposable
         SwitchPoolCommand = new ReactiveCommand<GachaPoolType>().AddTo(disposable);
         SwitchPoolCommand
             .Subscribe(type =>
-                poolType.Value = type).AddTo(disposable);
+            {
+                poolType.Value = type;
+            }).AddTo(disposable);
+                    
         
         tabs = new List<GachaPoolTabViewModel>();
         foreach (GachaPoolType type in System.Enum.GetValues(typeof(GachaPoolType)))

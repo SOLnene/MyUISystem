@@ -4,6 +4,7 @@ using UnityEngine;
 using System;
 using Unity.VisualScripting;
 using UnityEngine.ResourceManagement.AsyncOperations;
+using UnityEngine.Serialization;
 
 /// <summary>
 /// ui配置json数据
@@ -12,14 +13,16 @@ using UnityEngine.ResourceManagement.AsyncOperations;
 public class UIConfigData
 {
     public string uiType;
-    public string uiPath;
+    [FormerlySerializedAs("uiPath")] public string assetPath;      //资源路径
+    public string uiAddress;  //addressable路径
     public string uiLayer;
     public bool isWindow;
 }
 
 public class UIConfig
 {
-    public string uiPath;
+    public string assetPath;
+    public string uiAddress;
     public UIType uiType;
     public UILayer uiLayer;
     public Type uiViewType;
@@ -51,11 +54,11 @@ public class UIConfig
                         if (!Enum.TryParse(config.uiLayer, out UILayer layer))
                         {
                             layer = UILayer.NormalLayer;
-                            Debug.LogErrorFormat("{0}uiLayer解析异常{1}", config.uiPath, config.uiLayer);
+                            Debug.LogErrorFormat("{0}uiLayer解析异常{1}", config.assetPath, config.uiLayer);
                         }
                         if (!Enum.TryParse(config.uiType, out UIType uiType))
                         {
-                            Debug.LogErrorFormat("{0}uiType解析异常{1}", config.uiPath, config.uiType);
+                            Debug.LogErrorFormat("{0}uiType解析异常{1}", config.assetPath, config.uiType);
                         }
                        
                         Type viewType = GetType(config.uiType);
@@ -65,7 +68,8 @@ public class UIConfig
                         }
                         list.Add(new UIConfig
                         {
-                            uiPath = config.uiPath,
+                            assetPath = config.assetPath,
+                            uiAddress = config.uiAddress,
                             uiType = uiType,
                             uiLayer = layer,
                             uiViewType =  viewType,

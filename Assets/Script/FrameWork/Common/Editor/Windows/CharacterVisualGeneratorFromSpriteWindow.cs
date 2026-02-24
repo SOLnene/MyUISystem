@@ -10,7 +10,7 @@ using UnityEngine;
 
 public class CharacterVisualGeneratorFromSpriteWindow : EditorWindow
 {
-    private string spriteFolder = "Assets/AssetsPackage/Sprite/Gacha/Chara";
+    private string spriteFolder = "Assets/AssetsPackage/UI/Sprite/Gacha/Chara";
     private string outputFolder = "Assets/GameData/Character/Visuals";
     private bool overwriteExisting = false;
     private bool markAddressable = false;

@@ -81,7 +81,7 @@ public class UIConfigWindow : EditorWindow
                 continue;
             }
             var jsonData = GetUIJson(str);
-            if (jsonData == null || string.IsNullOrEmpty(jsonData.uiPath))
+            if (jsonData == null || string.IsNullOrEmpty(jsonData.assetPath))
             {
                 continue;
             }
@@ -129,7 +129,7 @@ public class UIConfigWindow : EditorWindow
                         var jsonData = GetUIJson(type);
                         var scriptPath = GetUIScriptPath(type);
                         if (jsonData == null ||
-                            string.IsNullOrEmpty(jsonData.uiPath) ||
+                            string.IsNullOrEmpty(jsonData.assetPath) ||
                             string.IsNullOrEmpty(scriptPath))
                         {
                             continue;
@@ -142,9 +142,9 @@ public class UIConfigWindow : EditorWindow
                         EditorGUILayout.BeginHorizontal("box");
                         if(GUILayout.Button("选中"))
                         {
-                            uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(jsonData.uiPath);
+                            uiPrefab = AssetDatabase.LoadAssetAtPath<GameObject>(jsonData.assetPath);
                         }
-                        EditorGUILayout.ObjectField(AssetDatabase.LoadAssetAtPath<GameObject>(jsonData.uiPath), typeof(GameObject),true);
+                        EditorGUILayout.ObjectField(AssetDatabase.LoadAssetAtPath<GameObject>(jsonData.assetPath), typeof(GameObject),true);
                         EditorGUILayout.ObjectField(AssetDatabase.LoadAssetAtPath<TextAsset>(scriptPath), typeof(TextAsset), true);
 
                         EditorGUILayout.EndHorizontal();
@@ -187,27 +187,15 @@ public class UIConfigWindow : EditorWindow
                                 string uiScriptContent = Regex.Replace(File.ReadAllText(uiViewTemplatePath), "UIXXXView", uiName);
                                 string newPath = $"{saveUIPath}/{uiName}.cs";
                                 
-                                File.WriteAllText(newPath,uiScriptContent);
                                 UIControlData uiControlData = uiPrefab.GetComponent<UIControlData>();
                                 if (uiControlData != null)
                                 {
                                     uiControlData.CopyCodeToClipBoardPrivate();
                                 }
-                                string uiBindingScriptContent = Regex.Replace(File.ReadAllText(uiViewBindingTemplatePath), "UIXXXView", uiName);
-                                uiBindingScriptContent = Regex.Replace(uiBindingScriptContent, "//UIControlData", uiControlData != null ? GUIUtility.systemCopyBuffer : "");
-                                string newBindingPath = $"{saveUIPath}/{uiName}.binding.cs";
-                                File.WriteAllText(newBindingPath,uiBindingScriptContent);
-
+                                
+                                File.WriteAllText(newPath,UpdateBindingCode(uiScriptContent, GUIUtility.systemCopyBuffer));
+                                var address= SyncAddressable(uiPrefab,uiName,isWindow);
                                 //设置addressable路径
-                                string address = $"ui/{(isWindow ? "popup" : "view")}/{uiName.ToLower()}";
-
-                                var entry = AddressableAssetSettingsDefaultObject
-                                    .Settings
-                                    .CreateOrMoveEntry(
-                                        AssetDatabase.AssetPathToGUID(
-                                            AssetDatabase.GetAssetPath(uiPrefab)),
-                                        AddressableAssetSettingsDefaultObject.Settings.DefaultGroup
-                                        );
                                 
                                 //生成json文件
                                 //todo:检查流程是否正确（runtime下是否正确更新）
@@ -215,14 +203,15 @@ public class UIConfigWindow : EditorWindow
                                 var jsonData = new UIConfigData()
                                 {
                                     uiType = uiName,
-                                    uiPath = address,//AssetDatabase.GetAssetPath(uiPrefab),
+                                    assetPath = AssetDatabase.GetAssetPath(uiPrefab),//AssetDatabase.GetAssetPath(uiPrefab),
+                                    uiAddress = address,
                                     uiLayer = layer.ToString(),
                                     isWindow = isWindow
                                         
                                 };
                                 //TODO:或许应该改为赋值避免无法更新uiname，这种情况发生于uiconfigjson存在uiname缺不存在uipath
-                                uiJsonDatas.Add(uiName,jsonData);
-                                uiNames.Add(uiName,newPath);
+                                uiJsonDatas[uiName] = jsonData;
+                                uiNames[uiName] = newPath;
                                 SaveJson();
                                 
                                 //添加uiType
@@ -237,7 +226,6 @@ public class UIConfigWindow : EditorWindow
                                 //通知更新
                                 EditorUtility.SetDirty(AddressableAssetSettingsDefaultObject.Settings);
                                 AssetDatabase.SaveAssets();
-                                AddressableAssetSettings.BuildPlayerContent();
                             }
                             GUI.color = defaultColor;
                         }
@@ -247,9 +235,11 @@ public class UIConfigWindow : EditorWindow
                             var jsonData = GetUIJson(uiName);
                             EditorGUILayout.ObjectField("已存在UI代码", AssetDatabase.LoadAssetAtPath(uiScriptPath, typeof(TextAsset)),typeof(TextAsset),true);
                             jsonData.isWindow = EditorGUILayout.Toggle("是否为窗口",jsonData.isWindow);
+                            isWindow = jsonData.isWindow;
                             Enum.TryParse(jsonData.uiLayer, out UILayer layer);
                             jsonData.uiLayer = EditorGUILayout.EnumPopup("UI层级设置", layer).ToString();
-
+                            jsonData.assetPath = AssetDatabase.GetAssetPath(uiPrefab);
+                            jsonData.uiAddress = SyncAddressable(uiPrefab,uiName,isWindow);
                             var defaultColor = GUI.color;
                             GUI.color = Color.green;
                             if (GUILayout.Button("保存设置"))
@@ -260,7 +250,13 @@ public class UIConfigWindow : EditorWindow
                             }
                             if (GUILayout.Button("更新绑定代码"))
                             {
-                                UpdateBindingCode();
+                                UIControlData uiControlData = uiPrefab.GetComponent<UIControlData>();
+                                if (uiControlData != null)
+                                {
+                                    uiControlData.CopyCodeToClipBoardPrivate();
+                                }
+                                string source = File.ReadAllText(uiScriptPath);
+                                File.WriteAllText(uiScriptPath,UpdateBindingCode(source, GUIUtility.systemCopyBuffer));
                                 AssetDatabase.SaveAssets();
                                 AssetDatabase.Refresh();
                             }
@@ -317,6 +313,7 @@ public class UIConfigWindow : EditorWindow
             {
                 list.Add(data);
             }
+            
         }
         File.Delete(uiConfigPath);
         File.WriteAllText(uiConfigPath,JsonConvert.SerializeObject(list,Formatting.Indented));
@@ -430,33 +427,22 @@ public class UIConfigWindow : EditorWindow
         }
     }
 
-    void UpdateBindingCode()
+    string UpdateBindingCode(string source,string newData)
     {
-        UIControlData uiControlData = uiPrefab.GetComponent<UIControlData>();
-        if (uiControlData != null)
-        {
-            uiControlData.CopyCodeToClipBoardPrivate();
-        }
-        string uiBindingScriptContent = Regex.Replace(File.ReadAllText(uiViewBindingTemplatePath), "UIXXXView", uiName);
-        uiBindingScriptContent = Regex.Replace(uiBindingScriptContent, "//UIControlData", uiControlData != null ? GUIUtility.systemCopyBuffer : "");
+        string newSource = ReplaceAutoGeneratedRegion(
+            source,
+            "控件绑定变量声明，自动生成请勿手改",
+            newData
+            );
 
-        string mainScriptPath = GetUIScriptPath(uiName, true);
-        if (string.IsNullOrEmpty(mainScriptPath))
-        {
-            Debug.LogError($"未找到{uiName}.cs,无法更新绑定代码");
-            return;
-        }
-
-        string dir = Path.GetDirectoryName(mainScriptPath);
-        string newBindingPath = Path.Combine(dir, $"{uiName}.binding.cs");
-        File.WriteAllText(newBindingPath,uiBindingScriptContent);
+        return newSource;
     }
 
     void CheckMove(UIConfigData jsonData)
     {
-        if (jsonData != null && !string.IsNullOrEmpty(jsonData.uiPath))
+        if (jsonData != null && !string.IsNullOrEmpty(jsonData.assetPath))
         {
-            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(jsonData.uiPath);
+            var asset = AssetDatabase.LoadAssetAtPath<GameObject>(jsonData.assetPath);
             if (asset == null)
             {
                 // 说明文件被移动了，尝试重新搜索
@@ -464,10 +450,85 @@ public class UIConfigWindow : EditorWindow
                 if (ids.Length > 0)
                 {
                     string newPath = AssetDatabase.GUIDToAssetPath(ids[0]);
-                    jsonData.uiPath = newPath;
+                    jsonData.assetPath = newPath;
                     Debug.LogWarning($"UIConfigWindow: {jsonData.uiType} 的路径已更新为 {newPath}");
                 }
             }
         }
+    }
+
+    /// <summary>
+    /// 替换自动生成部分的代码
+    /// </summary>
+    /// <param name="sourceCode"></param>
+    /// <param name="regionName"></param>
+    /// <param name="newContent"></param>
+    /// <returns></returns>
+    static string ReplaceAutoGeneratedRegion(
+        string sourceCode,
+        string regionName,
+        string newContent)
+    {
+        string pattern =
+            $@"#region\s*{Regex.Escape(regionName)}[\s\S]*?#endregion";
+
+        //todo:不要反向依赖
+        string replacement =
+            $"{newContent}";
+
+        if (!Regex.IsMatch(sourceCode, pattern))
+        {
+            Debug.LogError($"未找到自动生成区域: {regionName}");
+            return sourceCode;
+        }
+
+        return Regex.Replace(sourceCode, pattern, replacement);
+    }
+    
+    string SyncAddressable(GameObject prefab, string uiName, bool isWindow)
+    {
+        if (prefab == null)
+            return null;
+
+        var settings = AddressableAssetSettingsDefaultObject.Settings;
+        if (settings == null)
+        {
+            Debug.LogError("Addressable Settings 未找到");
+            return null;
+        }
+
+        string assetPath = AssetDatabase.GetAssetPath(prefab);
+        string guid = AssetDatabase.AssetPathToGUID(assetPath);
+
+        // 生成规范地址
+        string address = $"ui/{(isWindow ? "popup" : "view")}/{uiName.ToLower()}";
+
+        // 查找是否已有 entry
+        var entry = settings.FindAssetEntry(guid);
+
+        if (entry == null)
+        {
+            entry = settings.CreateOrMoveEntry(
+                guid,
+                settings.DefaultGroup
+                );
+        }
+
+        // 更新 address
+        if (entry.address != address)
+        {
+            entry.address = address;
+        }
+
+        entry.SetLabel("UI", true);
+
+        settings.SetDirty(
+            AddressableAssetSettings.ModificationEvent.EntryModified,
+            entry,
+            true
+            );
+
+        AssetDatabase.SaveAssets();
+        return address;
     }
 }

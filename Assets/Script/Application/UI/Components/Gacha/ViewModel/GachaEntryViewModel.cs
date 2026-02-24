@@ -10,16 +10,19 @@ using UnityEngine;
 /// </summary>
 public class GachaEntryViewModel
 {
-    //todo:生命周期内不会改变的属性，不用reactiveproperty
+    //todo:生命周期内不会改变的属性，不用reactiveproperty 这里实际上是key而不是name
     public string Name { get; private set; }
     public Sprite Icon { get;private set; }
-    public Sprite DetailImage { get;private set; }
+    //负责加载完成后的刷新
+    public readonly ReactiveProperty<Sprite> DetailImage = new ReactiveProperty<Sprite>();
     public int Rarity { get;private set; }
 
+    public GachaEntryType EntryType { get; private set; }
+    
     readonly IGachaVisualProvider visualProvider;
 
     //用于加载完成后刷新
-    public event Action OnVisualLoaded;
+    public readonly Subject<Unit> VisualLoaded = new Subject<Unit>();
     //TODO:接入characterdefinition
     public GachaEntryViewModel(GachaEntry entry,IGachaVisualProvider provider)
     {
@@ -27,6 +30,7 @@ public class GachaEntryViewModel
         visualProvider = provider;
         Rarity = entry.rarity;
         LoadVisual(entry).Forget();
+        EntryType = entry.entryType;
     }
 
     async UniTask LoadVisual(GachaEntry entry)
@@ -39,8 +43,8 @@ public class GachaEntryViewModel
 
         Icon = await ResourceManager.Instance.LoadAssetAsync<Sprite>(visual.IconPath);
         
-        DetailImage = await ResourceManager.Instance.LoadAssetAsync<Sprite>(visual.DetailImagePath);
-        OnVisualLoaded?.Invoke();
+        DetailImage.Value = await ResourceManager.Instance.LoadAssetAsync<Sprite>(visual.DetailImagePath);
+        VisualLoaded.OnNext(Unit.Default);
     }
     
     

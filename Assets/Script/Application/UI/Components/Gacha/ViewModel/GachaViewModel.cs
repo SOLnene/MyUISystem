@@ -12,9 +12,10 @@ GachaService / GachaDomain
 【流程层】
 GachaViewModel
     ├── 执行抽卡
-    ├── 控制 SingleResult 流程
-    ├── 处理 Skip
-    └── 决定“什么时候进入 Result”
+    ├── 和业务层交互
+    ├── 把“原始结果”转成 ViewModel
+    ├── 创建 Session
+    └── 通知 UI：有一次新抽卡开始了
 
 【展示层】
 SingleResultViewModel   ← 单个逐个展示
@@ -29,20 +30,16 @@ public class GachaViewModel : IDisposable
     // 最近一次抽到的物品列表
     public ReactiveCollection<GachaEntryViewModel> lastDrawnItems = new ReactiveCollection<GachaEntryViewModel>();
     // 是否正在抽卡
+    // isDrawing:
+    // - 流程互斥（防止并行 DrawAsync）
+    // - UI 防重入（按钮灰掉）
+    // ⚠ 后续可能拆为 isBusy / canInput
     public ReactiveProperty<bool> isDrawing = new ReactiveProperty<bool>(false);
-    // 当前选中的物品索引
-    public ReactiveProperty<int> currentIndex = new ReactiveProperty<int>(-1);
-    //是否有下一个
-    public ReactiveProperty<bool> hasNext = new ReactiveProperty<bool>(false);
     
     public ReactiveProperty<GachaPoolType> CurrentPoolType { get; }
         = new ReactiveProperty<GachaPoolType>(GachaPoolType.Character);
     
     public Subject<GachaSessionViewModel> OnSessionStarted { get; } = new Subject<GachaSessionViewModel>();
-    /// <summary>
-    /// 抽卡流程控制
-    /// </summary>
-    public GachaSessionViewModel sessionVM;
 
     readonly IGachaService gachaService;
     readonly IGachaVisualProvider visualProvider;
@@ -51,6 +48,10 @@ public class GachaViewModel : IDisposable
     {
         gachaService = service;
         visualProvider = provider;
+
+        //currentIndex.Subscribe(_ => UpdateHasNext()).AddTo(disposable);
+        lastDrawnItems.ObserveCountChanged().Subscribe(_ => UpdateHasNext()).AddTo(disposable);
+        
         drawCommand
             .Where(_ => !isDrawing.Value)
             .Subscribe(
@@ -59,7 +60,9 @@ public class GachaViewModel : IDisposable
                     //启动异步
                     _ = DrawAsync(count);
                 }).AddTo(disposable);
-        
+        CurrentPoolType.Subscribe(
+            type =>Debug.Log($"切换卡池到 {type}"))
+            .AddTo(disposable);
     }
 
     async UniTask DrawAsync(int count)
@@ -78,7 +81,7 @@ public class GachaViewModel : IDisposable
         
         isDrawing.Value = false;
         
-        sessionVM = new GachaSessionViewModel(lastDrawnItems);
+        var sessionVM = new GachaSessionViewModel(lastDrawnItems);
         //开始展示流程
         //TODO：再包一层
         //UIManager.Instance.Open(UIType.GachaResultDetailPopup,sessionVM);
@@ -97,41 +100,24 @@ public class GachaViewModel : IDisposable
     
     public void ShowNext()
     {
-        // 当 currentIndex 为 -1 时，说明是第一次显示 → 设置为 0
-        if (currentIndex.Value < 0)
-        {
-            currentIndex.Value = 0;
-            return;
-        }
         
-        if(currentIndex.Value<0||currentIndex.Value>lastDrawnItems.Count)
-        {
-            return;
-        }
-        currentIndex.Value++;
     }
     
-    public bool HasNext()
+    /*public bool HasNext()
     {
         hasNext.Value = currentIndex.Value >= 0 && currentIndex.Value < lastDrawnItems.Count - 1;
         return currentIndex.Value >= 0 && currentIndex.Value < lastDrawnItems.Count - 1;
+    }*/
+    
+    void UpdateHasNext()
+    {
+       
     }
     
-    public void ShowNextOrClose()
-    {
-        if (HasNext())
-        {
-            ShowNext();
-        }
-        else
-        {
-            CloseResult();
-        }
-    }
     
     public void CloseResult()
     {
-        currentIndex.Value = -1;
+        
     }
     
     public void Dispose()

@@ -13,7 +13,7 @@ GachaPoolProvider	数据来源 / 配置读取（Infrastructure）
 GachaSession	一次抽卡过程（Transient Domain State）*/
 public partial class GachaView : UIView
 {
-    GachaViewModel vm;
+    public GachaViewModel vm;
     CompositeDisposable disposable;
     [SerializeField]
     GachaPoolUIConfigDatabase poolUIConfigDatabase;
@@ -41,36 +41,13 @@ public partial class GachaView : UIView
         //TopHub
         GachaTopHubViewModel topVm = new GachaTopHubViewModel(vm.CurrentPoolType);
         topHub.Bind(topVm).Forget();
+        //middleView
+        middleHub.Bind(vm);
         
         Draw1Btn.onClick.RemoveAllListeners();
         Draw10Btn.onClick.RemoveAllListeners();
         Draw1Btn.onClick.AddListener(() => vm.drawCommand.Execute(1));
         Draw10Btn.onClick.AddListener(() => vm.drawCommand.Execute(10));
-        vm.OnSessionStarted
-            .Subscribe(session =>
-            {
-                UIManager.Instance.Open(
-                    UIType.GachaResultDetailPopup,
-                    session
-                    );
-                //session在抽卡开始后才存在
-                //todo:避免嵌套订阅
-                session.OnPreviewFinished
-                    .Subscribe(_ =>
-                    {
-                        UIManager.Instance.Close(UIType.GachaResultDetailPopup);
-                        UIManager.Instance.Open(UIType.GachaResultPopup, vm.sessionVM);
-                    })
-                    .AddTo(this);
-                session.OnSessionFinished
-                    .Subscribe(_ =>
-                    {
-                        UIManager.Instance.Close(UIType.GachaResultPopup);
-                        Debug.Log("抽卡会话结束");
-                    })
-                    .AddTo(this);
-            })
-            .AddTo(this);
     }
     
     public override void OnAddListener()

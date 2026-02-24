@@ -9,11 +9,14 @@ using UnityEngine;
 /// </summary>
 public class GachaSessionViewModel: IDisposable
 {
-    public ReactiveCollection<GachaEntryViewModel> items { get; }
-    public ReactiveProperty<int> currentIndex { get; } = new ReactiveProperty<int>(0);
+    public ReactiveCollection<GachaEntryViewModel> Items { get; }
+    public ReactiveProperty<int> CurrentIndex { get; } = new ReactiveProperty<int>(0);
     
     public IReadOnlyReactiveProperty<GachaEntryViewModel> CurrentItem { get; }
     public IReadOnlyReactiveProperty<bool> HasNext { get; }
+
+    public ReactiveProperty<GachaSessionPhase> Phase { get; }
+        = new ReactiveProperty<GachaSessionPhase>(GachaSessionPhase.Revealing);
     
     //不带数据的事件流
     public Subject<Unit> OnPreviewFinished { get; } = new Subject<Unit>();
@@ -23,34 +26,62 @@ public class GachaSessionViewModel: IDisposable
     CompositeDisposable disposable = new CompositeDisposable();
     public GachaSessionViewModel(IReadOnlyList<GachaEntryViewModel> result)
     {
-        items = result.ToReactiveCollection();
+        Items = result.ToReactiveCollection();
 
-        CurrentItem = currentIndex.Select(i =>
-                i >= 0 && i < items.Count
-                    ? items[i]
+        CurrentItem = CurrentIndex.Select(i =>
+                i >= 0 && i < Items.Count
+                    ? Items[i]
                     : null)
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
         
-        HasNext = currentIndex
-            .Select(_ => currentIndex.Value < items.Count - 1)
+        HasNext = CurrentIndex
+            .Select(i => i < Items.Count - 1)
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
     }
-    
+
     public void Next()
     {
-        if ( currentIndex.Value < items.Count - 1)
-            currentIndex.Value++;
+        if (HasNext.Value)
+        {
+            CurrentIndex.Value++;
+        }
+        else
+        {
+            EnterPreview();
+        }
     }
 
-    public void Skip()
+    public void SkipReveal()
     {
-        currentIndex.Value = items.Count - 1;
+        EnterPreview();
+    }
+
+    void EnterPreview()
+    {
+        Phase.Value = GachaSessionPhase.Preview;
+        OnPreviewFinished.OnNext(Unit.Default);
+    }
+
+    public void FinishSession()
+    {
+        Phase.Value = GachaSessionPhase.Finished;
+        OnSessionFinished.OnNext(Unit.Default);
     }
     
     public void Dispose()
     {
         disposable.Dispose();
     }
+}
+
+/// <summary>
+/// 抽卡流程阶段
+/// </summary>
+public enum GachaSessionPhase
+{
+    Revealing,  //逐个展示
+    Preview,    //汇总展示
+    Finished
 }

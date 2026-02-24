@@ -29,7 +29,7 @@ public enum UIState
 public class UIViewHandle
 {
     public UIType uiType;
-    public string uiPath;
+    public string address;
     public bool isWindow;
     public Type uiViewType;
     
@@ -48,6 +48,13 @@ public class UIViewHandle
     public UILayerLogic uiLayerLogic;
 
     public int order;
+
+    public bool isPause;
+    
+    /// <summary>
+    /// 在我上面的界面(非窗口界面)的数量
+    /// </summary>
+    public int topViewNum;
     
     //todo:自定义管理类，不再暴露AsyncOperationHandle
     public AsyncOperationHandle Load(object data = null, Action callback = null)
@@ -55,9 +62,9 @@ public class UIViewHandle
         isLoading = true;
         if (shouldOpen)
         {
-            
+            uiLayerLogic.AllocateOrderAndPush(this);
         }
-        return ResourceManager.Instance.InstantiateAsync(uiPath, (go) =>
+        return ResourceManager.Instance.InstantiateAsync(address, (go) =>
         {
             //如果加载完成时用户已经取消（isLoading == false），立刻回收并退出
             if (!isLoading)
@@ -169,6 +176,7 @@ public class UIViewHandle
     /// </summary>
     public void InternalOpen(object data = null, Action callback = null)
     {
+        uiLayerLogic.OpenUI(this);
         uiState = UIState.Opening;
         //Todo:层级管理
         SetVisible(true);
@@ -194,6 +202,7 @@ public class UIViewHandle
 
     public void InternalClose(Action callback = null)
     {
+        uiLayerLogic.CloseUI(this);
         uiState = UIState.Closing;
         //Todo:层级管理
         
@@ -240,5 +249,17 @@ public class UIViewHandle
         {
             uiView.gameObject.SetActive(visible);
         }            
+    }
+
+    public bool IsOpen()
+    {
+        return uiState == UIState.Opening && uiState == UIState.Opened;
+    }
+
+    public void AddTopViewNum(int num)
+    {
+        topViewNum += num;
+        topViewNum = Mathf.Max(0, topViewNum);
+        SetVisible(topViewNum<=0);
     }
 }

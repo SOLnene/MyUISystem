@@ -10,10 +10,12 @@ public enum UIType
     UILoadingView,
     UIStartView,
 		HubRoot,
-		WeaponDetailView,
+		EquipDetailView,
 		ItemSelectPopupView,
 		GachaView,
 		GachaResultPopup,
 		GachaResultDetailPopup,
+		GachaResultRevealView,
+		CharacterDetailView,
 		Max,
 }

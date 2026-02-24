@@ -1,50 +1,72 @@
 [
   {
     "uiType": "UILoadingView",
-    "uiPath": "Assets/AssetsPackage/UI/Prefab/UILoadingView.prefab",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/UILoadingView.prefab",
+    "uiAddress": "ui/popup/uiloadingview",
     "uiLayer": "NormalLayer",
-    "isWindow": true
+    "isWindow": false
   },
   {
     "uiType": "UIStartView",
-    "uiPath": "Assets/AssetsPackage/UI/Prefab/UIStartView.prefab",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/UIStartView.prefab",
+    "uiAddress": "ui/popup/uistartview",
     "uiLayer": "NormalLayer",
     "isWindow": false
   },
   {
     "uiType": "HubRoot",
-    "uiPath": "Assets/AssetsPackage/UI/Prefab/Hub/HubRoot.prefab",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/Hub/HubRoot.prefab",
+    "uiAddress": "ui/popup/hubroot",
     "uiLayer": "NormalLayer",
-    "isWindow": true
+    "isWindow": false
   },
   {
-    "uiType": "WeaponDetailView",
-    "uiPath": "Assets/AssetsPackage/UI/Prefab/WeaponDetailView.prefab",
+    "uiType": "EquipDetailView",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/EquipDetail/EquipDetailView.prefab",
+    "uiAddress": "ui/popup/equipdetailview",
     "uiLayer": "NormalLayer",
     "isWindow": false
   },
   {
     "uiType": "ItemSelectPopupView",
-    "uiPath": "Assets/AssetsPackage/UI/Prefab/ItemSelectPopupView.prefab",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/ItemSelectPopupView.prefab",
+    "uiAddress": "ui/popup/itemselectpopupview",
     "uiLayer": "TopLayer",
     "isWindow": true
   },
   {
     "uiType": "GachaView",
-    "uiPath": "Assets/AssetsPackage/UI/Prefab/Gacha/GachaView.prefab",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/Gacha/GachaView.prefab",
+    "uiAddress": "ui/popup/gachaview",
     "uiLayer": "NormalLayer",
     "isWindow": false
   },
   {
     "uiType": "GachaResultPopup",
-    "uiPath": "Assets/AssetsPackage/UI/Prefab/Gacha/GachaResultPopup.prefab",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/Gacha/GachaResultPopup.prefab",
+    "uiAddress": "ui/popup/gacharesultpopup",
+    "uiLayer": "TopLayer",
+    "isWindow": false
+  },
+  {
+    "uiType": "GachaResultDetailPopup",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/Gacha/GachaResultDetailPopup.prefab",
+    "uiAddress": "ui/popup/gacharesultdetailpopup",
+    "uiLayer": "TopLayer",
+    "isWindow": false
+  },
+  {
+    "uiType": "GachaResultRevealView",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/Gacha/GachaResultRevealView.prefab",
+    "uiAddress": "ui/popup/gacharesultrevealview",
     "uiLayer": "TopLayer",
     "isWindow": true
   },
   {
-    "uiType": "GachaResultDetailPopup",
-    "uiPath": "Assets/AssetsPackage/UI/Prefab/Gacha/GachaResultDetailPopup.prefab",
-    "uiLayer": "TopLayer",
-    "isWindow": true
+    "uiType": "CharacterDetailView",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/CharaterDetail/CharacterDetailView.prefab",
+    "uiAddress": "ui/view/characterdetailview",
+    "uiLayer": "NormalLayer",
+    "isWindow": false
   }
 ]

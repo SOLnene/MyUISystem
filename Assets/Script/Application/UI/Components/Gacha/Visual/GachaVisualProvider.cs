@@ -43,8 +43,8 @@ public class GachaVisualProvider : IGachaVisualProvider
     {
         return new GachaVisual
         {
-            IconPath = $"ui_gacha_equipicon_{key}",
-            DetailImagePath = $"ui_gacha_equipicon_{key}"
+            IconPath = $"ui_gacha_equipicon_{key}".ToLower(),
+            DetailImagePath = $"ui_gacha_equipicon_{key}".ToLower()
         };
     }
 }

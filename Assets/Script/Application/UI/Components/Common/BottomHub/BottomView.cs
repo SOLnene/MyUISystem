@@ -26,7 +26,7 @@ public class BottomView : MonoBehaviour,IActionHubView
         button.onClick.RemoveAllListeners();
         button.onClick.AddListener(() =>
         {
-            UIManager.Instance.Open(UIType.WeaponDetailView,vm.selectedSlot.Value);
+            UIManager.Instance.Open(UIType.EquipDetailView,vm.selectedSlot.Value);
         });
         //TODO:换成buttondata生成
         if (enhanceButton != null)

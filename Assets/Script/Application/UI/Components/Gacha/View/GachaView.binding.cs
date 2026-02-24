@@ -15,10 +15,14 @@ public partial class GachaView : UIView
 	[ControlBinding]
 	private GachaTopHubView topHub;
 	[ControlBinding]
+	private GachaMiddleView middleHub;
+	[ControlBinding]
 	private Button Draw10Btn;
 
 		#pragma warning restore 0649
 #endregion
+
+
 
 
 

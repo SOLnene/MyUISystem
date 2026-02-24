@@ -25,6 +25,7 @@ public class GachaTopHubView : BindableUI
 	public async UniTask Bind(GachaTopHubViewModel viewModel)
 	{
 		vm = viewModel;
+		Debug.Log("Bind Hub");
 		if (tabPrefab == null)
 		{
 			tabPrefab = await ResourceManager.Instance.LoadAssetAsync<GameObject>("ui/gacha/gachapooltab"); 

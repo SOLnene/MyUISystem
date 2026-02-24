@@ -128,6 +128,7 @@ namespace SkierFramework
             //{ "UIScrollView", typeof(UIScrollView) },
             { "ScrollRect", typeof(ScrollRect)},
             { "SpriteRenderer", typeof(SpriteRenderer)},
+            {"HorizontalLayoutGroup",typeof(HorizontalLayoutGroup)},
             { "GridLayoutGroup", typeof(GridLayoutGroup) },
             { "Animation", typeof(Animation) },
             { "VideoPlayer", typeof(UnityEngine.Video.VideoPlayer) },
@@ -142,11 +143,26 @@ namespace SkierFramework
             {"BottomHub",typeof(BottomHub)},
             {"TeamInfoSlot",typeof(TeamInfoSlot)},
             {"SkillSlot",typeof(SkillSlot)},
+            {"UIMotionBase",typeof(UIMotionBase)},
+            {"GachaResultItemView",typeof(GachaResultItemView)},
             {"BackpackTopView",typeof(BackpackTopView)},
             {"BackpackMiddleView",typeof(BackpackMiddleView)},
             {"WeaponDetailMiddleView",typeof(WeaponDetailMiddleView)},
             {"GachaPoolTabView",typeof(GachaPoolTabView)},
             {"GachaTopHubView",typeof(GachaTopHubView)},
+            {"GachaMiddleView",typeof(GachaMiddleView)},
+            {"GachaResultRevealView",typeof(GachaResultRevealView)},
+            {"GachaResultListView",typeof(GachaResultListView)},
+            {"GachaTabFeedback",typeof(GachaTabFeedback)},
+            {"CharacterDetailContentView",typeof(CharacterDetailContentView)},
+            {"CharacterDetailTabView",typeof(CharacterDetailTabView)},
+            {"CharacterDetailPreviewView",typeof(CharacterDetailPreviewView)},
+            {"CharacterDetailInfoPanelView",typeof(CharacterDetailInfoPanelView)},
+            ///////////////UI通用动画///////////////
+            {"ISelectableFeedback",typeof(ISelectableFeedback)},
+            {"ItemGlowScaleFeedback",typeof(ItemGlowScaleFeedback)},
+            {"StatItemView",typeof(StatItemView)},
+            {"BindableUI",typeof(BindableUI)},
             //////////////////////////////////////
 
             { "Image", typeof(Image)},
@@ -813,7 +829,8 @@ namespace SkierFramework
         public void SetDirty()
         {
 #if UNITY_EDITOR
-            UnityEditor.EditorUtility.SetDirty(gameObject);
+            // 1. 标记组件本身已改变
+            UnityEditor.EditorUtility.SetDirty(this);
 #if UNITY_2021_1_OR_NEWER
             var prefabStage = UnityEditor.SceneManagement.PrefabStageUtility.GetPrefabStage(gameObject);
 #else
@@ -821,8 +838,10 @@ namespace SkierFramework
 #endif
             if (prefabStage != null)
             {
+                //2. 如果是在 Prefab 模式下（Prefab Stage），标记场景已改变
                 UnityEditor.SceneManagement.EditorSceneManager.MarkSceneDirty(prefabStage.scene);
             }
+
 #endif
         }
 #endif

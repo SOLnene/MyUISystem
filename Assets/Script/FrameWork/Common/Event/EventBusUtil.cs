@@ -57,7 +57,7 @@ public static class EventBusUtil
         {
             var busType = typedef.MakeGenericType(eventType);
             eventBusTypes.Add(busType);
-            Debug.Log($"初始化EventBus<{eventType.Name}>");
+            //Debug.Log($"初始化EventBus<{eventType.Name}>");
         }
         return eventBusTypes;
     }
@@ -67,7 +67,7 @@ public static class EventBusUtil
     /// </summary>
     public static void ClearAllBuses()
     {
-        Debug.Log("Clearing all buses...");
+//        Debug.Log("Clearing all buses...");
         for (int i = 0; i < EventBusTypes.Count; i++)
         {
             var busType = EventBusTypes[i];

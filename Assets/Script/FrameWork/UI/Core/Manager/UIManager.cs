@@ -42,11 +42,11 @@ public class UIManager : SingletonMono<UIManager>
     //uicreate场景中使用，用于关闭场景中原本的ui
     [SerializeField]
     GameObject testCanvas;
-    
+
     /// <summary>
     /// 预加载的itemslotview,先放这里
     /// </summary>
-    public  ItemSlotView slotPrefab;
+    public ItemSlotView slotPrefab;
     void Awake()
     {
         Init();
@@ -79,7 +79,7 @@ public class UIManager : SingletonMono<UIManager>
         //preload
         await EnsureSlotPrefabLoaded();
         await EnsureSpritesLoaded("Assets/AssetsPackage/UI/Sprite/TouchIcon/UI_TouchIcon_Plus.png");
-        await PreLoad(UIType.GachaView);
+        //await PreLoad(UIType.GachaView);
         
         //创建item并添加到背包中
         var items = ItemFactory.CreateTestItems();
@@ -87,7 +87,11 @@ public class UIManager : SingletonMono<UIManager>
         {
             GameContext.Instance.BackpackVM.AddItem(item);
         }
-        Open(UIType.GachaView);
+        var flow = new GachaFlowController();
+        var characterDefinition = GameDatabase.CharacterDatabase.Get("hutao");
+        var characterModel = CharacterFactory.Create(characterDefinition, 1);
+        var characterDetailVm = new CharacterDetailViewModel(characterModel);
+        UIManager.Instance.Open(UIType.CharacterDetailView, characterDetailVm);
     }
     
     void Init()
@@ -152,7 +156,7 @@ public class UIManager : SingletonMono<UIManager>
                 }
                 viewHandles.Add(config.uiType, new UIViewHandle
                 {
-                    uiPath = config.uiPath,
+                    address = config.uiAddress,
                     uiType = config.uiType,
                     uiViewType = config.uiViewType,
                     uiLayerLogic = layers[config.uiLayer],
@@ -176,6 +180,28 @@ public class UIManager : SingletonMono<UIManager>
     {
         openedUIs.Add(type);
         viewHandles[type].Show(data,callback);
+    }
+    /// <summary>
+    /// 回调带UIView的重载
+    /// </summary>
+    /// <param name="type"></param>
+    /// <param name="data"></param>
+    /// <param name="callback"></param>
+    public void OpenWithView(UIType type, object data = null,Action<UIView> callback = null)
+    {
+        openedUIs.Add(type);
+        viewHandles[type].Show(data, () =>
+        {
+            var view = viewHandles[type].uiView;
+            if (view != null)
+            {
+                callback?.Invoke(view);
+            }
+            else
+            {
+                Debug.LogWarning($"UIType {type} 打开成功但 UIView 为空，无法执行回调");
+            }
+        });
     }
     
     public void Close(UIType uiType, Action callback = null)
