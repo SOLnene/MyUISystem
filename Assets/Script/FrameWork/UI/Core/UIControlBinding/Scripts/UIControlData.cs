@@ -24,6 +24,7 @@ using System.Reflection;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Text;
+using Game.UI.Components.CharacterDetail;
 #if XLUA
 using XLua;
 #endif
@@ -138,7 +139,9 @@ namespace SkierFramework
             //{ "UITweener", typeof(UITweener) },
 
             ////////自定义控件类型请放这里////////
-            {"HpBarBase",typeof(BarBase)},
+            /// todo:这里应该只放纯显示控件，具体的类应该使用subview，然后getcompoent获取
+            {"BarBase",typeof(BarBase)},
+            {"ItemSlotView",typeof(ItemSlotView)},
             {"HpBarWithText",typeof(BarWithText)},
             {"BottomHub",typeof(BottomHub)},
             {"TeamInfoSlot",typeof(TeamInfoSlot)},
@@ -161,7 +164,7 @@ namespace SkierFramework
             ///////////////UI通用动画///////////////
             {"ISelectableFeedback",typeof(ISelectableFeedback)},
             {"ItemGlowScaleFeedback",typeof(ItemGlowScaleFeedback)},
-            {"StatItemView",typeof(StatItemView)},
+            //{"StatItemView",typeof(StatItemView)},
             {"BindableUI",typeof(BindableUI)},
             //////////////////////////////////////
 

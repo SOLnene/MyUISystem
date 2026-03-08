@@ -185,3 +185,7 @@ OnDisable 必须调用 Cancel
 - **动画**：几乎所有隐藏/销毁/跳过场景都要 Cancel（视觉残留最明显，用户最容易感知）。
 - **加载任务**：只在真正销毁或明确需要中断时 Cancel，允许后台完成（节省重复 IO，提升切回流畅度）。
 - **订阅**：在 OnDestroy / OnRelease 时 Dispose，OnDisable 只 Clear（视框架而定）。
+  这个 UI 是不是只展示真实数据？
+
+如果是 → 可以直接订阅 Model
+如果不是 → 必须加一层 VM

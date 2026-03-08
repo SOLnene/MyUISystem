@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using Game.UI.Components.CharacterDetail;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;

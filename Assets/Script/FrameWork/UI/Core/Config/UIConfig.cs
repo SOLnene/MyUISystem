@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System;
+using System.Reflection;
 using Unity.VisualScripting;
 using UnityEngine.ResourceManagement.AsyncOperations;
 using UnityEngine.Serialization;
@@ -101,10 +102,36 @@ public class UIConfig
         var assemblies = AppDomain.CurrentDomain.GetAssemblies();
         foreach (var assembly in assemblies)
         {
-            type = Type.GetType(string.Format("{0}, {1}", typeName, assembly.FullName));
-            if (type != null)
+            // 只扫描有意义的程序集（跳过系统程序集，提高效率）
+            if (assembly.FullName.StartsWith("System") || 
+                assembly.FullName.StartsWith("mscorlib") || 
+                assembly.FullName.StartsWith("UnityEngine") || 
+                assembly.FullName.StartsWith("UnityEditor"))
             {
-                return type;
+                continue;
+            }
+
+            try
+            {
+                var types = assembly.GetTypes();
+                foreach (var t in types)
+                {
+                    // 只匹配类名（t.Name == typeName）
+                    if (t.Name == typeName)
+                    {
+                        // 可选：额外检查是否继承自 UIView，防同名类冲突
+                        if (typeof(UIView).IsAssignableFrom(t))
+                        {
+                            Debug.Log($"[UIConfig] 找到匹配类型: {t.FullName} (类名: {typeName})");
+                            return t;
+                        }
+                    }
+                }
+            }
+            catch (ReflectionTypeLoadException ex)
+            {
+                // 某些程序集加载失败时跳过（常见于插件/第三方包）
+                Debug.LogWarning($"程序集 {assembly.FullName} 加载类型失败: {ex.Message}");
             }
         }
         Debug.LogErrorFormat("找不到类型{0}",typeName);

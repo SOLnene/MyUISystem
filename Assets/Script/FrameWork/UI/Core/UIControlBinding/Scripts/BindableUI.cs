@@ -31,6 +31,10 @@ public abstract class BindableUI<T> : BindableUI where T : class
 {
     protected T Vm { get; private set; }
 
+    /// <summary>
+    /// 防报错
+    /// </summary>
+    /// <param name="data"></param>
     public override void Bind(object data)
     {
         if (data == null)
@@ -38,6 +42,21 @@ public abstract class BindableUI<T> : BindableUI where T : class
             return;
         }
         Vm = data as T;
+            
+        if (Vm == null && data != null)
+        {
+            UnityEngine.Debug.LogWarning($"[UI] {name} 类型转换失败: 期望 {typeof(T).Name}");
+        }
+    }
+    
+    //现在没用
+    public virtual void Bind(T data)
+    {
+        if (data == null)
+        {
+            return;
+        }
+        Vm = data;
             
         if (Vm == null && data != null)
         {
