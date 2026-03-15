@@ -27,7 +27,19 @@ public class BarBase : MonoBehaviour,IBindableUI,IBar
         }
     }
 
-    
+    bool isInitialized = false;
+
+    //确保控件绑定
+    void EnsureInit()
+    {
+        if (isInitialized) return;
+
+        var ctrlData = GetComponent<UIControlData>();
+        if (ctrlData != null)
+            ctrlData.BindDataTo(this);
+
+        isInitialized = true;
+    }
     
     public virtual void BindData()
     {
@@ -40,6 +52,7 @@ public class BarBase : MonoBehaviour,IBindableUI,IBar
     
     public virtual void SetValue(int current, int max,int preview = -1)
     {
+        EnsureInit();
         if (max <= 0)
         {
             BarFill.fillAmount = 0;
@@ -53,6 +66,7 @@ public class BarBase : MonoBehaviour,IBindableUI,IBar
     
     public virtual void SetValue(float percent,float preview = -1.0f)
     {
+        EnsureInit();
         if (percent <= 0)
         {
             BarFill.fillAmount = 0;

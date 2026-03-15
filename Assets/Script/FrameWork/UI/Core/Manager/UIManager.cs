@@ -265,7 +265,7 @@ public class UIManager : SingletonMono<UIManager>
         if (slotPrefab == null)
         {
             var prefab = await ResourceManager.Instance.LoadAssetAsync<GameObject>(
-                "Assets/AssetsPackage/UI/Prefab/ItemSlot.prefab");
+                "ui/prefab/item_slot");
             slotPrefab = prefab.GetComponent<ItemSlotView>();
         }
         return slotPrefab;

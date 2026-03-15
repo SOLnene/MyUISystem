@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Game/Item Definition")]
+[CreateAssetMenu(menuName = "Game/Definition/Item Definition")]
 public class ItemDefinition : ScriptableObject
 {
     public int id;

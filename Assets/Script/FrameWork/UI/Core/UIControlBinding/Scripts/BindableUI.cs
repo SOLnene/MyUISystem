@@ -5,6 +5,7 @@ using UnityEngine;
 
 public class BindableUI : MonoBehaviour,IBindableUI
 {
+    //因为有很多之前的类没走bindable，所有onenable还不能删
     public virtual void OnEnable()
     {
         UIControlData ctrlData = gameObject.GetComponent<UIControlData>();
@@ -46,6 +47,12 @@ public abstract class BindableUI<T> : BindableUI where T : class
         if (Vm == null && data != null)
         {
             UnityEngine.Debug.LogWarning($"[UI] {name} 类型转换失败: 期望 {typeof(T).Name}");
+        }
+        //因为有很多之前的类没走这里，所有onenable还不能删
+        UIControlData ctrlData = gameObject.GetComponent<UIControlData>();
+        if(ctrlData != null)
+        {
+            ctrlData.BindDataTo(this);
         }
     }
     

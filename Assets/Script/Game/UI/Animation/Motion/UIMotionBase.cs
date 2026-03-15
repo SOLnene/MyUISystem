@@ -60,6 +60,12 @@ public abstract class UIMotionBase : BindableUI
         isPlaying = false;
     }*/
 
+    /// <summary>
+    /// 实际动画内容
+    /// </summary>
+    /// <param name="isEnter"></param>
+    /// <param name="token"></param>
+    /// <returns></returns>
     protected abstract UniTask PlayAnimation(bool isEnter,CancellationToken token);
     
     protected abstract void ApplyIdleState();

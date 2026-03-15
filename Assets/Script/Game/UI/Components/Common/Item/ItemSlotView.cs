@@ -41,6 +41,7 @@ public class ItemSlotView : MonoBehaviour,IPointerEnterHandler,IPointerExitHandl
     [SerializeField]
     Transform starParent;
 
+    
     [Space]
     [Header("经验书")]
     [SerializeField]
@@ -107,10 +108,6 @@ public class ItemSlotView : MonoBehaviour,IPointerEnterHandler,IPointerExitHandl
         
         vm.star.Subscribe(star =>
         {
-            foreach (Transform child in starParent)
-            {
-                Destroy(child.gameObject);
-            }
             SetStarLevel(star);
         }).AddTo(disposable);
         
@@ -206,37 +203,17 @@ public class ItemSlotView : MonoBehaviour,IPointerEnterHandler,IPointerExitHandl
         icon.sprite = sprite;
         //Debug.Log($"[LoadIconAsync] 已赋值给 Image: {icon.sprite?.name}");
     }
-    
+
     public void SetStarLevel(int level)
     {
-        string path = "Assets/Sprite/Backpack/UI_IconStar.png";
-        ResourceManager.Instance.LoadAssetAsync<Sprite>(path, sprite =>
+        int childCount = starParent.childCount;
+        for (int i = 0; i < childCount; i++)
         {
-            if (sprite == null)
-            {
-                Debug.LogError($"加载星级图片失败: {path}");
-                return;
-            }
-            for (int i = 0; i < level; i++)
-            {
-                CreateStarImage(sprite);
-            }
-        });
+            starParent.GetChild(i).gameObject.SetActive(i < level);
+        }
     }
-    
-    private void CreateStarImage(Sprite sprite)
-    {
-        GameObject starGO = new GameObject("StarIcon", typeof(RectTransform), typeof(UnityEngine.UI.Image));
-        var rect = starGO.GetComponent<RectTransform>();
-        rect.sizeDelta = new Vector2(40, 40);  // 宽32, 高32 像素
-        var image = starGO.GetComponent<UnityEngine.UI.Image>();
-        image.sprite = sprite;
-        image.color = new Color(1.0f, 0.8f, 0.2f);
-        //image.SetNativeSize();
 
-        // 放到目标容器下，例如 Slot/Stars
-        starGO.transform.SetParent(starParent, false);
-    }
+   
     #region 动画相关
     public void OnPointerEnter(PointerEventData eventData)
     {

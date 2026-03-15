@@ -87,7 +87,31 @@ public class ConsumableItem : InventoryItem
     public void Add(int amount) => Count += amount;
     public void Use(int amount) => Count = Mathf.Max(0, Count - amount);
 
-    public override string GetDisplayLevelText() => $"×{Count}";
+    public override string GetDisplayLevelText() => $"x{Count}";
+}
+
+
+[Serializable]
+public class MaterialItem : InventoryItem
+{
+    public int Count { get; private set; }
+
+    public int NeededCount { get; private set; }
+    public MaterialItem(ItemDefinition def, int count = 1,int neededCount=1) : base(def)
+    {
+        Count = count;
+        NeededCount = neededCount;
+    }
+
+    public void Add(int amount) => Count += amount;
+    public void Use(int amount) => Count = Mathf.Max(0, Count - amount);
+
+    public override string GetDisplayLevelText() => $"{Count}/{NeededCount}";
+
+    public void SetNeeded(int count)
+    {
+        NeededCount = count;
+    }
 }
 
 /// <summary>

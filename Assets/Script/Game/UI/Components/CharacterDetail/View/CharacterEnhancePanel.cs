@@ -22,9 +22,7 @@ namespace Game.UI.Components.CharacterDetail
 	    
         public override void Bind(object viewmodel)
         {
-            Debug.Log("Bind enhance panel");
             base.Bind(viewmodel);
-            Debug.Log("Bind enhance panel base");
             upgradePanel.Bind(Vm.previewVm);
             for (int i = 0; i < statItems.Length; i++)
             {

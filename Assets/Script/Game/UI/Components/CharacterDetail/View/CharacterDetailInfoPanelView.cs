@@ -62,12 +62,10 @@ namespace Game.UI.Components.CharacterDetail
 				{
 					expFill.fillAmount = Mathf.Max(0.001f,progress);
 				}).AddTo(disposable);
-        
-			var attributeViewmodel = new AttributePageViewModel(model);
-        
+
 			for (int i = 0; i < statItems.Length; i++)
 			{
-				statItems[i].Bind(attributeViewmodel.stats[i]);
+				statItems[i].Bind(vm.AttributeViewModel.stats[i]);
 			}
 
 			model.Stats.Favor.Subscribe(

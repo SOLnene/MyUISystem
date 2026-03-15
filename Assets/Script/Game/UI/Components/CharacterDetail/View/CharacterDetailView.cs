@@ -24,9 +24,13 @@ namespace Game.UI.Components.CharacterDetail
 		private Image final;
 		[ControlBinding]
 		private BindableUI enhancePanel;
+		[ControlBinding]
+		private BindableUI promotePanel;
 
 		#pragma warning restore 0649
 #endregion
+
+
         
         private const float TOP_BAR_HEIGHT = 150f;     // 根据设计稿改
         private const float BOTTOM_BAR_HEIGHT = 140f;
@@ -54,14 +58,38 @@ namespace Game.UI.Components.CharacterDetail
                     charaText.text = name;
                 }).AddTo(disposable);
             final.gameObject.SetActive(false);
-            var contentVm = new CharacterDetailContentViewModel(viewModel.model); 
-            contentView.Bind(contentVm);
+            contentView.Bind(viewModel.contentViewModel);
+           
+            enhancePanel.Bind(viewModel.enhanceViewmodel);
+            promotePanel.Bind(viewModel.promoteViewmodel);
             contentView.gameObject.SetActive(false);
-            ExpBookMaterialInput materialInput = new ExpBookMaterialInput();
-            var enhanceVm = new CharacterEnhanceViewmodel(viewModel.model,materialInput);
-            enhancePanel.Bind(enhanceVm);
+
+           
+            // 初始化时先决定显示哪个面板
+            RefreshUpgradeOrPromotePanel();
+
+            // 升级后/突破后重新判断一次
+            viewModel.enhanceViewmodel.onUpgrade
+                .Subscribe(_ => RefreshUpgradeOrPromotePanel())
+                .AddTo(disposable);
+
+            viewModel.promoteViewmodel.onPromote
+                .Subscribe(_ => RefreshUpgradeOrPromotePanel())
+                .AddTo(disposable);
         }
     
+        void RefreshUpgradeOrPromotePanel()
+        {
+            // 规则：小于当前 rank 最大等级 -> 升级；达到/超过 -> 突破
+            int level = vm.model.LevelRP.Value;
+            int maxLevel = vm.model.GetMaxLevel();
+            bool showUpgrade = level < maxLevel;
+
+            enhancePanel.gameObject.SetActive(showUpgrade);
+            promotePanel.gameObject.SetActive(!showUpgrade);
+        }
+
+        
         public override void OnAddListener()
         {
             base.OnAddListener();
@@ -75,11 +103,13 @@ namespace Game.UI.Components.CharacterDetail
         public override void OnClose()
         {
             base.OnClose();
+            // 子 ViewModel 的生命周期由 CharacterDetailViewModel 统一管理
         }
 
         public override void OnRelease()
         {
             base.OnRelease();
+            
         }
     }
 }

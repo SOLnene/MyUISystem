@@ -79,7 +79,7 @@ public static class ItemFactory
     /// <summary>
     /// 根据 Key 或 ID 创建单个物品
     /// </summary>
-    public static InventoryItem CreateItem(string keyOrId)
+    public static InventoryItem CreateItem(string keyOrId,int needCount = 1)
     {
         var db = GameDatabase.ItemDatabase;
         if (db == null)
@@ -106,6 +106,8 @@ public static class ItemFactory
                 return new EquipItem(def as EquipDefinition);
             case ItemCategory.Consumable:
                 return new ConsumableItem(def, count: 1);
+            case ItemCategory.Material:
+                return new MaterialItem(def, count: 1,needCount);
             default:
                 return new InventoryItem(def);
         }
@@ -137,7 +139,7 @@ public static class ItemFactory
     
     public static async UniTask<ItemSlotView> InstantiateItemSlot(ItemSlotViewModel viewModel, Transform parent)
     {
-        var prefab = await ResourceManager.Instance.InstantiateItemAsync("Assets/AssetsPackage/UI/Prefab/ItemSlot.prefab", parent,false);
+        var prefab = await ResourceManager.Instance.InstantiateItemAsync("ui/prefab/item_slot", parent,false);
         if (prefab == null)
         {
             Debug.LogError("加载 ItemSlot 预制体失败");

@@ -5,6 +5,7 @@ namespace Game.UI.Components.CharacterDetail
     public class StatItemViewModel
     {
         //todo:存标识，做enum
+        //无subsribe时，可以不手动dispose
         public Sprite icon;
     
         public string label;
@@ -16,7 +17,7 @@ namespace Game.UI.Components.CharacterDetail
         public IReadOnlyReactiveProperty<string> nextValueText;
         
         public IReadOnlyReactiveProperty<bool> IsUpgrade { get; }
-      
+        
 
         /// <summary>
         /// 

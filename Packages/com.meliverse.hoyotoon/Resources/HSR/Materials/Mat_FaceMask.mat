@@ -1,0 +1,78 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Mat_FaceMask
+  m_Shader: {fileID: 4800000, guid: fa1ff39970429b249abded822852aeba, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _DissolveMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DissolveMask:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _DITHER_FADE_IN: 0
+    - _DissolveDistortionIntensity: 0.01
+    - _DissolveMapAdd: 0
+    - _DissolveMaskUVSet: 0
+    - _DissolveOutlineOffset: 0
+    - _DissolveOutlineSize1: 0.05
+    - _DissolveOutlineSize2: 0
+    - _DissolvePosMaskFilpOn: 0
+    - _DissolvePosMaskGlobalOn: 0
+    - _DissolvePosMaskOn: 0
+    - _DissolvePosMaskWorldON: 0
+    - _DissolveRate: 0
+    - _DissolveUV: 0
+    - _DissolveUseDirection: 0
+    - _DissoveDirecMask: 2
+    - _DissoveON: 0
+    - _DitherAlpha: 1
+    - _EnableAlphaCutoff: 0
+    - _FresnelColorStrength: 1
+    - _OneMinusCharacterOutlineWidthScale: 0
+    - _StencilComp: 8
+    - _StencilMask: 255
+    - _StencilOP: 2
+    - _StencilRef: 0
+    - _UsingDitherAlpha: 0
+    m_Colors:
+    - _CharaWorldSpaceOffset: {r: 0, g: 0, b: 0, a: 0}
+    - _Color: {r: 1, g: 1, b: 1, a: 1}
+    - _DissolveCenter: {r: 0, g: 0, b: 0, a: 0}
+    - _DissolveComponent: {r: 1, g: 0, b: 0, a: 0}
+    - _DissolveDiretcionXYZ: {r: 0, g: 0, b: 0, a: 0}
+    - _DissolveOutlineColor1: {r: 1, g: 1, b: 1, a: 1}
+    - _DissolveOutlineColor2: {r: 0, g: 0, b: 0, a: 0}
+    - _DissolveOutlineSmoothStep: {r: 0, g: 0, b: 0, a: 0}
+    - _DissolvePosMaskPos: {r: 1, g: 0, b: 0, a: 1}
+    - _DissolvePosMaskRootOffset: {r: 0, g: 0, b: 0, a: 0}
+    - _DissolveST: {r: 1, g: 1, b: 0, a: 0}
+    - _DissolveUVSpeed: {r: 0, g: 0, b: 0, a: 0}
+    - _DistortionST: {r: 1, g: 1, b: 0, a: 0}
+    - _FresnelBSI: {r: 1, g: 1, b: 1, a: 0}
+    - _FresnelColor: {r: 0, g: 0, b: 0, a: 0}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

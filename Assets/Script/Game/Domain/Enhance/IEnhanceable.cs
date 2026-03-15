@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Game.Domain.Character;
@@ -6,28 +7,26 @@ using UniRx;
 
 public interface IEnhanceable
 {
+    //TODO:避免外部引用levelsystem,在model中封装方法
     LevelSystem LevelSystem { get; }
     
     public IReadOnlyReactiveProperty<int> LevelRP { get; }
     public IReadOnlyReactiveProperty<int> ExpRP { get; }
     
+    IObservable<Unit> ChangeRP { get; }
     /// <summary>
     /// 用于展示的属性
     /// </summary>
     /// <param name="addedExp"></param>
     /// <returns></returns>
-    public List<StatPreviewData> GetStatPreview(int addedExp);
-    /*int Level { get; }
-    int CurrentExp { get; }
-
-
-    int GetNextLevelExp();
-    bool NeedBreak();
-    int GetMaxLevel();
+    public List<StatPreviewData> GetStatPreview(int addedExp,bool promoting = false);
+    
+    /// <summary>
+    /// 实际增加经验，驱动等级与经验的 ReactiveProperty 更新
+    /// </summary>
+    /// <param name="exp">增加的经验值</param>
+    /// <returns>本次经验变化的结果</returns>
     ExpGainResult AddExp(int exp);
-    bool Breakout();*/
-
-    //public EnhancePreview GetPreviewWithExp(int addedExp);
 }
 
 public enum ExpGainResult

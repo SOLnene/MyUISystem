@@ -17,12 +17,10 @@ public class LevelSystem
         NextLevelExp = GetExpRequired();
     }
     
-    public ExpGainResult AddExp(int exp)
+    public ExpGainResult AddExp(int exp,int maxLevel)
     {
         if (RankMaxed())
             return ExpGainResult.MaxLevelReached;
-    
-        int maxLevel = GetMaxLevel();
         
         if (Level >= maxLevel)
             return ExpGainResult.RankLimitReached;
@@ -44,7 +42,7 @@ public class LevelSystem
             NextLevelExp = GetExpRequired();
             result = ExpGainResult.LeveledUp;
         }
-    
+        Debug.Log("Added Exp: " + exp + ", Current Exp: " + CurrentExp + ", Level: " + Level);
         return result;
     }
     /// <summary>
@@ -68,7 +66,7 @@ public class LevelSystem
         return Mathf.RoundToInt(exp * rarityMultiplier);
     }
 
-    public LevelPreview GetPreviewWithExp(int addedExp)
+    public LevelPreview GetPreviewWithExp(int addedExp,int maxLevel)
     {
         int tempLevel = Level;
         int tempExp = CurrentExp + addedExp;
@@ -77,7 +75,7 @@ public class LevelSystem
 
         while (tempExp >= GetExpRequired(tempLevel))
         {
-            if (tempLevel >= GetMaxLevel())
+            if (tempLevel >= maxLevel)
             {
                 // 经验超出但受Rank限制
                 cappedExpGain -= tempExp - (GetExpRequired(tempLevel) - 1);
@@ -103,13 +101,9 @@ public class LevelSystem
     {
         return Level >= 90;
     }
-    public int GetMaxLevel()
-    {
-        return 90;
-    }
 }
 
-public class LevelPreview
+public struct LevelPreview
 {
     public int finalLevel;
     public int finalExp;

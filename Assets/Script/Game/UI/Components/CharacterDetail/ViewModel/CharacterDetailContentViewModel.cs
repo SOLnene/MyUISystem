@@ -11,7 +11,7 @@ namespace Game.UI.Components.CharacterDetail
 
         public readonly ReactiveProperty<CharacterModel> CurrentCharacter = new ReactiveProperty<CharacterModel>();
     
-        CompositeDisposable disposable;
+        CompositeDisposable disposable  = new CompositeDisposable();
     
         public CharacterDetailContentViewModel(CharacterModel model)
         {
@@ -24,7 +24,10 @@ namespace Game.UI.Components.CharacterDetail
 
         public void Dispose()
         {
-       
+            TabViewModel.Dispose();
+            PreviewViewModel.Dispose();
+            InfoViewModel.Dispose();
+            disposable.Dispose();
         }
     }
 }

@@ -64,6 +64,8 @@ public class CharacterMaterialView : BindableUI<CharacterEnhanceViewmodel>
 			{
 				countText.text = Vm.GetCurrentBookCount().ToString();
 			}).AddTo(this);
+		quickAddButton.onClick.RemoveAllListeners();
+		quickAddButton.onClick.AddListener(Vm.QuickFill);
 	}
 
 	void BindCost()

@@ -9,6 +9,7 @@ namespace Game.UI.Components.CharacterDetail
         public CharacterModel model;
         public ReadOnlyReactiveProperty<string> ExpText { get; }
         public ReadOnlyReactiveProperty<float> ExpProgress { get; }
+        public AttributePageViewModel AttributeViewModel { get; }
 
         CompositeDisposable disposable = new CompositeDisposable();
         public CharacterDetailInfoViewModel(CharacterModel model)
@@ -20,17 +21,22 @@ namespace Game.UI.Components.CharacterDetail
                 {
                     int maxExp = model.LevelSystem.GetExpRequired(level);
                     return $"{exp}/{maxExp}";
-                }).ToReadOnlyReactiveProperty();
+                }).ToReadOnlyReactiveProperty()
+                .AddTo(disposable);
             ExpProgress = model.LevelRP.CombineLatest(model.ExpRP,
                 (level, exp) =>
                 {
                     int maxExp = model.LevelSystem.GetExpRequired(level);
                     return (float)exp/maxExp;
-                }).ToReadOnlyReactiveProperty();
+                }).ToReadOnlyReactiveProperty()
+                .AddTo(disposable);
+
+            AttributeViewModel = new AttributePageViewModel(model);
         }
 
         public void Dispose()
         {
+            AttributeViewModel?.Dispose();
             disposable.Dispose();
         }
     }

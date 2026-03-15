@@ -10,26 +10,30 @@ namespace Game.UI.Components.CharacterDetail
     public class CharacterEnhanceViewmodel : IDisposable
     {
         public IEnhanceable model;
+        public IPromotable promoteModel;
         public CharacterLevelPreviewViewmodel previewVm;
         public IMaterialInput materialInput;
-        
+
         public List<StatItemViewModel> statItemViewModels;
 
         /// <summary>
         /// itemSlots的vm
         /// </summary>
         public List<ItemSlotViewModel> itemViewModels = new List<ItemSlotViewModel>();
-        
+
         //专用 todo:可以不用rp
         public ReactiveProperty<ExpBookType> selectedBook = new ReactiveProperty<ExpBookType>(ExpBookType.None);
+
+        public ReactiveCommand onUpgrade = new ReactiveCommand();
         
         CompositeDisposable disposable = new CompositeDisposable();
-        public CharacterEnhanceViewmodel(IEnhanceable model,IMaterialInput materialInput)
+        public CharacterEnhanceViewmodel(IEnhanceable model, IMaterialInput materialInput)
         {
             this.model = model;
+            promoteModel = model as IPromotable;
             this.materialInput = materialInput;
-            previewVm = new CharacterLevelPreviewViewmodel(model,materialInput.TotalExpRp);
-            
+            previewVm = new CharacterLevelPreviewViewmodel(model, materialInput.TotalExpRp);
+
             var statItemList = new List<StatItemViewModel>();
             var previews = model.GetStatPreview(0);
             foreach (var preview in previews)
@@ -40,18 +44,18 @@ namespace Game.UI.Components.CharacterDetail
                 statItemList.Add(statItem);
             }
             statItemViewModels = statItemList;
-            
+
             //材料部分
             CreateItemViewmodel("expbook_small");
             CreateItemViewmodel("expbook_medium");
-            CreateItemViewmodel( "expbook_large");
-            
+            CreateItemViewmodel("expbook_large");
+
             materialInput.TotalExpRp.Subscribe(
                 value =>
                 {
                     UpdatePreview(value);
                 }).AddTo(disposable);
-           
+
         }
 
         public void UpdatePreview(int exp)
@@ -87,7 +91,7 @@ namespace Game.UI.Components.CharacterDetail
         {
             switch (key)
             {
-                case  "expbook_small":
+                case "expbook_small":
                     return ExpBookType.Small;
                 case "expbook_medium":
                     return ExpBookType.Medium;
@@ -99,31 +103,32 @@ namespace Game.UI.Components.CharacterDetail
             }
             return ExpBookType.None;
         }
-        
+
         public void AddBook(ExpBookType type, int count = 1)
         {
-            if(type!= ExpBookType.None)
-            materialInput.Add(ChangeToKey(type),count);
+            if (type != ExpBookType.None)
+                materialInput.Add(ChangeToKey(type), count);
         }
-        
+
         public void RemoveBook(ExpBookType type, int count = 1)
         {
-            if(type!= ExpBookType.None)
-            materialInput.Remove(ChangeToKey(type),count);
+            if (type != ExpBookType.None)
+                materialInput.Remove(ChangeToKey(type), count);
         }
-        
+
         public int GetCurrentBookCount()
         {
-            if(selectedBook.Value == ExpBookType.None) return 0;
+            if (selectedBook.Value == ExpBookType.None) return 0;
             var key = ChangeToKey(selectedBook.Value);
-            
             return materialInput.Counts[key].Value;
         }
-        
+
         public void ConfirmEnhance()
         {
             int exp = materialInput.GetTotalExp();
-            model.LevelSystem.AddExp(exp);
+            model.AddExp(exp);
+            materialInput.Clear();
+            onUpgrade.Execute(Unit.Default);
         }
 
         public void CreateItemViewmodel(string key)
@@ -146,18 +151,70 @@ namespace Game.UI.Components.CharacterDetail
                     viewModel.selectedCount.Value = count;
                 })
                 .AddTo(disposable);
+
             itemViewModels.Add(viewModel);
-            
+
         }
-        
+
         public void SetSelectedBook(ExpBookType type)
         {
             selectedBook.Value = type;
         }
-        
+
+        /// <summary>
+        /// 快捷加入：自动选择经验书以让角色升级到当前阶级的满级，优先消耗低级书，减少经验溢出
+        /// </summary>
+        public void QuickFill()
+        {
+            int currentLevel = model.LevelRP.Value;
+            int currentExp = model.ExpRP.Value;
+            int maxLevel = promoteModel.GetMaxLevel();
+
+            int needExp = 0;
+
+            // 计算到当前阶级满级所需经验
+            for (int lv = currentLevel; lv < maxLevel; lv++)
+            {
+                int levelExp = model.LevelSystem.GetExpRequired(lv);
+
+                if (lv == currentLevel)
+                    needExp += levelExp - currentExp;
+                else
+                    needExp += levelExp;
+            }
+
+            materialInput.Clear();
+
+            int[] expValue = { 100, 500, 2500 };
+            string[] keys = { "expbook_small", "expbook_medium", "expbook_large" };
+
+            int remainExp = needExp;
+
+            // 先用大的经验书
+            for (int i = expValue.Length - 1; i >= 0; i--)
+            {
+                int count = remainExp / expValue[i];
+
+                if (count >= 1)
+                {
+                    materialInput.Add(keys[i], count);
+                    remainExp -= count * expValue[i];
+                }
+            }
+            if (remainExp > 0)
+            {
+                materialInput.Add("expbook_small", 1);
+            }
+        }
+
         public void Dispose()
         {
             disposable.Dispose();
+            previewVm.Dispose();
+            foreach (var itemSlotVm in itemViewModels)
+            {
+                itemSlotVm.Dispose();
+            }
         }
     }
 }

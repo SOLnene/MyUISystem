@@ -1,7 +1,7 @@
 using SkierFramework;
 namespace Game.UI.Components.CharacterDetail
 {
-    public class CharacterDetailContentView : BindableUI
+    public class CharacterDetailContentView : BindableUI<CharacterDetailContentViewModel>
     {
     #region 控件绑定变量声明，自动生成请勿手改
 		#pragma warning disable 0649
@@ -17,11 +17,11 @@ namespace Game.UI.Components.CharacterDetail
 
         CharacterDetailContentViewModel vm;
     
-        public void Bind(CharacterDetailContentViewModel viewModel)
+        public override void Bind(object viewModel)
         {
-            vm = viewModel;
+            base.Bind(viewModel);
         
-            infoPanelArea.Bind(viewModel.InfoViewModel);
+            infoPanelArea.Bind(Vm.InfoViewModel);
         }
     }
 }
