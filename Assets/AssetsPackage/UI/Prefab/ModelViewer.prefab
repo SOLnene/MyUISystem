@@ -135,7 +135,6 @@ GameObject:
   m_Component:
   - component: {fileID: 7022045072873553327}
   - component: {fileID: 4568052538829725976}
-  - component: {fileID: 2831232934438865817}
   m_Layer: 5
   m_Name: Camera
   m_TagString: Untagged
@@ -189,7 +188,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.01
   far clip plane: 1000
   field of view: 40
   orthographic: 0
@@ -209,14 +208,6 @@ Camera:
   m_OcclusionCulling: 1
   m_StereoConvergence: 10
   m_StereoSeparation: 0.022
---- !u!81 &2831232934438865817
-AudioListener:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1348549039384608430}
-  m_Enabled: 1
 --- !u!1 &2089722280539027885
 GameObject:
   m_ObjectHideFlags: 0
@@ -280,7 +271,7 @@ Camera:
     y: 0
     width: 1
     height: 1
-  near clip plane: 0.3
+  near clip plane: 0.01
   far clip plane: 1000
   field of view: 40
   orthographic: 0
@@ -431,14 +422,23 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   modelRoot: {fileID: 4408487495821630833}
   cameraPivot: {fileID: 4435302963657511762}
+  displayCamera: {fileID: 7421745948605561341}
   modelCamera: {fileID: 7421745948605561341}
+  planeTransform: {fileID: 1613273054095183001}
   rotateSensitivity: 0.4
   smoothSpeed: 10
   minPitch: -45
   maxPitch: 45
   zoomSensitivity: 1
-  minDistance: 0
-  maxDistance: 3
+  minDistance: 1
+  maxDistance: 4
+  heightLimit: 0.15
+  resetSpeed: 0.5
+  presets:
+  - {fileID: 11400000, guid: e2a630c9ed4de0345aeecc078f1e6e1f, type: 2}
+  - {fileID: 11400000, guid: d08d9a67e6a197c438090bca6d23535c, type: 2}
+  - {fileID: 11400000, guid: a4f779037c031504db3b8fe85a360ac1, type: 2}
+  - {fileID: 11400000, guid: aafc5e53b77792f438626cb26066cbf4, type: 2}
 --- !u!1 &7929226565961233964
 GameObject:
   m_ObjectHideFlags: 0
@@ -556,7 +556,6 @@ GameObject:
   - component: {fileID: 4885454844442239918}
   - component: {fileID: 8368887556924924349}
   - component: {fileID: 3216556704354282222}
-  - component: {fileID: 330277034858268560}
   m_Layer: 12
   m_Name: Plane
   m_TagString: Untagged
@@ -651,21 +650,6 @@ MeshCollider:
   m_Convex: 0
   m_CookingOptions: 30
   m_Mesh: {fileID: 10209, guid: 0000000000000000e000000000000000, type: 0}
---- !u!114 &330277034858268560
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8094103927006642862}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3c69633cd28e47e489b73ebf994de136, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  characterRoot: {fileID: 1559210902965436206}
-  reflectionPlane: {fileID: 1613273054095183001}
-  depthScale: 0.6
 --- !u!1 &8261194232129157336
 GameObject:
   m_ObjectHideFlags: 0

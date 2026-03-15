@@ -1,4 +1,5 @@
 using System;
+using DG.Tweening;
 using UnityEngine;
 using UnityEngine.Serialization;
 
@@ -36,7 +37,10 @@ public class ModelViewer : SingletonMono<ModelViewer>
     // 当前值（用于插值平滑）
     float currentYaw;
     float currentPitch;
-
+    
+    bool isTransitioning; // 是否正在过渡中（如预设位切换）
+    //先这样测试
+    [SerializeField]public  CameraPreset[] presets;
     void Start()
     {
         // 初始化，防止启动时猛烈旋转
@@ -75,13 +79,15 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     void ApplyTransforms()
     {
+        /*
         // 模型只绕着自己的 Y 轴转（转身）
         if (modelRoot)
-            modelRoot.localRotation = Quaternion.Euler(0, currentYaw, 0);
+            cameraPivot.localRotation = Quaternion.Euler(0, currentYaw, 0);
+            */
 
         // 相机父节点只绕 X 轴转（抬头/低头）
         if (cameraPivot)
-            cameraPivot.localRotation = Quaternion.Euler(currentPitch, 0, 0);
+            cameraPivot.localRotation = Quaternion.Euler(currentPitch, currentYaw, 0);
 
         
     }
@@ -90,7 +96,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
     public void Drag(Vector2 delta)
     {
         // 水平滑动 -> 修改模型旋转
-        targetYaw -= delta.x * rotateSensitivity; 
+        targetYaw += delta.x * rotateSensitivity; 
         
         // 垂直滑动 -> 修改相机俯仰
         targetPitch += delta.y * rotateSensitivity;
@@ -161,6 +167,20 @@ public class ModelViewer : SingletonMono<ModelViewer>
             targetPos = unitLocal * maxAllowedDist;
             Debug.Log("After Clamp: " + targetPos);
         }
+    }
+    
+    public void SwitchToPreset(CameraPreset preset)
+    {
+        isTransitioning = true;
+    
+        // 使用 DOTween 平滑修改你的目标值（targetPos, targetPitch 等）
+        // 注意：修改的是 targetPos 而不是 currentPos，这样之后你依然可以平滑旋转
+        DOTween.To(() => targetPos, x => targetPos = x, preset.cameraLocalPosition, preset.transitionDuration);
+        DOTween.To(() => targetPitch, x => targetPitch = x, preset.pitch, preset.transitionDuration);
+        DOTween.To(() => targetYaw, y => targetYaw = y, preset.yaw, preset.transitionDuration);
+        // 甚至可以做 FOV 的动画
+        displayCamera.DOFieldOfView(preset.fov, preset.transitionDuration)
+            .OnComplete(() => isTransitioning = false);
     }
     
     public void ResetView()

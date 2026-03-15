@@ -10,25 +10,28 @@ namespace Game.UI.Components.CharacterDetail
         //UIControlData
     #region 控件绑定变量声明，自动生成请勿手改
 		#pragma warning disable 0649
-		[ControlBinding]
-		private RectTransform topBarLayer;
-		[ControlBinding]
-		private RectTransform contentLayer;
-		[ControlBinding]
-		private RectTransform bottomLayer;
-		[ControlBinding]
-		private TextMeshProUGUI charaText;
-		[ControlBinding]
-		private CharacterDetailContentView contentView;
-		[ControlBinding]
-		private Image final;
-		[ControlBinding]
-		private BindableUI enhancePanel;
-		[ControlBinding]
-		private BindableUI promotePanel;
+        [ControlBinding]
+        private RectTransform topBarLayer;
+        [ControlBinding]
+        private RectTransform contentLayer;
+        [ControlBinding]
+        private RectTransform bottomLayer;
+        [ControlBinding]
+        private TextMeshProUGUI charaText;
+        [ControlBinding]
+        private CharacterDetailContentView contentView;
+        [ControlBinding]
+        private Image final;
+        [ControlBinding]
+        private BindableUI enhancePanel;
+        [ControlBinding]
+        private BindableUI promotePanel;
+        [ControlBinding]
+        private Button[] TabItem;
 
 		#pragma warning restore 0649
 #endregion
+
 
 
         
@@ -76,6 +79,7 @@ namespace Game.UI.Components.CharacterDetail
             viewModel.promoteViewmodel.onPromote
                 .Subscribe(_ => RefreshUpgradeOrPromotePanel())
                 .AddTo(disposable);
+            SetTabItems();
         }
     
         void RefreshUpgradeOrPromotePanel()
@@ -89,7 +93,16 @@ namespace Game.UI.Components.CharacterDetail
             promotePanel.gameObject.SetActive(!showUpgrade);
         }
 
-        
+        void SetTabItems()
+        {
+            for (int i = 0; i < TabItem.Length; i++)
+            {
+                int index = i;
+                TabItem[i].onClick.RemoveAllListeners();
+               TabItem[i].onClick.AddListener(
+                   ()=>ModelViewer.Instance.SwitchToPreset(ModelViewer.Instance.presets[index]));
+            }
+        }
         public override void OnAddListener()
         {
             base.OnAddListener();
