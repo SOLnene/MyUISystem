@@ -4,6 +4,7 @@ using UnityEditor;
 [CustomEditor(typeof(ModelViewer))]
 public class ModelViewerEditor : Editor
 {
+    private CameraPreset previewPreset; // 用于Scene应用测试
     public override void OnInspectorGUI()
     {
         base.OnInspectorGUI();
@@ -72,4 +73,7 @@ public class ModelViewerEditor : Editor
             Debug.LogError("导出失败：请检查 ModelViewer 面板，确保 displayCamera, cameraPivot 和 modelRoot 都已赋值！");
         }
     }
+    
+  
+
 }

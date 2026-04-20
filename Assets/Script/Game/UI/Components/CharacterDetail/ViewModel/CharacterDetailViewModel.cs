@@ -9,7 +9,9 @@ namespace Game.UI.Components.CharacterDetail
         public CharacterEnhanceViewmodel enhanceViewmodel;
         public CharacterPromoteViewmodel promoteViewmodel;
         public ExpBookMaterialInput materialInput;
-    
+
+      
+        
         CompositeDisposable disposable = new CompositeDisposable();
         public CharacterModel model;
         public CharacterDetailViewModel(CharacterModel model)

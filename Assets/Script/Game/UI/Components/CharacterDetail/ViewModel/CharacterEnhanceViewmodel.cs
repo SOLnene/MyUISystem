@@ -25,12 +25,20 @@ namespace Game.UI.Components.CharacterDetail
         public ReactiveProperty<ExpBookType> selectedBook = new ReactiveProperty<ExpBookType>(ExpBookType.None);
 
         public ReactiveCommand onUpgrade = new ReactiveCommand();
+
+        public Action onBack;
+        //名字
+        public string modelName;
         
         CompositeDisposable disposable = new CompositeDisposable();
         public CharacterEnhanceViewmodel(IEnhanceable model, IMaterialInput materialInput)
         {
             this.model = model;
             promoteModel = model as IPromotable;
+            //todo:避免强转
+            modelName = (model as CharacterModel).Name.Value;
+            this.onBack = onBack;
+            
             this.materialInput = materialInput;
             previewVm = new CharacterLevelPreviewViewmodel(model, materialInput.TotalExpRp);
 
@@ -207,6 +215,11 @@ namespace Game.UI.Components.CharacterDetail
             }
         }
 
+        public void SetOnBack(Action command)
+        {
+            onBack = command;
+        }
+        
         public void Dispose()
         {
             disposable.Dispose();

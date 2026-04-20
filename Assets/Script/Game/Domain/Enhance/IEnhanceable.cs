@@ -7,7 +7,6 @@ using UniRx;
 
 public interface IEnhanceable
 {
-    //TODO:避免外部引用levelsystem,在model中封装方法
     LevelSystem LevelSystem { get; }
     
     public IReadOnlyReactiveProperty<int> LevelRP { get; }

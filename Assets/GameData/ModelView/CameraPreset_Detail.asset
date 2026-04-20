@@ -12,8 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4ac1c43819c0060438a7c44b4975d4ed, type: 3}
   m_Name: CameraPreset_Detail
   m_EditorClassIdentifier: 
-  cameraLocalPosition: {x: -0.045332663, y: 0.11468972, z: 1.4328856}
+  key: Detail
+  allowDrag: 0
+  cameraLocalPosition: {x: -0.045332663, y: 0.11468972, z: 1}
   pitch: -18.608276
   yaw: -25.951874
-  fov: 40
+  fov: 30
   transitionDuration: 0.5
+  animationClip: {fileID: 7400000, guid: 8241cc6ff25d7c943bea804ccd9528b7, type: 2}
+  crossFadeDuration: 0.3

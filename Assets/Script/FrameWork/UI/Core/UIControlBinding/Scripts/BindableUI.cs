@@ -18,7 +18,11 @@ public class BindableUI : MonoBehaviour,IBindableUI
 
     public virtual void Bind(object data)
     {
-        
+        UIControlData ctrlData = gameObject.GetComponent<UIControlData>();
+        if(ctrlData != null)
+        {
+            ctrlData.BindDataTo(this);
+        }
     }
     
     protected virtual void AfterBind()

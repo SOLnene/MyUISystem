@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6798996311efe544998457ec8b8932e6, type: 3}
+  m_Name: Face_Idle
+  m_EditorClassIdentifier: 
+  canBlink: 1
+  expressionName: Face_Idle
+  blends:
+  - blendShapeName: Brow_Trouble_L
+    weight: 0.3
+  - blendShapeName: Brow_Trouble_R
+    weight: 0.3
+  - blendShapeName: Brow_Angry_L
+    weight: 0.3
+  - blendShapeName: Brow_Angry_R
+    weight: 0.3
+  - blendShapeName: Eye_Ha
+    weight: 0.05
+  - blendShapeName: Eye_Lowereyelid
+    weight: 0.12

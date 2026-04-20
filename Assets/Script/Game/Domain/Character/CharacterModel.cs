@@ -8,6 +8,7 @@ namespace Game.Domain.Character
         //静态数据
         public CharacterDefinition Definition { get; }
 
+        //todo:名字不该是rp
         public IReadOnlyReactiveProperty<string> Name { get; }
         public IReadOnlyReactiveProperty<int> Star { get; }
         public IReadOnlyReactiveProperty<string> Description { get; }

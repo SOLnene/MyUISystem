@@ -26,19 +26,21 @@ namespace Game.UI.Components.CharacterDetail
         private BindableUI enhancePanel;
         [ControlBinding]
         private BindableUI promotePanel;
-        [ControlBinding]
-        private Button[] TabItem;
+        
 
 		#pragma warning restore 0649
 #endregion
 
-
+        [SerializeField]
+        CharacterDetailTabItem[] tabItems;
 
         
         private const float TOP_BAR_HEIGHT = 150f;     // 根据设计稿改
         private const float BOTTOM_BAR_HEIGHT = 140f;
 
         CharacterDetailViewModel vm;
+
+        int currentIndex = 0;
         CompositeDisposable disposable = new CompositeDisposable();
         public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
         {
@@ -80,6 +82,12 @@ namespace Game.UI.Components.CharacterDetail
                 .Subscribe(_ => RefreshUpgradeOrPromotePanel())
                 .AddTo(disposable);
             SetTabItems();
+            //初始化为idle
+            //todo:切换角色初始化
+            //todo:不写死
+            ModelViewer.Instance.SwitchToPreset(ModelViewer.Instance.presets[0],true);
+            //todo:如果脸部动画很明显，需要给facepreset也做一个immediate方法
+            ModelViewer.Instance.SwitchFacePreset(ModelViewer.Instance.facePresets[0]);
         }
     
         void RefreshUpgradeOrPromotePanel()
@@ -95,14 +103,38 @@ namespace Game.UI.Components.CharacterDetail
 
         void SetTabItems()
         {
-            for (int i = 0; i < TabItem.Length; i++)
+            for (int i = 0; i < tabItems.Length; i++)
             {
                 int index = i;
-                TabItem[i].onClick.RemoveAllListeners();
-               TabItem[i].onClick.AddListener(
-                   ()=>ModelViewer.Instance.SwitchToPreset(ModelViewer.Instance.presets[index]));
+                tabItems[i].Bind(i, ()=>
+                {
+                    OnTabClicked(index);
+                });
             }
         }
+        
+        void OnTabClicked(int index)
+        {
+            if (currentIndex == index) return;
+
+            // 取消旧选中
+            if (currentIndex >= 0)
+            {
+                var oldTab = tabItems[currentIndex];
+                oldTab.SetSelected(false);
+            }
+
+            // 设置新选中
+            currentIndex = index;
+            var newTab = tabItems[currentIndex];
+            newTab.SetSelected(true);
+            
+            //SwitchContent(index);
+            
+            ModelViewer.Instance.SwitchToPreset(ModelViewer.Instance.presets[index]);
+            ModelViewer.Instance.SwitchFacePreset(ModelViewer.Instance.facePresets[index]);
+        }
+
         public override void OnAddListener()
         {
             base.OnAddListener();

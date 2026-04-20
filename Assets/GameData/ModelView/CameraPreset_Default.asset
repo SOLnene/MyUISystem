@@ -12,8 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4ac1c43819c0060438a7c44b4975d4ed, type: 3}
   m_Name: CameraPreset_Default
   m_EditorClassIdentifier: 
+  key: Default
+  allowDrag: 1
   cameraLocalPosition: {x: 0, y: -0.5, z: 3.500001}
   pitch: -0
   yaw: 0
-  fov: 40
+  fov: 30
   transitionDuration: 0.5
+  animationClip: {fileID: 7400000, guid: c77cd255618bf484aa78fba507e320b5, type: 2}
+  crossFadeDuration: 0.3

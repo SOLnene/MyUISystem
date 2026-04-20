@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using SkierFramework;
+using UniRx;
 using UnityEngine;
 namespace Game.UI.Components.CharacterDetail
 {
@@ -18,11 +19,13 @@ namespace Game.UI.Components.CharacterDetail
 #endregion
 
 
-
+	    [SerializeField]
+	    UITopBar topBar;
 	    
         public override void Bind(object viewmodel)
         {
             base.Bind(viewmodel);
+            topBar.Bind(Vm.modelName, new ReactiveProperty<int>(10000), Vm.onBack);
             upgradePanel.Bind(Vm.previewVm);
             for (int i = 0; i < statItems.Length; i++)
             {

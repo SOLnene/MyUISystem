@@ -3,8 +3,10 @@ using Game.Domain.Character;
 using UniRx;
 namespace Game.UI.Components.CharacterDetail
 {
+    
     public class CharacterDetailContentViewModel : IDisposable
     {
+        //todo:弃用 不拆那么细
         public CharacterDetailTabViewModel TabViewModel { get; private set; }
         public CharacterDetailPreviewViewModel PreviewViewModel { get; private set; }
         public CharacterDetailInfoViewModel InfoViewModel { get; private set; }

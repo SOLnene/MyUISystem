@@ -12,8 +12,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4ac1c43819c0060438a7c44b4975d4ed, type: 3}
   m_Name: CameraPreset_Relic
   m_EditorClassIdentifier: 
+  key: Relic
+  allowDrag: 0
   cameraLocalPosition: {x: -0.030418038, y: 0.043082803, z: 1.5191263}
   pitch: -9.237091
   yaw: -7.9175415
-  fov: 40
+  fov: 30
   transitionDuration: 0.5
+  animationClip: {fileID: 7400000, guid: 640c02053b715ec4ca1c8b8a70c58245, type: 2}
+  crossFadeDuration: 0.3

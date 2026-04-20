@@ -7,6 +7,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
 {
     [Header("Transforms")]
     [SerializeField] Transform modelRoot;
+    //角色胸口
     [SerializeField] Transform cameraPivot;
     [FormerlySerializedAs("modelCamera")][SerializeField] Camera displayCamera;
     [SerializeField] Camera modelCamera;
@@ -38,9 +39,19 @@ public class ModelViewer : SingletonMono<ModelViewer>
     float currentYaw;
     float currentPitch;
     
-    bool isTransitioning; // 是否正在过渡中（如预设位切换）
+    // 是否在默认界面（可以手动控制视角）
+    bool canDrag;
+    //是否正在切换镜头/播放动画
+    bool isInTransition;
+
+    Sequence seq;
+    //todo:动态获取/更新
+    [SerializeField] CharacterPreviewAnimator characterPreviewAnimator;
     //先这样测试
     [SerializeField]public  CameraPreset[] presets;
+    [SerializeField] public FaceExpressionPreset[] facePresets;
+    
+    [SerializeField] FaceController faceController;
     void Start()
     {
         // 初始化，防止启动时猛烈旋转
@@ -57,11 +68,10 @@ public class ModelViewer : SingletonMono<ModelViewer>
     // 每一帧平滑处理
     void Update()
     {
+    
         // 1. 平滑插值 (Lerp)
         currentYaw = Mathf.Lerp(currentYaw, targetYaw, Time.deltaTime * smoothSpeed);
         currentPitch = Mathf.Lerp(currentPitch, targetPitch, Time.deltaTime * smoothSpeed);
-        Debug.Log("Current Camera Local Pos: " + currentPos);
-        Debug.Log("Current Camera target Pos: " + targetPos);
         currentPos = Vector3.Lerp(currentPos, targetPos, Time.deltaTime * smoothSpeed);
        
         ApplyTransforms();
@@ -79,22 +89,18 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     void ApplyTransforms()
     {
-        /*
-        // 模型只绕着自己的 Y 轴转（转身）
-        if (modelRoot)
-            cameraPivot.localRotation = Quaternion.Euler(0, currentYaw, 0);
-            */
-
         // 相机父节点只绕 X 轴转（抬头/低头）
         if (cameraPivot)
             cameraPivot.localRotation = Quaternion.Euler(currentPitch, currentYaw, 0);
-
-        
     }
 
     // 由 PreviewDragController 调用
     public void Drag(Vector2 delta)
     {
+        if (!canDrag)
+        {
+            return;
+        }
         // 水平滑动 -> 修改模型旋转
         targetYaw += delta.x * rotateSensitivity; 
         
@@ -105,6 +111,10 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     public void Scroll(float scrollDelta, Vector2 viewportPos)
     {
+        if (!canDrag)
+        {
+            return;
+        }
         Vector3 targetDir;
         
         Ray ray = displayCamera.ViewportPointToRay(viewportPos);
@@ -115,7 +125,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
             targetDir = ray.direction;
             Vector3 expectedWorldPos = displayCamera.transform.position + targetDir * step;
             //camerapivot在模型胸口处
-            float distanceToModel = Vector3.Distance(expectedWorldPos, cameraPivot.transform.position);
+            float distanceToModel =Math.Abs(expectedWorldPos.z - cameraPivot.transform.position.z) ;
             if (distanceToModel > maxDistance || distanceToModel < minDistance)
             {
                 return;
@@ -169,18 +179,49 @@ public class ModelViewer : SingletonMono<ModelViewer>
         }
     }
     
-    public void SwitchToPreset(CameraPreset preset)
+    public void SwitchToPreset(CameraPreset preset,bool immediate = false)
     {
-        isTransitioning = true;
+        canDrag = preset.allowDrag;
+        if (isInTransition)
+        {
+            return;
+        }
+        isInTransition = true;
+        // Kill旧动画
+        if (seq != null && seq.IsActive())
+            seq.Kill();
+        
+        seq = DOTween.Sequence();
+        seq.Join(DOTween.To(() => targetPos, x => targetPos = x, preset.cameraLocalPosition, preset.transitionDuration));
+        seq.Join(DOTween.To(() => targetPitch, x => targetPitch = x, preset.pitch, preset.transitionDuration));
+        seq.Join(DOTween.To(() => targetYaw, y => targetYaw = y, preset.yaw, preset.transitionDuration));
+        if (immediate)
+        {
+            targetPos = currentPos = preset.cameraLocalPosition;
+            targetPitch = currentPitch = preset.pitch;
+            targetYaw = currentYaw = preset.yaw;
+            characterPreviewAnimator.ApplyPresetImmediate(preset);
+            ApplyTransforms();
+
+            if (displayCamera)
+                displayCamera.transform.localPosition = currentPos;
+            isInTransition = false;
+        }
+        else
+        {
+            characterPreviewAnimator.ApplyPreset(preset);
+        }
+       
+        seq.OnComplete(() =>
+        {
+            isInTransition = false;
+            canDrag = preset.allowDrag;
+        });
+    }
     
-        // 使用 DOTween 平滑修改你的目标值（targetPos, targetPitch 等）
-        // 注意：修改的是 targetPos 而不是 currentPos，这样之后你依然可以平滑旋转
-        DOTween.To(() => targetPos, x => targetPos = x, preset.cameraLocalPosition, preset.transitionDuration);
-        DOTween.To(() => targetPitch, x => targetPitch = x, preset.pitch, preset.transitionDuration);
-        DOTween.To(() => targetYaw, y => targetYaw = y, preset.yaw, preset.transitionDuration);
-        // 甚至可以做 FOV 的动画
-        displayCamera.DOFieldOfView(preset.fov, preset.transitionDuration)
-            .OnComplete(() => isTransitioning = false);
+    public void SwitchFacePreset(FaceExpressionPreset preset)
+    {
+        faceController.ApplyFacePreset(preset);
     }
     
     public void ResetView()
