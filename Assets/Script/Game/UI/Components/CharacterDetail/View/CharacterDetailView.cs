@@ -40,7 +40,7 @@ namespace Game.UI.Components.CharacterDetail
 
         CharacterDetailViewModel vm;
 
-        int currentIndex = 0;
+        int currentIndex = -1;
         CompositeDisposable disposable = new CompositeDisposable();
         public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
         {
@@ -85,9 +85,8 @@ namespace Game.UI.Components.CharacterDetail
             //初始化为idle
             //todo:切换角色初始化
             //todo:不写死
-            ModelViewer.Instance.SwitchToPreset(ModelViewer.Instance.presets[0],true);
+            SetCurrentTab(0, true);
             //todo:如果脸部动画很明显，需要给facepreset也做一个immediate方法
-            ModelViewer.Instance.SwitchFacePreset(ModelViewer.Instance.facePresets[0]);
         }
     
         void RefreshUpgradeOrPromotePanel()
@@ -103,6 +102,11 @@ namespace Game.UI.Components.CharacterDetail
 
         void SetTabItems()
         {
+            if (tabItems == null || tabItems.Length == 0)
+            {
+                return;
+            }
+
             for (int i = 0; i < tabItems.Length; i++)
             {
                 int index = i;
@@ -115,7 +119,11 @@ namespace Game.UI.Components.CharacterDetail
         
         void OnTabClicked(int index)
         {
-            if (currentIndex == index) return;
+            if (currentIndex >= -1)
+            {
+                SetCurrentTab(index, false);
+                return;
+            }
 
             // 取消旧选中
             if (currentIndex >= 0)
@@ -133,6 +141,62 @@ namespace Game.UI.Components.CharacterDetail
             
             ModelViewer.Instance.SwitchToPreset(ModelViewer.Instance.presets[index]);
             ModelViewer.Instance.SwitchFacePreset(ModelViewer.Instance.facePresets[index]);
+        }
+
+        void SetCurrentTab(int index, bool instant)
+        {
+            if (tabItems == null || tabItems.Length == 0)
+            {
+                ApplyTabPresentation(index, instant);
+                currentIndex = index;
+                return;
+            }
+
+            if (index < 0 || index >= tabItems.Length)
+            {
+                return;
+            }
+
+            if (currentIndex == index && currentIndex >= 0)
+            {
+                tabItems[currentIndex].SetSelected(true, instant);
+                ApplyTabPresentation(index, instant);
+                return;
+            }
+
+            if (currentIndex >= 0 && currentIndex < tabItems.Length)
+            {
+                tabItems[currentIndex].SetSelected(false, instant);
+            }
+
+            currentIndex = index;
+            tabItems[currentIndex].SetSelected(true, instant);
+            ApplyTabPresentation(index, instant);
+        }
+
+        void ApplyTabPresentation(int index, bool immediate)
+        {
+            if (ModelViewer.Instance == null)
+            {
+                return;
+            }
+
+            if (ModelViewer.Instance.presets != null && index >= 0 && index < ModelViewer.Instance.presets.Length)
+            {
+                ModelViewer.Instance.SwitchToPreset(ModelViewer.Instance.presets[index], immediate);
+            }
+
+            if (ModelViewer.Instance.facePresets != null && index >= 0 && index < ModelViewer.Instance.facePresets.Length)
+            {
+                ModelViewer.Instance.SwitchFacePreset(ModelViewer.Instance.facePresets[index]);
+            }
+
+            SwitchTabContentShell(index);
+        }
+
+        void SwitchTabContentShell(int index)
+        {
+            // todo: tab 对应页面未接入，先保留空壳入口
         }
 
         public override void OnAddListener()
