@@ -67,11 +67,11 @@ namespace Game.UI.Components.CharacterDetail
            
             enhancePanel.Bind(viewModel.enhanceViewmodel);
             promotePanel.Bind(viewModel.promoteViewmodel);
-            contentView.gameObject.SetActive(false);
-
-           
+            contentView.gameObject.SetActive(true);
+            enhancePanel.gameObject.SetActive(false);
+            promotePanel.gameObject.SetActive(false);
             // 初始化时先决定显示哪个面板
-            RefreshUpgradeOrPromotePanel();
+            //RefreshUpgradeOrPromotePanel();
 
             // 升级后/突破后重新判断一次
             viewModel.enhanceViewmodel.onUpgrade

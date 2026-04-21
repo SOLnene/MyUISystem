@@ -5,8 +5,8 @@ namespace Game.UI.Components.CharacterDetail
     {
     #region 控件绑定变量声明，自动生成请勿手改
 		#pragma warning disable 0649
-        [ControlBinding]
-        private CharacterDetailTabView tabArea;
+        /*[ControlBinding]
+        private CharacterDetailTabView tabArea;*/
         [ControlBinding]
         private CharacterDetailPreviewView characterPreviewArea;
         [ControlBinding]

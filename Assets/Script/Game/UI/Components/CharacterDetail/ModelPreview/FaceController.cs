@@ -204,7 +204,6 @@ public class FaceController : MonoBehaviour
         {
             SetExpression("Eye_WinkC_L",1);
             SetExpression("Eye_WinkC_R",1);
-            Debug.Log("开始眨眼");
             // 延迟一小段时间后复位（闭眼时间 ≈ 0.08~0.15 秒）
             DOVirtual.DelayedCall(Random.Range(minCloseDuration, maxCloseDuration), () =>
             {
@@ -212,7 +211,6 @@ public class FaceController : MonoBehaviour
                 {
                     SetExpression("Eye_WinkC_L",0);
                     SetExpression("Eye_WinkC_R",0);
-                    Debug.Log("结束眨眼");
                 }
             });
             
