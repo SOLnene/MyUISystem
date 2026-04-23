@@ -43,6 +43,10 @@ public class ModelViewer : SingletonMono<ModelViewer>
     bool canDrag;
     //是否正在切换镜头/播放动画
     bool isInTransition;
+    bool cameraTransitionPending;
+    bool animationTransitionPending;
+    bool faceTransitionPending;
+    bool transitionAllowDrag;
 
     Sequence seq;
     //todo:动态获取/更新
@@ -52,6 +56,9 @@ public class ModelViewer : SingletonMono<ModelViewer>
     [SerializeField] public FaceExpressionPreset[] facePresets;
     
     [SerializeField] FaceController faceController;
+
+    public bool IsInTransition => isInTransition;
+    public event Action OnPreviewTransitionCompleted;
     void Start()
     {
         // 初始化，防止启动时猛烈旋转
@@ -179,49 +186,137 @@ public class ModelViewer : SingletonMono<ModelViewer>
         }
     }
     
-    public void SwitchToPreset(CameraPreset preset,bool immediate = false)
+    public void SwitchPreview(int index, bool immediate = false)
     {
-        canDrag = preset.allowDrag;
         if (isInTransition)
         {
             return;
         }
+
+        if (presets == null || index < 0 || index >= presets.Length)
+        {
+            return;
+        }
+
+        CameraPreset preset = presets[index];
+        FaceExpressionPreset facePreset = facePresets != null && index >= 0 && index < facePresets.Length
+            ? facePresets[index]
+            : null;
+
+        BeginTransition(preset.allowDrag);
+        StartCameraTransition(preset, immediate);
+        StartAnimationTransition(preset, immediate);
+        StartFaceTransition(facePreset);
+    }
+
+    public void SwitchToPreset(CameraPreset preset,bool immediate = false)
+    {
+        if (isInTransition)
+        {
+            return;
+        }
+
+        BeginTransition(preset.allowDrag);
+        StartCameraTransition(preset, immediate);
+        StartAnimationTransition(preset, immediate);
+        faceTransitionPending = false;
+        TryCompleteTransition();
+    }
+
+    void BeginTransition(bool allowDrag)
+    {
         isInTransition = true;
+        transitionAllowDrag = allowDrag;
+        canDrag = false;
+        cameraTransitionPending = true;
+        animationTransitionPending = true;
+        faceTransitionPending = true;
+    }
+
+    void StartCameraTransition(CameraPreset preset, bool immediate)
+    {
         // Kill旧动画
         if (seq != null && seq.IsActive())
+        {
             seq.Kill();
-        
-        seq = DOTween.Sequence();
-        seq.Join(DOTween.To(() => targetPos, x => targetPos = x, preset.cameraLocalPosition, preset.transitionDuration));
-        seq.Join(DOTween.To(() => targetPitch, x => targetPitch = x, preset.pitch, preset.transitionDuration));
-        seq.Join(DOTween.To(() => targetYaw, y => targetYaw = y, preset.yaw, preset.transitionDuration));
+        }
+
         if (immediate)
         {
             targetPos = currentPos = preset.cameraLocalPosition;
             targetPitch = currentPitch = preset.pitch;
             targetYaw = currentYaw = preset.yaw;
-            characterPreviewAnimator.ApplyPresetImmediate(preset);
             ApplyTransforms();
 
             if (displayCamera)
+            {
                 displayCamera.transform.localPosition = currentPos;
-            isInTransition = false;
+            }
+
+            MarkCameraTransitionComplete();
+            return;
         }
-        else
-        {
-            characterPreviewAnimator.ApplyPreset(preset);
-        }
-       
+
+        seq = DOTween.Sequence();
+        seq.Join(DOTween.To(() => targetPos, x => targetPos = x, preset.cameraLocalPosition, preset.transitionDuration));
+        seq.Join(DOTween.To(() => targetPitch, x => targetPitch = x, preset.pitch, preset.transitionDuration));
+        seq.Join(DOTween.To(() => targetYaw, y => targetYaw = y, preset.yaw, preset.transitionDuration));
         seq.OnComplete(() =>
         {
-            isInTransition = false;
-            canDrag = preset.allowDrag;
+            MarkCameraTransitionComplete();
         });
+    }
+
+    void StartAnimationTransition(CameraPreset preset, bool immediate)
+    {
+        if (immediate)
+        {
+            characterPreviewAnimator.ApplyPresetImmediate(preset, MarkAnimationTransitionComplete);
+            return;
+        }
+
+        characterPreviewAnimator.ApplyPreset(preset, MarkAnimationTransitionComplete);
     }
     
     public void SwitchFacePreset(FaceExpressionPreset preset)
     {
         faceController.ApplyFacePreset(preset);
+    }
+
+    void StartFaceTransition(FaceExpressionPreset preset)
+    {
+        SwitchFacePreset(preset);
+        MarkFaceTransitionComplete();
+    }
+
+    void MarkCameraTransitionComplete()
+    {
+        cameraTransitionPending = false;
+        TryCompleteTransition();
+    }
+
+    void MarkAnimationTransitionComplete()
+    {
+        animationTransitionPending = false;
+        TryCompleteTransition();
+    }
+
+    void MarkFaceTransitionComplete()
+    {
+        faceTransitionPending = false;
+        TryCompleteTransition();
+    }
+
+    void TryCompleteTransition()
+    {
+        if (cameraTransitionPending || animationTransitionPending || faceTransitionPending)
+        {
+            return;
+        }
+
+        isInTransition = false;
+        canDrag = transitionAllowDrag;
+        OnPreviewTransitionCompleted?.Invoke();
     }
     
     public void ResetView()

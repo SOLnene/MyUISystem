@@ -184,8 +184,6 @@ public class FaceController : MonoBehaviour
         {
             SetExpression(blend.blendShapeName, blend.weight * intensity);
         }
-
-        Debug.Log($"应用表情预设: {preset.expressionName} (强度: {intensity})");
     }
 
     public void SetBlink()

@@ -119,6 +119,16 @@ namespace Game.UI.Components.CharacterDetail
         
         void OnTabClicked(int index)
         {
+            if (currentIndex == index)
+            {
+                return;
+            }
+
+            if (ModelViewer.Instance != null && ModelViewer.Instance.IsInTransition)
+            {
+                return;
+            }
+
             if (currentIndex >= -1)
             {
                 SetCurrentTab(index, false);
@@ -181,15 +191,7 @@ namespace Game.UI.Components.CharacterDetail
                 return;
             }
 
-            if (ModelViewer.Instance.presets != null && index >= 0 && index < ModelViewer.Instance.presets.Length)
-            {
-                ModelViewer.Instance.SwitchToPreset(ModelViewer.Instance.presets[index], immediate);
-            }
-
-            if (ModelViewer.Instance.facePresets != null && index >= 0 && index < ModelViewer.Instance.facePresets.Length)
-            {
-                ModelViewer.Instance.SwitchFacePreset(ModelViewer.Instance.facePresets[index]);
-            }
+            ModelViewer.Instance.SwitchPreview(index, immediate);
 
             SwitchTabContentShell(index);
         }

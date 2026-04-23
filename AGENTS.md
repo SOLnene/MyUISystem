@@ -22,6 +22,9 @@
 - UI 优先遵循 UIConfig / UIType / UIView
 - 资源加载优先复用 ResourceManager
 - 优先小范围、可验证改动
+- 如需使用外部 sprite，只允许从 `F:\ChormeDownload\resources-main\resources-main\resources\gi\Sprite` 读取；必须先导入到项目 `Assets/Art` 下按用途归类的目录并应用项目内资源引用，禁止直接引用外部绝对路径或运行时加载外部图片。
+- 新增资源默认优先放入现有的最贴近用途目录；除非我明确指定新目录或先确认过，否则不要为了单次需求新建资源文件夹。
+- Unity UI 的固定视觉节点应优先做在 prefab 内并通过序列化字段绑定；除非明确需要对象池、动态列表或运行时实例化，否则禁止为了静态 UI 效果在脚本中动态创建 UI 层级。
 
 ## 交付格式
 修改前先说明：

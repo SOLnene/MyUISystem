@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Unity.Collections;
@@ -18,6 +19,7 @@ public class CharacterPreviewAnimator : MonoBehaviour
     private const string STATE_NAME = "Idle";
 
     private Coroutine idleRoutine;
+    private Coroutine completeRoutine;
     private CameraPreset currentPreset;
     bool isPlayingStateA = true; // 标记当前在播放 StateA 还是 StateB
 
@@ -40,14 +42,18 @@ public class CharacterPreviewAnimator : MonoBehaviour
         animator.applyRootMotion = false; // 防止飞走
     }
     // AnimatorOverrideController有问题，先用这个
-    public void ApplyPreset(CameraPreset preset)
+    public void ApplyPreset(CameraPreset preset, Action onCompleted = null)
     {
         /*var s = preset.animationClip.name;
         animator.CrossFade(s, preset.crossFadeDuration);*/
         currentPreset = preset;
 
         var clip =preset.animationClip;
-        if (clip == null) return;
+        if (clip == null)
+        {
+            onCompleted?.Invoke();
+            return;
+        }
 
         // 乒乓切换：如果当前在A，就替换B的Clip并过渡到B；反之亦然。
         if (isPlayingStateA)
@@ -67,14 +73,31 @@ public class CharacterPreviewAnimator : MonoBehaviour
 
         // 切换标记
         isPlayingStateA = !isPlayingStateA;
+
+        if (completeRoutine != null)
+        {
+            StopCoroutine(completeRoutine);
+        }
+
+        completeRoutine = StartCoroutine(NotifyCompletedAfterDelay(preset.crossFadeDuration, onCompleted));
     }
     
     //无过渡切换动作
     //用于初始化动作
-    public void ApplyPresetImmediate(CameraPreset preset)
+    public void ApplyPresetImmediate(CameraPreset preset, Action onCompleted = null)
     {
+        if (completeRoutine != null)
+        {
+            StopCoroutine(completeRoutine);
+            completeRoutine = null;
+        }
+
         var clip = preset.animationClip;
-        if (clip == null) return;
+        if (clip == null)
+        {
+            onCompleted?.Invoke();
+            return;
+        }
 
         // 强制写入 override
         overrideController["idle"] = clip;
@@ -84,6 +107,18 @@ public class CharacterPreviewAnimator : MonoBehaviour
         // 防止第一次点击切换没有过渡
         isPlayingStateA = true; 
         animator.Update(0f);
+        onCompleted?.Invoke();
+    }
+
+    IEnumerator NotifyCompletedAfterDelay(float delay, Action onCompleted)
+    {
+        if (delay > 0f)
+        {
+            yield return new WaitForSeconds(delay);
+        }
+
+        completeRoutine = null;
+        onCompleted?.Invoke();
     }
     
     /*// 对外入口：应用Preset
