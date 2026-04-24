@@ -1,3 +1,4 @@
+using System;
 using SkierFramework;
 using TMPro;
 using UniRx;
@@ -27,9 +28,19 @@ namespace Game.UI.Components.CharacterDetail
 		private BindableUI[] statItems;
 		[ControlBinding]
 		private BarBase favorBar;
+		[ControlBinding]
+		private Button enhanceEntryBtn;
+		[ControlBinding]
+		private TextMeshProUGUI btnText;
 
 		#pragma warning restore 0649
 #endregion
+
+
+
+		
+		//升级按钮点击事件
+		public Action onUpgradeClick;
 		
 		CompositeDisposable disposable = new CompositeDisposable();
 
@@ -72,6 +83,18 @@ namespace Game.UI.Components.CharacterDetail
 				favor =>
 				{
 					favorBar.SetValue((int)favor,100);
+				}).AddTo(disposable);
+			
+			enhanceEntryBtn.onClick.RemoveAllListeners();
+			enhanceEntryBtn.onClick.AddListener(() =>
+			{
+				onUpgradeClick?.Invoke();
+			});
+
+			vm.EntryBtnText.Subscribe(
+				text =>
+				{
+					btnText.text = text;
 				}).AddTo(disposable);
 		}
 

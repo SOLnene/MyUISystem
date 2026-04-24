@@ -67,9 +67,7 @@ namespace Game.UI.Components.CharacterDetail
            
             enhancePanel.Bind(viewModel.enhanceViewmodel);
             promotePanel.Bind(viewModel.promoteViewmodel);
-            contentView.gameObject.SetActive(true);
-            enhancePanel.gameObject.SetActive(false);
-            promotePanel.gameObject.SetActive(false);
+            BackToDetailMainView();
             // 初始化时先决定显示哪个面板
             //RefreshUpgradeOrPromotePanel();
 
@@ -78,9 +76,16 @@ namespace Game.UI.Components.CharacterDetail
                 .Subscribe(_ => RefreshUpgradeOrPromotePanel())
                 .AddTo(disposable);
 
+            viewModel.onBackToMain
+                .Subscribe(_ => BackToDetailMainView())
+                .AddTo(disposable);
+
             viewModel.promoteViewmodel.onPromote
                 .Subscribe(_ => RefreshUpgradeOrPromotePanel())
                 .AddTo(disposable);
+
+            contentView.InfoPanelView.onUpgradeClick += OpenUpgradeOrPromotePanel;
+
             SetTabItems();
             //初始化为idle
             //todo:切换角色初始化
@@ -98,6 +103,21 @@ namespace Game.UI.Components.CharacterDetail
 
             enhancePanel.gameObject.SetActive(showUpgrade);
             promotePanel.gameObject.SetActive(!showUpgrade);
+        }
+
+        void OpenUpgradeOrPromotePanel()
+        {
+            contentView.gameObject.SetActive(false);
+            topBarLayer.gameObject.SetActive(false);
+            RefreshUpgradeOrPromotePanel();
+        }
+
+        void BackToDetailMainView()
+        {
+            contentView.gameObject.SetActive(true);
+            enhancePanel.gameObject.SetActive(false);
+            promotePanel.gameObject.SetActive(false);
+            Debug.Log("返回角色详情主界面");
         }
 
         void SetTabItems()
@@ -215,6 +235,7 @@ namespace Game.UI.Components.CharacterDetail
         {
             base.OnClose();
             // 子 ViewModel 的生命周期由 CharacterDetailViewModel 统一管理
+            contentView.InfoPanelView.onUpgradeClick -= OpenUpgradeOrPromotePanel;
         }
 
         public override void OnRelease()

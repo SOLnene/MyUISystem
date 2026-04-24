@@ -31,7 +31,8 @@ namespace Game.UI.Components.CharacterDetail
         public string modelName;
         
         CompositeDisposable disposable = new CompositeDisposable();
-        public CharacterEnhanceViewmodel(IEnhanceable model, IMaterialInput materialInput)
+        //目前这两个接口没什么用，现在还是角色专用vm
+        public CharacterEnhanceViewmodel(IEnhanceable model, IMaterialInput materialInput, Action onBack)
         {
             this.model = model;
             promoteModel = model as IPromotable;

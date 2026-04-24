@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using Game.Domain.Character;
 using SkierFramework;
 using TMPro;
 using UniRx;
@@ -30,6 +31,8 @@ namespace Game.UI.Components.CharacterDetail
 		#pragma warning restore 0649
 #endregion
 
+        [SerializeField]
+        UITopBar topBar;
 
 
 
@@ -42,6 +45,17 @@ namespace Game.UI.Components.CharacterDetail
         {
             base.Bind(viewmodel);
             disposable.Clear();
+            if (topBar == null)
+            {
+                topBar = GetComponentInChildren<UITopBar>(true);
+            }
+
+            if (topBar != null)
+            {
+                var characterModel = Vm.model as CharacterModel;
+                var title = characterModel != null ? characterModel.Name.Value : string.Empty;
+                topBar.Bind(title, new ReactiveProperty<int>(10000), Vm.onBack);
+            }
 
             Vm.rank.Subscribe(value =>
             {

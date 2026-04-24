@@ -14,7 +14,7 @@ namespace Game.UI.Components.CharacterDetail
 
 		#pragma warning restore 0649
 #endregion
-
+        public CharacterDetailInfoPanelView InfoPanelView => infoPanelArea;
         CharacterDetailContentViewModel vm;
     
         public override void Bind(object viewModel)

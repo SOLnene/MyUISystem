@@ -12,7 +12,8 @@ namespace Game.UI.Components.CharacterDetail
         public CharacterDetailInfoViewModel InfoViewModel { get; private set; }
 
         public readonly ReactiveProperty<CharacterModel> CurrentCharacter = new ReactiveProperty<CharacterModel>();
-    
+        
+        
         CompositeDisposable disposable  = new CompositeDisposable();
     
         public CharacterDetailContentViewModel(CharacterModel model)

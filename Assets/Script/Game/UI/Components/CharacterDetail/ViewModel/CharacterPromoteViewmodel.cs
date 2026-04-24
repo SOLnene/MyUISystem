@@ -27,14 +27,16 @@ namespace Game.UI.Components.CharacterDetail
         public List<ItemSlotViewModel> itemSlotViewModels;
         
         public ReactiveCommand onPromote = new ReactiveCommand();
+        public Action onBack;
         // 当前阶段（当前 Rank 的等级上限）与下一阶段（下一 Rank 的等级上限）下的基础属性预览
         public 
         
         readonly CompositeDisposable disposable = new CompositeDisposable();
 
-        public CharacterPromoteViewmodel(IPromotable model)
+        public CharacterPromoteViewmodel(IPromotable model, Action onBack)
         {
             this.model = model;
+            this.onBack = onBack;
 
             rank = model.RankRP.ToReadOnlyReactiveProperty().AddTo(disposable);
             
