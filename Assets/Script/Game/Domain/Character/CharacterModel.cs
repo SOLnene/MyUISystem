@@ -32,6 +32,8 @@ namespace Game.Domain.Character
         public CharacterStats Stats { get; }
 
         public  IObservable<Unit> ChangeRP { get; }
+        
+        public ReactiveProperty<EquipItem> CurrentEquipRP { get; private set; }
         // ==== 构造函数 ====
 
         public CharacterModel(CharacterDefinition definition, int level, int exp = 0,int rank = 0)
@@ -51,6 +53,7 @@ namespace Game.Domain.Character
             
             ChangeRP = Observable.CombineLatest(LevelRP, RankRP)
                 .Select(_ => Unit.Default);
+            CurrentEquipRP = new ReactiveProperty<EquipItem>();
             // 初始同步一次属性
             RefreshBaseStats();
         }
@@ -147,5 +150,11 @@ namespace Game.Domain.Character
             int rank = RankSystem.CurrentRank;
             return 20000 * (rank + 1);
         }
+
+        public void ChangeEquip(EquipItem equipItem)
+        {
+            CurrentEquipRP.Value = equipItem;
+        }
     }
+    
 }

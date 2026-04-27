@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,8 +8,10 @@ using Unity.VisualScripting;
 
 public class ItemSelectPopupViewModel
 {
+    //多选界面用
     public readonly ReactiveCollection<ItemSlotViewModel> candidateSlots = new();
-    //public readonly ReactiveCollection<ItemSlotViewModel> selectedSlots = new();
+    //单选界面用
+    public readonly ReactiveProperty<ItemSlotViewModel> selectedSlot = new();
     /// <summary>
     /// 最后选中的槽位，用于信息面板显示
     /// </summary>
@@ -83,6 +86,36 @@ public class ItemSelectPopupViewModel
         
     }
 
+    public void Initialize(SinglePickParams param)
+    {
+        candidateSlots.Clear();
+        lastSelctedSlot.Value = null;
+
+        var allItems = GameContext.Instance.InventoryRepository.GetAllItems();
+
+        foreach (var item in allItems)
+        {
+            if (!param.filter.Match(item))
+            {
+                continue;
+            }
+
+            var slotVM = new ItemSlotViewModel(item);
+            candidateSlots.Add(slotVM);
+
+            slotVM.onClick.Subscribe(_ =>
+            {
+                // 取消上一个选中
+                if (lastSelctedSlot.Value != null)
+                    lastSelctedSlot.Value.isSelected.Value = false;
+                selectedSlot.Value = slotVM;
+                slotVM.isSelected.Value = true; 
+                lastSelctedSlot.Value = slotVM;
+                param.onPicked?.Invoke(slotVM.ItemViewModel.Model);
+            }).AddTo(disposable);
+        }
+    }
+    
     public void Dispose()
     {
         disposable.Dispose();
@@ -110,6 +143,20 @@ public class MaterialSelectParams
         this.filter = filter ?? new ItemFilter(ItemCategory.All);
         this.maxCount = maxCount;
         this.service = service;
+    }
+}
+
+public class SinglePickParams
+{
+    public ItemFilter filter;
+    public Action<InventoryItem> onPicked;
+    public bool closeAfterPick;
+
+    public SinglePickParams(ItemFilter filter, Action<InventoryItem> onPicked, bool closeAfterPick = true)
+    {
+        this.filter = filter;
+        this.onPicked = onPicked;
+        this.closeAfterPick = closeAfterPick;
     }
 }
 

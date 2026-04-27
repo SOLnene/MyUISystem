@@ -35,7 +35,7 @@ namespace Game.UI.Components.CharacterDetail
         CharacterDetailTabItem[] tabItems;
 
         
-        private const float TOP_BAR_HEIGHT = 150f;     // 根据设计稿改
+        private const float TOP_BAR_HEIGHT = 150f;   
         private const float BOTTOM_BAR_HEIGHT = 140f;
 
         CharacterDetailViewModel vm;
@@ -90,7 +90,7 @@ namespace Game.UI.Components.CharacterDetail
             //初始化为idle
             //todo:切换角色初始化
             //todo:不写死
-            SetCurrentTab(0, true);
+            SwitchTab(0, true);
             //todo:如果脸部动画很明显，需要给facepreset也做一个immediate方法
         }
     
@@ -122,7 +122,7 @@ namespace Game.UI.Components.CharacterDetail
 
         void SetTabItems()
         {
-            if (tabItems == null || tabItems.Length == 0)
+            if (tabItems == null)
             {
                 return;
             }
@@ -130,70 +130,37 @@ namespace Game.UI.Components.CharacterDetail
             for (int i = 0; i < tabItems.Length; i++)
             {
                 int index = i;
-                tabItems[i].Bind(i, ()=>
-                {
-                    OnTabClicked(index);
-                });
+                tabItems[i].Bind(index, () => OnTabClicked(index));
             }
         }
-        
+
         void OnTabClicked(int index)
         {
-            if (currentIndex == index)
+            if (!CanSwitchTab(index))
             {
                 return;
             }
 
-            if (ModelViewer.Instance != null && ModelViewer.Instance.IsInTransition)
-            {
-                return;
-            }
-
-            if (currentIndex >= -1)
-            {
-                SetCurrentTab(index, false);
-                return;
-            }
-
-            // 取消旧选中
-            if (currentIndex >= 0)
-            {
-                var oldTab = tabItems[currentIndex];
-                oldTab.SetSelected(false);
-            }
-
-            // 设置新选中
-            currentIndex = index;
-            var newTab = tabItems[currentIndex];
-            newTab.SetSelected(true);
-            
-            //SwitchContent(index);
-            
-            ModelViewer.Instance.SwitchToPreset(ModelViewer.Instance.presets[index]);
-            ModelViewer.Instance.SwitchFacePreset(ModelViewer.Instance.facePresets[index]);
+            SwitchTab(index, false);
         }
 
-        void SetCurrentTab(int index, bool instant)
+        bool CanSwitchTab(int index)
         {
-            if (tabItems == null || tabItems.Length == 0)
+            if (tabItems == null || index < 0 || index >= tabItems.Length)
             {
-                ApplyTabPresentation(index, instant);
-                currentIndex = index;
-                return;
+                return false;
             }
 
-            if (index < 0 || index >= tabItems.Length)
+            if (currentIndex == index)
             {
-                return;
+                return false;
             }
 
-            if (currentIndex == index && currentIndex >= 0)
-            {
-                tabItems[currentIndex].SetSelected(true, instant);
-                ApplyTabPresentation(index, instant);
-                return;
-            }
+            return ModelViewer.Instance == null || !ModelViewer.Instance.IsInTransition;
+        }
 
+        void SwitchTab(int index, bool instant)
+        {
             if (currentIndex >= 0 && currentIndex < tabItems.Length)
             {
                 tabItems[currentIndex].SetSelected(false, instant);
@@ -201,24 +168,23 @@ namespace Game.UI.Components.CharacterDetail
 
             currentIndex = index;
             tabItems[currentIndex].SetSelected(true, instant);
-            ApplyTabPresentation(index, instant);
+
+            ApplyCurrentTab(instant);
         }
 
-        void ApplyTabPresentation(int index, bool immediate)
+        void ApplyCurrentTab(bool instant)
         {
-            if (ModelViewer.Instance == null)
+            if (ModelViewer.Instance != null)
             {
-                return;
+                ModelViewer.Instance.SwitchPreview(currentIndex, instant);
             }
 
-            ModelViewer.Instance.SwitchPreview(index, immediate);
-
-            SwitchTabContentShell(index);
+            SwitchTabContentShell(currentIndex);
         }
 
         void SwitchTabContentShell(int index)
         {
-            // todo: tab 对应页面未接入，先保留空壳入口
+            contentView.ShowPage(index);
         }
 
         public override void OnAddListener()

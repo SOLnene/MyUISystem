@@ -10,19 +10,21 @@ namespace Game.UI.Components.CharacterDetail
         public CharacterDetailTabViewModel TabViewModel { get; private set; }
         public CharacterDetailPreviewViewModel PreviewViewModel { get; private set; }
         public CharacterDetailInfoViewModel InfoViewModel { get; private set; }
-
-        public readonly ReactiveProperty<CharacterModel> CurrentCharacter = new ReactiveProperty<CharacterModel>();
+        public CharacterDetailEquipPageViewModel EquipPageViewModel { get; private set; }
+        
+        public readonly ReactiveProperty<CharacterModel> currentCharacter = new ReactiveProperty<CharacterModel>();
         
         
         CompositeDisposable disposable  = new CompositeDisposable();
     
         public CharacterDetailContentViewModel(CharacterModel model)
         {
-            CurrentCharacter.Value = model;
+            currentCharacter.Value = model;
         
             TabViewModel = new CharacterDetailTabViewModel(model);
             PreviewViewModel = new CharacterDetailPreviewViewModel(model);
             InfoViewModel = new CharacterDetailInfoViewModel(model);
+            EquipPageViewModel = new CharacterDetailEquipPageViewModel(model);
         }
 
         public void Dispose()
@@ -30,6 +32,7 @@ namespace Game.UI.Components.CharacterDetail
             TabViewModel.Dispose();
             PreviewViewModel.Dispose();
             InfoViewModel.Dispose();
+            EquipPageViewModel.Dispose();
             disposable.Dispose();
         }
     }

@@ -10,47 +10,57 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e7c8105d09d0c8a4d8ef680cf3076760, type: 3}
-  m_Name: Claymore_Bakufu
+  m_Name: Claymore_Blackrock
   m_EditorClassIdentifier: 
-  id: 125139377
-  key: Claymore_Bakufu
-  itemName: Bakufu
-  desc: "\u81EA\u52A8\u751F\u6210\u7684\u7269\u54C1"
-  iconPath: ui_equipicon_claymore_bakufu
+  id: 369769927
+  key: Claymore_Blackrock
+  itemName: 黑岩斩刀
+  desc: 以黑岩打磨而成的利刃，锋线冷硬，适合追求爆发的使用者。
+  iconPath: ui_equipicon_claymore_blackrock
   category: 0
-  itemRarity: 1
-  stars: 2
-  baseAttack: 32
-  baseCritRate: 0.051
-  baseCritDamage: 0.583
+  itemRarity: 3
+  stars: 4
+  baseAttack: 42
+  baseCritRate: 0.05
+  baseCritDamage: 0.24
   rankInfos:
   - rank: 0
     maxLevel: 20
     goldCost: 0
     requirements:
     - materialKey: mat_claymore_1
-      count: 4
+      count: 6
     - materialKey: gold
-      count: 2000
-    attackAddFlat: 10
+      count: 3000
+    attackAddFlat: 15
     attackAddPercent: 0.02
   - rank: 1
     maxLevel: 40
     goldCost: 0
     requirements:
     - materialKey: mat_claymore_2
-      count: 8
+      count: 12
     - materialKey: gold
-      count: 4000
-    attackAddFlat: 20
+      count: 6000
+    attackAddFlat: 30
     attackAddPercent: 0.04
   - rank: 2
     maxLevel: 60
     goldCost: 0
     requirements:
     - materialKey: mat_claymore_3
-      count: 12
+      count: 18
     - materialKey: gold
-      count: 6000
-    attackAddFlat: 30
+      count: 9000
+    attackAddFlat: 45
     attackAddPercent: 0.06
+  - rank: 3
+    maxLevel: 80
+    goldCost: 0
+    requirements:
+    - materialKey: mat_claymore_4
+      count: 24
+    - materialKey: gold
+      count: 12000
+    attackAddFlat: 60
+    attackAddPercent: 0.08

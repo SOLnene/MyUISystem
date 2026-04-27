@@ -1,4 +1,5 @@
 using SkierFramework;
+using UnityEngine;
 namespace Game.UI.Components.CharacterDetail
 {
     public class CharacterDetailContentView : BindableUI<CharacterDetailContentViewModel>
@@ -10,18 +11,28 @@ namespace Game.UI.Components.CharacterDetail
         [ControlBinding]
         private CharacterDetailPreviewView characterPreviewArea;
         [ControlBinding]
-        private CharacterDetailInfoPanelView infoPanelArea;
+        private CharacterDetailInfoPanelView infoPageView;
 
 		#pragma warning restore 0649
 #endregion
-        public CharacterDetailInfoPanelView InfoPanelView => infoPanelArea;
+        [SerializeField]
+        CharacterDetailEquipPageView equipPageView;
+        
+        public CharacterDetailInfoPanelView InfoPanelView => infoPageView;
         CharacterDetailContentViewModel vm;
     
-        public override void Bind(object viewModel)
+        public override void Bind(CharacterDetailContentViewModel viewModel)
         {
             base.Bind(viewModel);
-        
-            infoPanelArea.Bind(Vm.InfoViewModel);
+            Debug.Log("bind content");
+            infoPageView.Bind(Vm.InfoViewModel);
+            equipPageView.Bind(Vm.EquipPageViewModel);
+        }
+
+        public void ShowPage(int index)
+        {
+            infoPageView.gameObject.SetActive(index == 0);
+            equipPageView.gameObject.SetActive(index == 1);
         }
     }
 }

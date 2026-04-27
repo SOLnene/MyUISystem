@@ -6,7 +6,7 @@ using UnityEngine;
 using UnityEngine.UI;
 namespace Game.UI.Components.CharacterDetail
 {
-	public class CharacterDetailInfoPanelView : BindableUI
+	public class CharacterDetailInfoPanelView : BindableUI<CharacterDetailInfoViewModel>
 	{
     #region 控件绑定变量声明，自动生成请勿手改
 		#pragma warning disable 0649
@@ -44,31 +44,31 @@ namespace Game.UI.Components.CharacterDetail
 		
 		CompositeDisposable disposable = new CompositeDisposable();
 
-		CharacterDetailInfoViewModel vm;
-		public void Bind(CharacterDetailInfoViewModel viewModel)
+		//CharacterDetailInfoViewModel vm;
+		public override void Bind(CharacterDetailInfoViewModel viewModel)
 		{
-			vm = viewModel;
+			base.Bind(viewModel);
 			var model = viewModel.model;
 			nameText.text = model.Name.Value;
 			disposable.Clear();
 
-
-			vm.model.LevelRP.Subscribe(level =>
+			Debug.Log("bind info");
+			Vm.model.LevelRP.Subscribe(level =>
 			{
 				levelText.text = $"Lv.{level}";
 			}).AddTo(disposable);
 
-			vm.model.Description.Subscribe(desc =>
+			Vm.model.Description.Subscribe(desc =>
 			{
 				descriptionText.text = desc;
 			}).AddTo(disposable);
         
-			vm.ExpText.Subscribe(
+			Vm.ExpText.Subscribe(
 				text =>
 				{
 					expText.text = text;
 				}).AddTo(disposable);
-			vm.ExpProgress.Subscribe(
+			Vm.ExpProgress.Subscribe(
 				progress =>
 				{
 					expFill.fillAmount = Mathf.Max(0.001f,progress);
@@ -76,7 +76,7 @@ namespace Game.UI.Components.CharacterDetail
 
 			for (int i = 0; i < statItems.Length; i++)
 			{
-				statItems[i].Bind(vm.AttributeViewModel.stats[i]);
+				statItems[i].Bind(Vm.AttributeViewModel.stats[i]);
 			}
 
 			model.Stats.Favor.Subscribe(
@@ -91,7 +91,7 @@ namespace Game.UI.Components.CharacterDetail
 				onUpgradeClick?.Invoke();
 			});
 
-			vm.EntryBtnText.Subscribe(
+			Vm.EntryBtnText.Subscribe(
 				text =>
 				{
 					btnText.text = text;

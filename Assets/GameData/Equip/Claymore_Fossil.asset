@@ -10,37 +10,47 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: e7c8105d09d0c8a4d8ef680cf3076760, type: 3}
-  m_Name: Claymore_Dragonfell
+  m_Name: Claymore_Fossil
   m_EditorClassIdentifier: 
-  id: 1345651657
-  key: Claymore_Dragonfell
-  itemName: Dragonfell
-  desc: "\u81EA\u52A8\u751F\u6210\u7684\u7269\u54C1"
-  iconPath: ui_equipicon_claymore_dragonfell
+  id: 152085429
+  key: Claymore_Fossil
+  itemName: 千岩古剑
+  desc: 岩脉与旧誓共同铸成的大剑，厚重沉稳，适合正面作战。
+  iconPath: ui_equipicon_claymore_fossil
   category: 0
-  itemRarity: 0
-  stars: 1
-  baseAttack: 57
-  baseCritRate: 0.184
-  baseCritDamage: 0.579
+  itemRarity: 3
+  stars: 4
+  baseAttack: 42
+  baseCritRate: 0.08
+  baseCritDamage: 0.16
   rankInfos:
   - rank: 0
     maxLevel: 20
     goldCost: 0
     requirements:
     - materialKey: mat_claymore_1
-      count: 2
+      count: 4
     - materialKey: gold
-      count: 1000
-    attackAddFlat: 5
+      count: 2000
+    attackAddFlat: 10
     attackAddPercent: 0.02
   - rank: 1
     maxLevel: 40
     goldCost: 0
     requirements:
     - materialKey: mat_claymore_2
-      count: 4
+      count: 8
     - materialKey: gold
-      count: 2000
-    attackAddFlat: 10
+      count: 4000
+    attackAddFlat: 20
     attackAddPercent: 0.04
+  - rank: 2
+    maxLevel: 60
+    goldCost: 0
+    requirements:
+    - materialKey: mat_claymore_3
+      count: 12
+    - materialKey: gold
+      count: 6000
+    attackAddFlat: 30
+    attackAddPercent: 0.06

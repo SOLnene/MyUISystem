@@ -60,8 +60,7 @@ public abstract class BindableUI<T> : BindableUI where T : class
         }
     }
     
-    //现在没用
-    /*public virtual void Bind(T data)
+    public virtual void Bind(T data)
     {
         if (data == null)
         {
@@ -73,5 +72,11 @@ public abstract class BindableUI<T> : BindableUI where T : class
         {
             UnityEngine.Debug.LogWarning($"[UI] {name} 类型转换失败: 期望 {typeof(T).Name}");
         }
-    }*/
+        //因为有很多之前的类没走这里，所有onenable还不能删
+        UIControlData ctrlData = gameObject.GetComponent<UIControlData>();
+        if(ctrlData != null)
+        {
+            ctrlData.BindDataTo(this);
+        }
+    }
 }

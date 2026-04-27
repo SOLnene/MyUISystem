@@ -39,7 +39,18 @@ public partial class ItemSelectPopupView : UIView
         
         slotPrefab = UIManager.Instance.slotPrefab;
         Bind(vm);
-        vm.Initialize(data as MaterialSelectParams);
+        if (data is SinglePickParams singlePickParams)
+        {
+            vm.Initialize(singlePickParams);
+        }
+        else if (data is MaterialSelectParams materialSelectParams)
+        {
+            vm.Initialize(materialSelectParams);
+        }
+        else
+        {
+            Debug.LogError("ItemSelectPopupView 参数错误");
+        }
         if (clickHandler == null)
         {
             clickHandler = UIHelper.CreateFullScreenClick(transform, () =>

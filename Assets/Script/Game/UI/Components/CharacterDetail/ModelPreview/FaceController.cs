@@ -81,8 +81,6 @@ public class FaceController : MonoBehaviour
                     faceRenderers.Add(r);
             }
         }
-
-        Debug.Log($"找到 {faceRenderers.Count} 个带 BlendShape 的面部 Renderer");
     }
 
     // 2. 为每个 Renderer 独立缓存所有 BlendShape 名字 → 索引
@@ -112,8 +110,7 @@ public class FaceController : MonoBehaviour
                 });
             }
         }
-
-        Debug.Log($"缓存了 {expressionMap.Count} 个唯一表情名称");
+        
     }
 
     // 3. 每帧平滑更新所有目标权重
