@@ -20,8 +20,11 @@ public partial class ItemSelectPopupView : UIView
     ItemSlotView slotPrefab;
 
     // 全屏点击遮罩
-    GameObject clickHandler;
-    
+    [SerializeField]
+    Button clickHandler;
+
+    //是否显示infopanel,先这样写 
+    bool showInfopanel;
     CompositeDisposable disposable = new();
     
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
@@ -41,20 +44,24 @@ public partial class ItemSelectPopupView : UIView
         Bind(vm);
         if (data is SinglePickParams singlePickParams)
         {
+            showInfopanel = false;
             vm.Initialize(singlePickParams);
         }
         else if (data is MaterialSelectParams materialSelectParams)
         {
+            showInfopanel = true;
             vm.Initialize(materialSelectParams);
         }
         else
         {
             Debug.LogError("ItemSelectPopupView 参数错误");
         }
-        if (clickHandler == null)
+        if (clickHandler != null)
         {
-            clickHandler = UIHelper.CreateFullScreenClick(transform, () =>
+            clickHandler.onClick.RemoveAllListeners();
+            clickHandler.onClick.AddListener(() =>
             {
+                Debug.Log("点击了遮罩，关闭ItemSelectPopupView");
                 UIManager.Instance.Close(UIType.ItemSelectPopupView);
             });
         }
@@ -64,7 +71,7 @@ public partial class ItemSelectPopupView : UIView
     public void Bind(ItemSelectPopupViewModel viewModel)
     {
         vm = viewModel;
-        vm.candidateSlots.ObserveAdd().Subscribe( async add =>
+        vm.candidateSlots.ObserveAdd().Subscribe(async add =>
         {
             CreateSlot(add.Value);
         }).AddTo(disposable);
@@ -79,19 +86,24 @@ public partial class ItemSelectPopupView : UIView
             }
         }).AddTo(disposable);
         infoPanelView.Bind(vm.infoPanelViewModel);
-        vm.lastSelctedSlot.Subscribe(slot =>
+        //todo:这个应该由外部传入
+        infoPanelView.gameObject.SetActive(showInfopanel);
+        if (showInfopanel)
         {
-            if (slot == null)
+            vm.lastSelctedSlot.Subscribe(slot =>
             {
-                infoPanelView.gameObject.SetActive(false);
-            }
-            else
-            {
-                infoPanelView.gameObject.SetActive(true);
-                vm.infoPanelViewModel.Bind(slot.ItemViewModel);
-            }
-            
-        }).AddTo(disposable);
+                if (slot == null)
+                {
+                    infoPanelView.gameObject.SetActive(false);
+                }
+                else
+                {
+                    infoPanelView.gameObject.SetActive(true);
+                    vm.infoPanelViewModel.Bind(slot.ItemViewModel);
+                }
+            }).AddTo(disposable);
+        }
+
     }
 
     void CreateSlot(ItemSlotViewModel viewModel)

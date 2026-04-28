@@ -7,44 +7,63 @@ using UnityEngine;
 public class CharacterDetailEquipPageViewModel 
 {
     public readonly ReactiveProperty<EquipItemViewModel> currentWeapon = new();
+
+    EquipItem selectedWeapon;
+    EquipItem equippedWeapon;
     
-    //选中的切换武器
-    public readonly ReactiveProperty<EquipItem> pendingWeapon = new();
     CharacterModel model;
     public readonly ReactiveCommand onReplaceClick = new();
     public readonly ReactiveCommand onEnhanceClick = new();
-
     CompositeDisposable disposable = new CompositeDisposable();
     public CharacterDetailEquipPageViewModel(CharacterModel model)
     {
         this.model = model;
         model.CurrentEquipRP
-            .Subscribe(weapon =>
-            {
-                currentWeapon.Value = weapon == null ? null : new EquipItemViewModel(weapon);
-            })
+            .Subscribe(OnEquippedWeaponChanged)
             .AddTo(disposable);
     }
-
-    public void SetPendingWeapon(EquipItem equipItem)
+    
+    public void SelectWeapon(EquipItem weapon)
     {
-        pendingWeapon.Value = equipItem;
+        selectedWeapon = weapon;
+        currentWeapon.Value = weapon == null ? null : new EquipItemViewModel(weapon);
     }
+    
 
     public bool HasPendingWeapon()
     {
-        return pendingWeapon.Value != null;
+        return selectedWeapon != null && selectedWeapon != equippedWeapon;
     }
 
     public void ConfirmChangeWeapon()
     {
-        if (pendingWeapon.Value == null)
+        if (!HasPendingWeapon())
         {
             return;
         }
 
-        model.ChangeEquip(pendingWeapon.Value);
-        pendingWeapon.Value = null;
+        model.ChangeEquip(selectedWeapon);
+    }
+    
+    void OnEquippedWeaponChanged(EquipItem weapon)
+    {
+        equippedWeapon = weapon;
+
+        if (!HasPendingWeapon())
+        {
+            ShowWeapon(equippedWeapon);
+        }
+    }    
+    
+    void ShowWeapon(EquipItem weapon)
+    {
+        if (weapon == null)
+        {
+            Debug.LogError("ShowWeapon failed: weapon is null.");
+            return;
+        }
+
+        currentWeapon.Value = new EquipItemViewModel(weapon);
     }
     
     public void Dispose()

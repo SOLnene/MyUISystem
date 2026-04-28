@@ -128,7 +128,7 @@ public class CharacterDetailEquipPageView : MonoBehaviour
             {
                 if (item is EquipItem equipItem)
                 {
-                    vm.SetPendingWeapon(equipItem);
+                    vm.SelectWeapon(equipItem);
                 }
             },
             false);
