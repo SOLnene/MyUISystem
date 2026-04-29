@@ -16,6 +16,7 @@ public class InfoPanelViewModel: IDisposable
     
     public void Bind(ItemViewModel vm)
     {
+        disposables.Clear();
         vm.name.Subscribe(x => name.Value = x).AddTo(disposables);
         vm.desc.Subscribe(x => desc.Value = x).AddTo(disposables);
         vm.iconPath.Subscribe(x => iconPath.Value = x).AddTo(disposables);

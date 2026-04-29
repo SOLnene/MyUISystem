@@ -32,23 +32,32 @@ public class InfoPanelView : MonoBehaviour
    StarDisplay starDisplay;
 
    InfoPanelViewModel infoPanelVM;
-   
+
+   CompositeDisposable disposable = new();
+   string currentIconPath;
     public void Bind(InfoPanelViewModel vm)
     {
+        disposable.Clear();
+        if (vm == null)
+        {
+            return;
+        }
+
         infoPanelVM = vm;
-        vm.name.Subscribe(name => nameText.text = name).AddTo(this);
-        vm.desc.Subscribe(desc => descText.text = desc).AddTo(this);
-        vm.displayMainText.Subscribe(mainText => displayMainText.text = mainText).AddTo(this);
-        vm.stars.Subscribe(stars=> starDisplay.SetStarLevel(stars,100,20)).AddTo(this);
+        vm.name.Subscribe(name => nameText.text = name).AddTo(disposable);
+        vm.desc.Subscribe(desc => descText.text = desc).AddTo(disposable);
+        vm.displayMainText.Subscribe(mainText => displayMainText.text = mainText).AddTo(disposable);
+        vm.stars.Subscribe(stars=> starDisplay.SetStarLevel(stars,100,20)).AddTo(disposable);
         vm.color.Subscribe(color =>
         {
             //topBgImage.color = color;
             middleBgImage.color = color;
-        }).AddTo(this);
+        }).AddTo(disposable);
         vm.iconPath.Where(path => !string.IsNullOrEmpty(path)).Subscribe(iconPath =>
         {
+            currentIconPath = iconPath;
             LoadIconAsync(iconPath).Forget();
-        }).AddTo(this);
+        }).AddTo(disposable);
     }
 
     async UniTask LoadIconAsync(string iconPath)
@@ -58,6 +67,11 @@ public class InfoPanelView : MonoBehaviour
             return;
         }
         var sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(iconPath);
+        if (currentIconPath != iconPath)
+        {
+            return;
+        }
+
         icon.sprite = sprite;
     }
     
@@ -85,5 +99,10 @@ public class InfoPanelView : MonoBehaviour
         //topBgImage.color = color;
         middleBgImage.color = color;
         starDisplay.SetStarLevel(item.Stars,100,20);
+    }
+
+    void OnDestroy()
+    {
+        disposable.Dispose();
     }
 }

@@ -86,23 +86,27 @@ public partial class ItemSelectPopupView : UIView
                 Destroy(slotView.gameObject);
             }
         }).AddTo(disposable);
-        infoPanelView.Bind(vm.infoPanelViewModel);
+        //infoPanelView.Bind(vm.infoPanelViewModel);
         //todo:这个应该由外部传入
-        infoPanelView.gameObject.SetActive(showInfopanel);
-        if (showInfopanel)
+        if (infoPanelView != null)
         {
-            vm.lastSelctedSlot.Subscribe(slot =>
+            infoPanelView.gameObject.SetActive(showInfopanel);
+            if (showInfopanel)
             {
-                if (slot == null)
+                infoPanelView.Bind(vm.infoPanelViewModel);
+                vm.lastSelctedSlot.Subscribe(slot =>
                 {
-                    infoPanelView.gameObject.SetActive(false);
-                }
-                else
-                {
-                    infoPanelView.gameObject.SetActive(true);
-                    vm.infoPanelViewModel.Bind(slot.ItemViewModel);
-                }
-            }).AddTo(disposable);
+                    if (slot == null)
+                    {
+                        infoPanelView.gameObject.SetActive(false);
+                    }
+                    else
+                    {
+                        infoPanelView.gameObject.SetActive(true);
+                        vm.infoPanelViewModel.Bind(slot.ItemViewModel);
+                    }
+                }).AddTo(disposable);
+            }
         }
 
     }
