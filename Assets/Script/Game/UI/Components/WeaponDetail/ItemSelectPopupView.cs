@@ -41,15 +41,16 @@ public partial class ItemSelectPopupView : UIView
         vm = new ItemSelectPopupViewModel();
         
         slotPrefab = UIManager.Instance.slotPrefab;
-        Bind(vm);
         if (data is SinglePickParams singlePickParams)
         {
             showInfopanel = false;
+            Bind(vm);
             vm.Initialize(singlePickParams);
         }
         else if (data is MaterialSelectParams materialSelectParams)
         {
             showInfopanel = true;
+            Bind(vm);
             vm.Initialize(materialSelectParams);
         }
         else
@@ -61,7 +62,7 @@ public partial class ItemSelectPopupView : UIView
             clickHandler.onClick.RemoveAllListeners();
             clickHandler.onClick.AddListener(() =>
             {
-                Debug.Log("点击了遮罩，关闭ItemSelectPopupView");
+                vm.onCancel?.Invoke();
                 UIManager.Instance.Close(UIType.ItemSelectPopupView);
             });
         }

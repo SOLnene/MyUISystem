@@ -34,13 +34,14 @@ public class EquipItem : InventoryItem
     /// <summary>
     /// 详情面板中的主要属性显示(第二部分)
     /// 现在都当成爆伤，没有别的加成属性
+    /// todo:model层不该管怎么显示
     /// </summary>
     /// <returns></returns>
     public override string GetDisplayMainText() => $"暴击伤害\n<b>{GetCriticalDamage()}%</b>\n基础攻击力\n<b><size=150%>{GetAttack()}</size></b>";
 
     public string GetDisplayMainStatText() => $"{GetAttack()}";
     
-    public string GetDisplaySubStatText() => $"{GetCriticalDamage()}%";
+    public string GetDisplaySubStatText() => $"{GetCriticalDamage()}";
     
     public string GetDisplayExpText() => $"{CurrentExp}/{NextLevelExp}%";
     public int GetAttack(int level = 0)

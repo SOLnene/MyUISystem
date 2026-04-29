@@ -22,6 +22,9 @@ public class ItemSelectPopupViewModel
     public InfoPanelViewModel infoPanelViewModel = new InfoPanelViewModel();
 
     MaterialSelectService selectService;
+
+    //点击关闭遮罩处理的的事件，单选界面用
+    public Action onCancel;
     
     CompositeDisposable disposable = new();
 
@@ -92,7 +95,7 @@ public class ItemSelectPopupViewModel
         lastSelctedSlot.Value = null;
 
         var allItems = GameContext.Instance.InventoryRepository.GetAllItems();
-
+        onCancel = param.onCancel;
         foreach (var item in allItems)
         {
             if (!param.filter.Match(item))
@@ -113,6 +116,7 @@ public class ItemSelectPopupViewModel
                 lastSelctedSlot.Value = slotVM;
                 param.onPicked?.Invoke(slotVM.ItemViewModel.Model);
             }).AddTo(disposable);
+           
         }
     }
     
@@ -151,12 +155,13 @@ public class SinglePickParams
     public ItemFilter filter;
     public Action<InventoryItem> onPicked;
     public bool closeAfterPick;
-
-    public SinglePickParams(ItemFilter filter, Action<InventoryItem> onPicked, bool closeAfterPick = true)
+    public Action onCancel;
+    public SinglePickParams(ItemFilter filter, Action<InventoryItem> onPicked, bool closeAfterPick = true,Action onCancel = null)
     {
         this.filter = filter;
         this.onPicked = onPicked;
         this.closeAfterPick = closeAfterPick;
+        this.onCancel = onCancel;
     }
 }
 

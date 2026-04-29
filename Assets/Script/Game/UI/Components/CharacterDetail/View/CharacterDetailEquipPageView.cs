@@ -55,6 +55,9 @@ public class CharacterDetailEquipPageView : MonoBehaviour
         {
             replaceButton.onClick.RemoveAllListeners();
             replaceButton.onClick.AddListener(OnReplaceButtonClicked);
+            vm.replaceButtonInteractable
+                .Subscribe(interactable => replaceButton.interactable = interactable)
+                .AddTo(disposable);
         }
 
         if (enhanceButton != null)
@@ -115,13 +118,14 @@ public class CharacterDetailEquipPageView : MonoBehaviour
         {
             if (promoteStars[i] != null)
             {
-                promoteStars[i].gameObject.SetActive(i < count);
+                promoteStars[i].color = i < count ? Color.white : Color.gray;
             }
         }
     }
     
     public void OpenChangeWeaponPanel()
     {
+        vm.BeginSelectWeapon();
         var param = new SinglePickParams(
             new ItemFilter(ItemCategory.Equip, 5),
             item =>
@@ -131,17 +135,16 @@ public class CharacterDetailEquipPageView : MonoBehaviour
                     vm.SelectWeapon(equipItem);
                 }
             },
-            false);
+            false,vm.CancelSelect);
 
         UIManager.Instance.Open(UIType.ItemSelectPopupView, param);
     }
 
     void OnReplaceButtonClicked()
     {
-        if (vm.HasPendingWeapon())
+        if (vm.HasPreviewWeapon())
         {
             vm.ConfirmChangeWeapon();
-            //UIManager.Instance.Close(UIType.ItemSelectPopupView);
         }
         else
         {
