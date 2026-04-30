@@ -77,27 +77,28 @@ public partial class EquipDetailView : UIView
         base.OnInit(uiControlData,handle);
     }
 
-    public void Bind(EquipDetailViewModel viewModel)
-    {
-        equipDetailVm = viewModel;
-        
-        equipDetailVm.currentWeaponVM.Subscribe(weapon =>
-        {
-            OnWeaponChanged(weapon);
-        }).AddTo(this);
-    }
+   
     
     public override void OnOpen(object data)
     {
         base.OnOpen(data);
         //todo:view中不允许创建vm，放到类似context的地方
-        var item = ItemFactory.CreateWeaponItem();
-        equipItemVm = new EquipItemViewModel(item);
-        var weapon = new ReactiveProperty<EquipItemViewModel>(equipItemVm);
-        if (equipDetailVm == null)
+        
+        var param = data as EquipDetailOpenParams;
+        if (param == null)
         {
-            equipDetailVm = new EquipDetailViewModel(weapon,GameContext.Instance.InventoryRepository);
-        } 
+            Debug.LogError("缺少武器界面参数");
+        }
+        else
+        {
+            equipItemVm = param.Weapon;
+        }
+        
+        var weapon = new ReactiveProperty<EquipItemViewModel>(equipItemVm);
+        
+        //不复用，每次打开重新创建
+        equipDetailVm?.Dispose();
+        equipDetailVm = new EquipDetailViewModel(weapon,GameContext.Instance.InventoryRepository);
         
         Bind(equipDetailVm);
         //子view绑定vm
@@ -107,10 +108,18 @@ public partial class EquipDetailView : UIView
         refinePanelView.Bind(equipDetailVm.refineVM);
         bottomView.Bind(equipDetailVm.bottomVM);
         
-        equipDetailVm.SetWeapon(equipItemVm);
+        equipDetailVm.ApplyOpenParams(param);
     }
 
-    
+    public void Bind(EquipDetailViewModel viewModel)
+    {
+        equipDetailVm = viewModel;
+        
+        equipDetailVm.currentWeaponVM.Subscribe(weapon =>
+        {
+            OnWeaponChanged(weapon);
+        }).AddTo(this);
+    }
     
     void OnWeaponChanged(EquipItemViewModel viewModel)
     {
@@ -135,6 +144,8 @@ public partial class EquipDetailView : UIView
     public override void OnClose()
     {
         base.OnClose();
+        equipDetailVm?.Dispose();
+        equipDetailVm = null;
     }
 
     public override void OnRelease()

@@ -7,7 +7,7 @@ using UnityEngine;
 public enum WeaponDetailTab
 {
     Info = 0 , //详情
-    Enhance = 1, //强化
+    Enhance = 1, //强化/突破
     Refine = 2, //精炼
 }
 

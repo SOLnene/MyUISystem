@@ -31,7 +31,8 @@ public class CharacterDetailEquipPageView : MonoBehaviour
     Button replaceButton;
     [SerializeField]
     Button enhanceButton;
-
+    [SerializeField]
+    ItemSelectPopupView itemSelectPopupViewPrefab;
 
     CharacterDetailEquipPageViewModel vm;
     CompositeDisposable disposable = new CompositeDisposable();
@@ -62,9 +63,8 @@ public class CharacterDetailEquipPageView : MonoBehaviour
 
         if (enhanceButton != null)
         {
-            enhanceButton.onClick.AsObservable()
-                .Subscribe(_ => vm.onEnhanceClick.Execute(Unit.Default))
-                .AddTo(disposable);
+            enhanceButton.onClick.RemoveAllListeners();
+            enhanceButton.onClick.AddListener(OnEnhanceButtonClick);
         }
     }
 
@@ -87,8 +87,6 @@ public class CharacterDetailEquipPageView : MonoBehaviour
 
         SetStars(rareStars, weapon.star.Value);
         SetPromoteStars(weapon.rank.Value);
-        
-    
     }
 
     void SetStars(GameObject[] stars, int count)
@@ -136,7 +134,6 @@ public class CharacterDetailEquipPageView : MonoBehaviour
                 }
             },
             false,vm.CancelSelect);
-
         UIManager.Instance.Open(UIType.ItemSelectPopupView, param);
     }
 
@@ -150,6 +147,22 @@ public class CharacterDetailEquipPageView : MonoBehaviour
         {
             OpenChangeWeaponPanel();
         }
+    }
+
+    void OpenSelectPanel()
+    {
+        itemSelectPopupViewPrefab.gameObject.SetActive(true);
+    }
+    
+    void OnEnhanceButtonClick()
+    {
+        var weapon = vm.currentWeapon.Value;
+        if (weapon == null)
+        {
+            return;
+        }
+        
+        UIManager.Instance.Open(UIType.EquipDetailView,new EquipDetailOpenParams(weapon,WeaponDetailTab.Enhance));
     }
     
     void OnDestroy()

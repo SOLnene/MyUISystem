@@ -11,7 +11,8 @@ public class EquipDetailViewModel: IDisposable
     /// </summary>
     public readonly ReactiveProperty<EquipItemViewModel> currentWeaponVM = new();
     
-    public readonly ReactiveProperty<int> SelectedIndex = new(0);
+    //todo:这个或者middle里面的index作为唯一状态源
+    //public readonly ReactiveProperty<int> SelectedIndex = new(0);
 
     public CompositeDisposable disposables = new CompositeDisposable();
     
@@ -87,9 +88,16 @@ public class EquipDetailViewModel: IDisposable
         currentWeaponVM.Value = viewModel;
     }
     
+    public void ApplyOpenParams(EquipDetailOpenParams param)
+    {
+        SetWeapon(param.Weapon);
+        SelectTab((int)param.InitialTab);
+    }
+    
     public void SelectTab(int index)
     {
-        SelectedIndex.Value = index;
+        //SelectedIndex.Value = index;
+        MiddleVM.currentTabIndex.Value = index;
     }
     
     public void Dispose()
@@ -99,5 +107,20 @@ public class EquipDetailViewModel: IDisposable
         infoVm.Dispose();
         enhanceVM.Dispose();
         bottomVM.Dispose();
+    }
+}
+
+/// <summary>
+/// 武器界面跳转参数
+/// </summary>
+public class EquipDetailOpenParams
+{
+    public EquipItemViewModel Weapon { get; }
+    public WeaponDetailTab InitialTab { get; }
+
+    public EquipDetailOpenParams(EquipItemViewModel weapon, WeaponDetailTab initialTab)
+    {
+        Weapon = weapon;
+        InitialTab = initialTab;
     }
 }
