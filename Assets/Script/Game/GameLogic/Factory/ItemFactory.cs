@@ -137,9 +137,11 @@ public static class ItemFactory
         return new EquipItem(randomDef, level: 1, refine: 1);
     }    
     
-    public static async UniTask<ItemSlotView> InstantiateItemSlot(ItemSlotViewModel viewModel, Transform parent)
+    //todo:未来有更多种类的ItemSlotView时，可以增加一个参数指定类型，或者直接传入预制体路径
+    public static async UniTask<ItemSlotView> InstantiateItemSlot(ItemSlotViewModel viewModel, Transform parent,
+        string prefabAddress = "ui/prefab/item_slot", bool active = true)
     {
-        var prefab = await ResourceManager.Instance.InstantiateItemAsync("ui/prefab/item_slot", parent,false);
+        var prefab = await ResourceManager.Instance.InstantiateItemAsync(prefabAddress, parent, active);
         if (prefab == null)
         {
             Debug.LogError("加载 ItemSlot 预制体失败");

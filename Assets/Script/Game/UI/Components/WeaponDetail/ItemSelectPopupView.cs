@@ -16,8 +16,7 @@ public partial class ItemSelectPopupView : UIView
 
     [SerializeField]
     InfoPanelView infoPanelView;
-    //实际使用
-    ItemSlotView slotPrefab;
+    const string slotPrefabAddress = "ui/prefab/item_slot_itemselect";
 
     // 全屏点击遮罩
     [SerializeField]
@@ -26,6 +25,10 @@ public partial class ItemSelectPopupView : UIView
     //是否显示infopanel,先这样写 
     bool showInfopanel;
     CompositeDisposable disposable = new();
+    /// <summary>
+    /// 版本控制，保证异步创建的槽位不会被过时的版本添加到界面上，以及界面关闭时不会添加槽位
+    /// </summary>
+    int slotCreateVersion;
     
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -39,8 +42,8 @@ public partial class ItemSelectPopupView : UIView
         vm?.Dispose(); // 确保旧订阅释放
         
         vm = new ItemSelectPopupViewModel();
+        slotCreateVersion++;
         
-        slotPrefab = UIManager.Instance.slotPrefab;
         if (data is SinglePickParams singlePickParams)
         {
             showInfopanel = false;
@@ -72,9 +75,9 @@ public partial class ItemSelectPopupView : UIView
     public void Bind(ItemSelectPopupViewModel viewModel)
     {
         vm = viewModel;
-        vm.candidateSlots.ObserveAdd().Subscribe(async add =>
+        vm.candidateSlots.ObserveAdd().Subscribe(add =>
         {
-            CreateSlot(add.Value);
+            CreateSlotAsync(add.Value).Forget();
         }).AddTo(disposable);
 
         vm.candidateSlots.ObserveRemove().Subscribe(rem =>
@@ -83,7 +86,7 @@ public partial class ItemSelectPopupView : UIView
             if (slotView != null)
             {
                 activeItemSlots.Remove(slotView);
-                Destroy(slotView.gameObject);
+                ResourceManager.Instance.Recycle(slotView.gameObject);
             }
         }).AddTo(disposable);
         //infoPanelView.Bind(vm.infoPanelViewModel);
@@ -111,19 +114,23 @@ public partial class ItemSelectPopupView : UIView
 
     }
 
-    void CreateSlot(ItemSlotViewModel viewModel)
+    async UniTask CreateSlotAsync(ItemSlotViewModel viewModel)
     {
-        var slotView = GameObject.Instantiate(slotPrefab, Content);
-        activeItemSlots.Add(slotView);
-        slotView.Bind(viewModel);
-    }
-    
-    async UniTaskVoid CreateSlotAsync(ItemSlotViewModel viewModel)
-    {
+        int version = slotCreateVersion;
         try
         {
-            var slotView = await ItemFactory.InstantiateItemSlot(viewModel, Content);
+            var slotView = await ItemFactory.InstantiateItemSlot(viewModel, Content, slotPrefabAddress);
+            if (slotView == null)
+            {
+                return;
+            }
+            if (version != slotCreateVersion)
+            {
+                ResourceManager.Instance.Recycle(slotView.gameObject);
+                return;
+            }
             activeItemSlots.Add(slotView);
+            slotView.Bind(viewModel);
         }
         catch (Exception e)
         {
@@ -148,11 +155,12 @@ public partial class ItemSelectPopupView : UIView
     public override void OnClose()
     {
         base.OnClose();
+        slotCreateVersion++;
         foreach (var slot in activeItemSlots)
         {
             if (slot != null)
             {
-                Destroy(slot.gameObject);
+                ResourceManager.Instance.Recycle(slot.gameObject);
             }
         }
         activeItemSlots.Clear();
