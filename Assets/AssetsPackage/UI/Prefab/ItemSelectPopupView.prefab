@@ -933,8 +933,8 @@ MonoBehaviour:
   m_ChildAlignment: 4
   m_StartCorner: 0
   m_StartAxis: 0
-  m_CellSize: {x: 400, y: 400}
-  m_Spacing: {x: 200, y: 200}
+  m_CellSize: {x: 200, y: 200}
+  m_Spacing: {x: 100, y: 100}
   m_Constraint: 0
   m_ConstraintCount: 2
 --- !u!114 &3775335481896712808
@@ -979,6 +979,14 @@ PrefabInstance:
       propertyPath: m_AnchorMin.y
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1309273679572736090, guid: 04fdeb5f3357c884c992966ef6c47165, type: 3}
+      propertyPath: m_Size
+      value: 0.57535815
+      objectReference: {fileID: 0}
+    - target: {fileID: 1309273679572736090, guid: 04fdeb5f3357c884c992966ef6c47165, type: 3}
+      propertyPath: m_Value
+      value: 3.0831335
+      objectReference: {fileID: 0}
     - target: {fileID: 2071793332439836936, guid: 04fdeb5f3357c884c992966ef6c47165, type: 3}
       propertyPath: m_AnchorMax.y
       value: 0
@@ -993,7 +1001,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2071793332439836936, guid: 04fdeb5f3357c884c992966ef6c47165, type: 3}
       propertyPath: m_AnchoredPosition.x
-      value: 0
+      value: 164.29922
+      objectReference: {fileID: 0}
+    - target: {fileID: 2071793332439836936, guid: 04fdeb5f3357c884c992966ef6c47165, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 272.2806
       objectReference: {fileID: 0}
     - target: {fileID: 3734815209980035147, guid: 04fdeb5f3357c884c992966ef6c47165, type: 3}
       propertyPath: m_fontAsset
