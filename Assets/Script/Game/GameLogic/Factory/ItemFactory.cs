@@ -148,6 +148,11 @@ public static class ItemFactory
             return null;
         }
       
+        //角色界面装备选择界面会因为对象池导致scale问题
+        
+        prefab.transform.localScale = Vector3.one;
+        prefab.transform.localRotation = Quaternion.identity;
+        
         var item = prefab.GetComponent<ItemSlotView>();
         return item;
     }

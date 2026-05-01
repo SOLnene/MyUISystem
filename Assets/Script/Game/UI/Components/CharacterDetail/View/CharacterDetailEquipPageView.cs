@@ -32,7 +32,7 @@ public class CharacterDetailEquipPageView : MonoBehaviour
     [SerializeField]
     Button enhanceButton;
     [SerializeField]
-    ItemSelectPopupView itemSelectPopupViewPrefab;
+    ItemSelectPanelView itemSelectPopupViewPrefab;
 
     CharacterDetailEquipPageViewModel vm;
     CompositeDisposable disposable = new CompositeDisposable();
@@ -134,7 +134,7 @@ public class CharacterDetailEquipPageView : MonoBehaviour
                 }
             },
             false,vm.CancelSelect);
-        UIManager.Instance.Open(UIType.ItemSelectPopupView, param);
+        itemSelectPopupViewPrefab.Show(param);
     }
 
     void OnReplaceButtonClicked()

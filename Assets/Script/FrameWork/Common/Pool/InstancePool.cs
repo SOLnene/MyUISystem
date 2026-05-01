@@ -74,6 +74,7 @@ public class InstancePool
     }
     
     //挂在到root下
+    //todo:给ui元素单独设定规则，目前这个会导致ui元素缩放出bug
     public void AssignParent(GameObject go,bool active = true)
     {
         if (go != null)
