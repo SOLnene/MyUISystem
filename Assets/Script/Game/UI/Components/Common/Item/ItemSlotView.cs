@@ -29,6 +29,8 @@ public class ItemSlotView : UIThreeStateSelectable
     Image icon;
     [SerializeField]
     Image checkedImage;
+    [SerializeField]
+    Transform scaleRoot;
     
     [Space]
     [Header("按钮")]
@@ -56,6 +58,7 @@ public class ItemSlotView : UIThreeStateSelectable
     Tween selectTween;
     Tween hoverTween;
     Tween loopTween;
+    Transform ScaleTarget => scaleRoot != null ? scaleRoot : transform;
 
     // 本地请求版本号，用来判定异步结果是否仍然有效
     int iconRequestVersion = 0;
@@ -228,17 +231,18 @@ public class ItemSlotView : UIThreeStateSelectable
 
     void ApplyNormalState(bool instant)
     {
-        SetGlowScale(Vector3.zero);
+        SetGlowScale(Vector3.one);
         if (instant)
         {
-            transform.localScale = Vector3.one;
+            ScaleTarget.localScale = Vector3.one;
             SetGlowAlpha(0f);
             return;
         }
 
         hoverTween = DOTween.Sequence()
-            .Append(transform.DOScale(1.0f, 0.15f).SetEase(Ease.OutBack))
-            .Join(glowEffectImage.DOFade(0.0f, 0.15f))
+            .Append(ScaleTarget.DOScale(1.0f, 0.1f).SetEase(Ease.OutQuad))
+            .Join(glowEffectImage.transform.DOScale(1.0f, 0.1f).SetEase(Ease.OutQuad))
+            .Join(glowEffectImage.DOFade(0.0f, 0.1f))
             .SetUpdate(true);
     }
 
@@ -247,32 +251,37 @@ public class ItemSlotView : UIThreeStateSelectable
         SetGlowScale(Vector3.one);
         if (instant)
         {
-            transform.localScale = Vector3.one * 1.1f;
-            SetGlowAlpha(1f);
+            ScaleTarget.localScale = Vector3.one * 1.035f;
+            SetGlowAlpha(0.55f);
             return;
         }
 
         hoverTween = DOTween.Sequence()
-            .Append(transform.DOScale(1.1f, 0.15f).SetEase(Ease.OutBack))
-            .Join(glowEffectImage.DOFade(1.0f, 0.15f))
+            .Append(ScaleTarget.DOScale(1.035f, 0.08f).SetEase(Ease.OutQuad))
+            .Join(glowEffectImage.transform.DOScale(1.02f, 0.08f).SetEase(Ease.OutQuad))
+            .Join(glowEffectImage.DOFade(0.55f, 0.08f))
             .SetUpdate(true);
     }
 
     void ApplySelectedState(bool instant)
     {
-        transform.localScale = Vector3.one;
         SetGlowScale(Vector3.one);
         if (instant)
         {
-            SetGlowAlpha(1f);
+            ScaleTarget.localScale = Vector3.one * 1.04f;
+            SetGlowAlpha(0.85f);
+        }
+        else
+        {
+            hoverTween = ScaleTarget.DOScale(1.04f, 0.08f).SetEase(Ease.OutQuad).SetUpdate(true);
         }
         
         loopTween = DOTween.Sequence()
-            .Append(glowEffectImage.transform.DOScale(1.1f, 1.0f).From(1.0f).SetEase(Ease.InOutSine))
-            .Join(glowEffectImage.DOFade(1.0f, 1.0f).From(0f).SetEase(Ease.InOutSine))
-            .Append(glowEffectImage.transform.DOScale(1.0f, 1.0f).From(1.1f).SetEase(Ease.InOutSine))
-            .Join(glowEffectImage.DOFade(0.0f, 1.0f).SetEase(Ease.InOutSine))
-            .SetLoops(-1, LoopType.Yoyo)
+            .Append(glowEffectImage.transform.DOScale(1.025f, 0.75f).SetEase(Ease.InOutSine))
+            .Join(glowEffectImage.DOFade(1.0f, 0.75f).SetEase(Ease.InOutSine))
+            .Append(glowEffectImage.transform.DOScale(1.0f, 0.75f).SetEase(Ease.InOutSine))
+            .Join(glowEffectImage.DOFade(0.75f, 0.75f).SetEase(Ease.InOutSine))
+            .SetLoops(-1)
             .SetUpdate(true);
     }
     
