@@ -9,7 +9,7 @@ using UniRx;
 using DG.Tweening;
 using UnityEngine.EventSystems;
 
-public class ItemSlotView : MonoBehaviour,IPointerEnterHandler,IPointerExitHandler
+public class ItemSlotView : UIThreeStateSelectable
 {
     [Header("Tmpro Text")]
     [SerializeField]
@@ -52,7 +52,6 @@ public class ItemSlotView : MonoBehaviour,IPointerEnterHandler,IPointerExitHandl
     public ItemSlotViewModel vm { get; private set; }
     
     //不知道为什么不用vm的select用这个
-    bool isSelected = false;
     
     Tween selectTween;
     Tween hoverTween;
@@ -81,6 +80,7 @@ public class ItemSlotView : MonoBehaviour,IPointerEnterHandler,IPointerExitHandl
         icon.sprite = null;
         
         disposable.Clear();
+        SetSelected(vm.isSelected.Value, true);
 
         if (vm.isEmpty.Value)
         {
@@ -123,15 +123,7 @@ public class ItemSlotView : MonoBehaviour,IPointerEnterHandler,IPointerExitHandl
         
         vm.isSelected.Subscribe(selected =>
         {
-            isSelected = selected;
-            if (selected)
-            {
-                PlayBreathingEffect();
-            }
-            else
-            {
-                StopBreathingEffect();
-            }
+            SetSelected(selected);
         }).AddTo(disposable);
         
         vm.isChecked.Subscribe(selected =>
@@ -215,65 +207,83 @@ public class ItemSlotView : MonoBehaviour,IPointerEnterHandler,IPointerExitHandl
 
    
     #region 动画相关
-    public void OnPointerEnter(PointerEventData eventData)
+    protected override void ApplyVisualState(VisualState state, bool instant, bool stateChanged)
     {
-        
-        if (!isSelected) // 选中状态交给 ViewModel 管理，Hover 不覆盖选中动画
+        hoverTween?.Kill();
+        loopTween?.Kill();
+
+        switch (state)
         {
-            PlayHoverAnimation();
+            case VisualState.Normal:
+                ApplyNormalState(instant || !stateChanged);
+                break;
+            case VisualState.Hover:
+                ApplyHoverState(instant || !stateChanged);
+                break;
+            case VisualState.Selected:
+                ApplySelectedState(instant || !stateChanged);
+                break;
         }
     }
 
-    public void OnPointerExit(PointerEventData eventData)
+    void ApplyNormalState(bool instant)
     {
-        if (!isSelected) // 如果是选中状态，退出 hover 时保持选中动画
+        SetGlowScale(Vector3.zero);
+        if (instant)
         {
-            PlayUnhoverAnimation();
+            transform.localScale = Vector3.one;
+            SetGlowAlpha(0f);
+            return;
         }
-    }
 
-    private void PlayHoverAnimation()
-    {
-        hoverTween?.Kill();
-        //防止透明度为0的bug
-        hoverTween = DOTween.Sequence()
-            .Append(transform.DOScale(1.1f, 0.15f).SetEase(Ease.OutBack))
-            .Join(glowEffectImage.DOFade(1.0f,0.15f))
-            .SetUpdate(true);
-
-    }
-
-    private void PlayUnhoverAnimation()
-    {
-        hoverTween?.Kill();
         hoverTween = DOTween.Sequence()
             .Append(transform.DOScale(1.0f, 0.15f).SetEase(Ease.OutBack))
-            .Join(glowEffectImage.DOFade(0.0f,0.15f))
+            .Join(glowEffectImage.DOFade(0.0f, 0.15f))
             .SetUpdate(true);
     }
-    
 
-
-    private void PlayBreathingEffect()
+    void ApplyHoverState(bool instant)
     {
-        hoverTween?.Kill();
-        loopTween?.Kill();
+        SetGlowScale(Vector3.one);
+        if (instant)
+        {
+            transform.localScale = Vector3.one * 1.1f;
+            SetGlowAlpha(1f);
+            return;
+        }
 
+        hoverTween = DOTween.Sequence()
+            .Append(transform.DOScale(1.1f, 0.15f).SetEase(Ease.OutBack))
+            .Join(glowEffectImage.DOFade(1.0f, 0.15f))
+            .SetUpdate(true);
+    }
+
+    void ApplySelectedState(bool instant)
+    {
+        transform.localScale = Vector3.one;
+        SetGlowScale(Vector3.one);
+        if (instant)
+        {
+            SetGlowAlpha(1f);
+        }
+        
         loopTween = DOTween.Sequence()
-            // 同时放大和光圈亮度变化
             .Append(glowEffectImage.transform.DOScale(1.1f, 1.0f).From(1.0f).SetEase(Ease.InOutSine))
-            .Join(glowEffectImage.DOFade(1.0f, 1.0f).From(0f).SetEase(Ease.InOutSine)) // 从暗到亮
+            .Join(glowEffectImage.DOFade(1.0f, 1.0f).From(0f).SetEase(Ease.InOutSine))
             .Append(glowEffectImage.transform.DOScale(1.0f, 1.0f).From(1.1f).SetEase(Ease.InOutSine))
-            .Join(glowEffectImage.DOFade(0.0f, 1.0f).SetEase(Ease.InOutSine)) // 最小时最暗
-            .SetLoops(-1, LoopType.Yoyo)  // 无限循环
+            .Join(glowEffectImage.DOFade(0.0f, 1.0f).SetEase(Ease.InOutSine))
+            .SetLoops(-1, LoopType.Yoyo)
             .SetUpdate(true);
     }
     
-    private void StopBreathingEffect()
+    void SetGlowScale(Vector3 scale)
     {
-        loopTween?.Kill();
-        glowEffectImage.transform.localScale = Vector3.zero;
-        glowEffectImage.color = new Color(glowEffectImage.color.r, glowEffectImage.color.g, glowEffectImage.color.b, 0f);
+        glowEffectImage.transform.localScale = scale;
+    }
+
+    void SetGlowAlpha(float alpha)
+    {
+        glowEffectImage.color = new Color(glowEffectImage.color.r, glowEffectImage.color.g, glowEffectImage.color.b, alpha);
     }
       #endregion
 }

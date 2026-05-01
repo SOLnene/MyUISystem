@@ -12,6 +12,7 @@ public abstract class UIThreeStateSelectable : MonoBehaviour, IPointerEnterHandl
 
     private bool isHovered;
     private bool isSelected;
+    //用于第一次刷新状态时强制应用状态，设置默认视觉状态
     private bool hasStateApplied;
     private VisualState currentState;
 
@@ -46,6 +47,12 @@ public abstract class UIThreeStateSelectable : MonoBehaviour, IPointerEnterHandl
     {
         VisualState nextState = ResolveState();
         bool stateChanged = !hasStateApplied || currentState != nextState;
+        
+        if (!stateChanged && !instant)
+        {
+            return;
+        }
+
         currentState = nextState;
         hasStateApplied = true;
         ApplyVisualState(nextState, instant, stateChanged);
