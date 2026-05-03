@@ -131,15 +131,30 @@ public partial class EquipDetailView : UIView
     }
     
     
-    public override void OnAddListener()
-    {
-        base.OnAddListener();
-    }
-
-    public override void OnRemoveListener()
-    {
-        base.OnRemoveListener();
-    }
+   public override void OnAddListener()
+   {
+       base.OnAddListener();
+   
+       if (TopHub != null)
+       {
+           TopHub.OnBackClicked += OnTopBackClicked;
+       }
+   }
+   
+   public override void OnRemoveListener()
+   {
+       if (TopHub != null)
+       {
+           TopHub.OnBackClicked -= OnTopBackClicked;
+       }
+   
+       base.OnRemoveListener();
+   }
+   
+   void OnTopBackClicked()
+   {
+       OnCancel();
+   }
 
     public override void OnClose()
     {

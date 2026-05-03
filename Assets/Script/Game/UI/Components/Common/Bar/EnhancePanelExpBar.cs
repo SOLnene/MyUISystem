@@ -24,18 +24,34 @@ public class EnhancePanelExpBar : BarBase
 	public override void SetValue(int current, int max, int preview = -1)
 	{
 	    base.SetValue(current, max);
-	    if (BarPreviewFill != null && preview >= 0)
+	    if (BarPreviewFill == null)
 	    {
-		    BarPreviewFill.fillAmount = Mathf.Clamp01((float)preview / max);
+		    return;
 	    }
+
+	    if (max <= 0 || preview < 0)
+	    {
+		    BarPreviewFill.fillAmount = 0;
+		    return;
+	    }
+
+	    BarPreviewFill.fillAmount = Mathf.Clamp01((float)preview / max);
 	}
 	
 	public override void SetValue(float percent, float preview = -1.0f)
 	{
 		base.SetValue(percent);
-		if (BarPreviewFill != null && preview >= 0)
+		if (BarPreviewFill == null)
 		{
-			BarPreviewFill.fillAmount = preview;
+			return;
 		}
+
+		if (preview < 0 || float.IsNaN(preview) || float.IsInfinity(preview))
+		{
+			BarPreviewFill.fillAmount = 0;
+			return;
+		}
+
+		BarPreviewFill.fillAmount = Mathf.Clamp01(preview);
 	}
 }
