@@ -30,7 +30,10 @@ public class BackpackTopView : MonoBehaviour
     [SerializeField]
     CategoryButtonView categoryBtnPrefab;
 
-    
+    [SerializeField]
+    GameObject coinGroup;
+    [SerializeField]
+    TextMeshProUGUI coinText;
     
     List<CategoryButtonView> categoryBtns = new();
 
@@ -133,22 +136,21 @@ public class BackpackTopView : MonoBehaviour
             backArrowImage.gameObject.SetActive(useArrow);
     }
 
-    public void SetCoins(int coins)
-    {
-        if (coinText != null)
-            coinText.text = coins.ToString();
-        if (coinIcon != null)
-            coinIcon.gameObject.SetActive(true);
-        if (coinText != null)
-            coinText.gameObject.SetActive(true);
-    }
+   
 
     public void HideCoins()
     {
         if (coinIcon != null) coinIcon.gameObject.SetActive(false);
         if (coinText != null) coinText.gameObject.SetActive(false);
     }*/
-
+    public void SetCoins(int coins)
+    {
+        if (coinText != null)
+            coinText.text = coins.ToString();
+        if (coinGroup != null)
+            coinGroup.gameObject.SetActive(true);
+    }
+    
     public void HideCategoryButtons()
     {
         if (categoryBtnParent != null) categoryBtnParent.gameObject.SetActive(false);

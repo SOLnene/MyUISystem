@@ -26,6 +26,8 @@ public partial class EquipDetailView : UIView
 
     //private ReactiveProperty<WeaponItem> weaponItem = new ReactiveProperty<WeaponItem>();
 
+    [SerializeField]
+    UITopBar topArea;
     [Header("具体界面")]
     [SerializeField]
     InfoPanelView infoPanelView;
@@ -35,10 +37,13 @@ public partial class EquipDetailView : UIView
     RefinePanelView refinePanelView;
     [SerializeField]
     WeaponDetailBottomView bottomView;
-    
+    //参考图
+    [SerializeField]
+    GameObject[] finalImages;
     EquipDetailViewModel equipDetailVm;
 
     EquipItemViewModel equipItemVm;
+    readonly CompositeDisposable disposable = new CompositeDisposable();
     
     /// <summary>
     /// 测试
@@ -109,16 +114,33 @@ public partial class EquipDetailView : UIView
         bottomView.Bind(equipDetailVm.bottomVM);
         
         equipDetailVm.ApplyOpenParams(param);
+        foreach (var img in finalImages)
+        {
+            img.SetActive(false);
+        }
     }
 
     public void Bind(EquipDetailViewModel viewModel)
     {
+        disposable.Clear();
         equipDetailVm = viewModel;
-        
-        equipDetailVm.currentWeaponVM.Subscribe(weapon =>
+
+        if (equipDetailVm == null)
         {
-            OnWeaponChanged(weapon);
-        }).AddTo(this);
+            return;
+        }
+
+        equipDetailVm.currentWeaponVM
+            .Where(weapon => weapon != null)
+            .Subscribe(OnWeaponChanged)
+            .AddTo(disposable);
+
+        topArea.Bind(
+            equipItemVm.Model.ItemName,
+            GameEconomy.Instance.gold,
+            OnCancel
+            );
+        
     }
     
     void OnWeaponChanged(EquipItemViewModel viewModel)
@@ -127,7 +149,7 @@ public partial class EquipDetailView : UIView
         {
             return;
         }
-        TopHub.SetTitle(viewModel.Model.ItemName);
+        //TopHub.SetTitle(viewModel.Model.ItemName);
     }
     
     
@@ -135,18 +157,18 @@ public partial class EquipDetailView : UIView
    {
        base.OnAddListener();
    
-       if (TopHub != null)
+       /*if (TopHub != null)
        {
            TopHub.OnBackClicked += OnTopBackClicked;
-       }
+       }*/
    }
    
    public override void OnRemoveListener()
    {
-       if (TopHub != null)
+       /*if (TopHub != null)
        {
            TopHub.OnBackClicked -= OnTopBackClicked;
-       }
+       }*/
    
        base.OnRemoveListener();
    }
@@ -159,6 +181,7 @@ public partial class EquipDetailView : UIView
     public override void OnClose()
     {
         base.OnClose();
+        disposable.Clear();
         equipDetailVm?.Dispose();
         equipDetailVm = null;
     }

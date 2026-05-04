@@ -23,7 +23,7 @@ public class UITopBar : MonoBehaviour
         goldRP.Subscribe(gold =>
         {
             goldText.text = $"{gold}";
-        }).AddTo(this);
+        }).AddTo(disposable);
         backBtn.onClick.RemoveAllListeners();
         backBtn.onClick.AddListener(() => onBack?.Invoke());
     }

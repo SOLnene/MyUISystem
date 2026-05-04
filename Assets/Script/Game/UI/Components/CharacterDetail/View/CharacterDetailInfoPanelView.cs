@@ -68,6 +68,7 @@ namespace Game.UI.Components.CharacterDetail
 				{
 					expText.text = text;
 				}).AddTo(disposable);
+			//todo:换用expbar
 			Vm.ExpProgress.Subscribe(
 				progress =>
 				{
