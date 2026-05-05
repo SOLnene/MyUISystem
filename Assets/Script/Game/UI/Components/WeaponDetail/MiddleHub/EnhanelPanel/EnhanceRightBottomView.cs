@@ -34,13 +34,13 @@ public class EnhanceRightBottomView : MonoBehaviour
         // 绑定消耗文本
         vm.currentConsume.Subscribe(value =>
         {
-            consumText.text = $"消耗数量: {value}/{vm.maxConsume}";
+            consumText.text = $"装备强化消耗({value}/{vm.maxConsume})";
         }).AddTo(this);
 
         // 绑定筛选下拉框
         filterDropdown.ClearOptions();
         List<string> options = new List<string>();
-        filterDropdown.AddOptions(vm.availabelLevels.ConvertAll(level=>level.ToString()));
+        filterDropdown.AddOptions(vm.availabelLevels.ConvertAll(level => $"{level}星及以下素材"));
         filterDropdown.onValueChanged
             .AsObservable()
             .Subscribe(index =>
