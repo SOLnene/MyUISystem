@@ -19,6 +19,8 @@ public class EquipItemViewModel: ItemViewModel
     public readonly ReactiveProperty<int> rank = new();
     public readonly ReactiveProperty<int> nextRankMaxLevel = new();
     public readonly ReactiveProperty<int> refineLevel = new();
+    readonly Subject<Unit> changed = new();
+    public System.IObservable<Unit> Changed => changed;
     /*public readonly ReactiveProperty<string> DisplayLevelText = new();
     public readonly ReactiveProperty<string> DisplayAttackText = new();
     public readonly ReactiveProperty<string> DisplayCritRateText = new();
@@ -49,6 +51,7 @@ public class EquipItemViewModel: ItemViewModel
         maxRanked.Value = Model.RankMaxed();
         nextRankMaxLevel.Value = Model.GetNextRankMaxLevel();
         refineLevel.Value = Model.RefinementLevel;
+        changed.OnNext(Unit.Default);
     }
 
     protected override string UpdateDisplayCount()

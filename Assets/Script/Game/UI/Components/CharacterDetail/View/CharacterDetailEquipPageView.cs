@@ -36,21 +36,21 @@ public class CharacterDetailEquipPageView : MonoBehaviour
 
     CharacterDetailEquipPageViewModel vm;
     CompositeDisposable disposable = new CompositeDisposable();
+    readonly CompositeDisposable weaponDisposable = new CompositeDisposable();
     
     public void Bind(CharacterDetailEquipPageViewModel viewModel)
     {
         disposable.Clear();
+        weaponDisposable.Clear();
         vm = viewModel;
         if (viewModel == null)
         {
             return;
         }
 
-        viewModel.currentWeapon.Subscribe(
-            _ =>
-            {
-                RefreshView();
-            }).AddTo(disposable);
+        viewModel.currentWeapon
+            .Subscribe(BindWeapon)
+            .AddTo(disposable);
 
         if (replaceButton != null)
         {
@@ -66,6 +66,22 @@ public class CharacterDetailEquipPageView : MonoBehaviour
             enhanceButton.onClick.RemoveAllListeners();
             enhanceButton.onClick.AddListener(OnEnhanceButtonClick);
         }
+    }
+
+    void BindWeapon(EquipItemViewModel weapon)
+    {
+        weaponDisposable.Clear();
+
+        if (weapon == null)
+        {
+            return;
+        }
+
+        RefreshView();
+
+        weapon.Changed
+            .Subscribe(_ => RefreshView())
+            .AddTo(weaponDisposable);
     }
 
     public void RefreshView()
@@ -167,6 +183,7 @@ public class CharacterDetailEquipPageView : MonoBehaviour
     
     void OnDestroy()
     {
+        weaponDisposable.Dispose();
         disposable.Dispose();
     }
 }
