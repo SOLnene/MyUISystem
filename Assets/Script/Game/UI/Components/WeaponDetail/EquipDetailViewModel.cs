@@ -10,6 +10,7 @@ public class EquipDetailViewModel: IDisposable
     /// 当前武器数据流，用于特有界面
     /// </summary>
     public readonly ReactiveProperty<EquipItemViewModel> currentWeaponVM = new();
+    public readonly ReactiveProperty<int> currentTabIndex = new((int)WeaponDetailTab.Info);
     
     //todo:这个或者middle里面的index作为唯一状态源
     //public readonly ReactiveProperty<int> SelectedIndex = new(0);
@@ -27,28 +28,21 @@ public class EquipDetailViewModel: IDisposable
     {
         currentWeaponVM = viewModel;
         
-        MiddleVM = new WeaponDetailMiddleViewModel(currentWeaponVM);
+        MiddleVM = new WeaponDetailMiddleViewModel(currentWeaponVM, currentTabIndex);
         infoVm = new InfoPanelViewModel();
         enhanceVM = new EnhancePanelViewModel(currentWeaponVM);
         refineVM = new RefinePanelViewModel(currentWeaponVM);
-        bottomVM = new WeaponDetailBottomViewModel();
+        bottomVM = new WeaponDetailBottomViewModel(currentTabIndex);
         /*
         currentItem = currentWeaponVM
             .Select(w => (InventoryItem)w)
             .ToReadOnlyReactiveProperty();
             */
         
-        currentWeaponVM.Subscribe(weapon =>
-        {
-            MiddleVM.SetWeapon(weapon);
-        }).AddTo(disposables);
-
         currentWeaponVM
             .Where(viewModel => viewModel != null)
             .Subscribe(viewModel => infoVm.Bind(viewModel))
             .AddTo(disposables);
-        MiddleVM.currentTabIndex.Subscribe(index => bottomVM.SetIndex(index)).AddTo(disposables);
-
         enhanceVM.previewCost.Subscribe(cost =>
         {
             bottomVM.totalCostGold.Value = cost;
@@ -97,7 +91,7 @@ public class EquipDetailViewModel: IDisposable
     public void SelectTab(int index)
     {
         //SelectedIndex.Value = index;
-        MiddleVM.currentTabIndex.Value = index;
+        currentTabIndex.Value = index;
     }
     
     public void Dispose()

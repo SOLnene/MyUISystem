@@ -15,13 +15,15 @@ public class WeaponDetailMiddleViewModel : IDisposable
 {
     public readonly ReactiveProperty<EquipItemViewModel> currentWeaponVM = new();
     
-    public readonly ReactiveProperty<int> currentTabIndex = new ReactiveProperty<int>(0);
+    public readonly ReactiveProperty<int> currentTabIndex;
     
-    readonly CompositeDisposable disposables = new CompositeDisposable();
+    readonly CompositeDisposable disposable = new CompositeDisposable();
 
-    public WeaponDetailMiddleViewModel(ReactiveProperty<EquipItemViewModel> viewModel)
+    public WeaponDetailMiddleViewModel(ReactiveProperty<EquipItemViewModel> viewModel, ReactiveProperty<int> currentTabIndex)
     {
+        disposable.Clear();
         currentWeaponVM = viewModel;
+        this.currentTabIndex = currentTabIndex;
     }
 
     public void SetWeapon(EquipItemViewModel viewModel)
@@ -29,9 +31,13 @@ public class WeaponDetailMiddleViewModel : IDisposable
         currentWeaponVM.Value = viewModel;
     }
 
-    
+    public void SelectTab(int index)
+    {
+        currentTabIndex.Value = index;
+    }
+
     public void Dispose()
     {
-        disposables.Dispose();
+        disposable.Dispose();
     }
 }

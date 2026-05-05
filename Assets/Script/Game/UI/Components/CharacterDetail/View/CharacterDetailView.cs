@@ -32,12 +32,22 @@ namespace Game.UI.Components.CharacterDetail
 #endregion
 
         [SerializeField]
-        CharacterDetailTabItem[] tabItems;
-
+        DetailTabItem[] tabItems;
+    
         
         private const float TOP_BAR_HEIGHT = 150f;   
         private const float BOTTOM_BAR_HEIGHT = 140f;
 
+
+        //tab标签
+        static readonly string[] Labels =
+        {
+            "属性",
+            "装备",
+            "圣遗物",
+            "详情"
+        };
+          
         CharacterDetailViewModel vm;
 
         int currentIndex = -1;
@@ -130,7 +140,7 @@ namespace Game.UI.Components.CharacterDetail
             for (int i = 0; i < tabItems.Length; i++)
             {
                 int index = i;
-                tabItems[i].Bind(index, () => OnTabClicked(index));
+                tabItems[i].Bind(index, Labels[i],() => OnTabClicked(index));
             }
         }
 
@@ -211,3 +221,5 @@ namespace Game.UI.Components.CharacterDetail
         }
     }
 }
+
+

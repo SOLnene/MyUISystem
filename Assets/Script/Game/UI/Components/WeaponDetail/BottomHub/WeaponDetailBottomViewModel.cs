@@ -16,14 +16,19 @@ public class WeaponDetailBottomViewModel : IDisposable
     
     public readonly ReactiveProperty<bool> canBreakout = new(false);
     
-    public readonly ReactiveProperty<int> selectedTabIndex = new(0);
+    public readonly ReactiveProperty<int> selectedTabIndex;
     
     
     
     CompositeDisposable disposables = new();
 
-    public WeaponDetailBottomViewModel()
+    public WeaponDetailBottomViewModel() : this(new ReactiveProperty<int>(0))
     {
+    }
+
+    public WeaponDetailBottomViewModel(ReactiveProperty<int> selectedTabIndex)
+    {
+        this.selectedTabIndex = selectedTabIndex;
         // 默认行为，可替换
         onStoryClick.Subscribe(_ => Debug.Log("查看武器故事")).AddTo(disposables);
         onQuickEquipClick.Subscribe(_ => Debug.Log("快速装备执行")).AddTo(disposables);

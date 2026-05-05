@@ -4,7 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class CharacterDetailTabItem : UIThreeStateSelectable
+public class DetailTabItem : UIThreeStateSelectable
 {
     [SerializeField]
     private TextMeshProUGUI text;
@@ -18,13 +18,7 @@ public class CharacterDetailTabItem : UIThreeStateSelectable
     private Image diamondSelected;
     [SerializeField]
     private Image arrow;
-    private static readonly string[] Labels =
-    {
-        "属性",
-        "装备",
-        "圣遗物",
-        "详情"
-    };
+  
 
     private RectTransform textRectTransform;
     private Color normalTextColor;
@@ -38,20 +32,23 @@ public class CharacterDetailTabItem : UIThreeStateSelectable
 
     int index;
 
-    public void Bind(int index, Action onClick)
+    public void Bind(int index,string label, Action onClick)
     {
         this.index = index;
         CacheVisualState();
-
-        if (index >= 0 && index < Labels.Length)
-        {
-            text.text = Labels[index];
-        }
+        
+        text.text = label;
+        
 
         btn.transition = Selectable.Transition.None;
         btn.onClick.RemoveAllListeners();
         btn.onClick.AddListener(() => onClick?.Invoke());
         SetSelected(IsSelected, true);
+    }
+
+    public void SetLabel(string label)
+    {
+        text.text = label;
     }
 
     void CacheVisualState()

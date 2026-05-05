@@ -7,7 +7,7 @@ public class WeaponDetailMiddleView : MonoBehaviour
 {
     [Header("左侧选项卡")]
     [SerializeField]
-    UITabSelector tabSelector;
+    DetailTabItem[] tabItems;
     [Header("右侧内容区")]
     [SerializeField]
     GameObject infoPanel;
@@ -18,6 +18,7 @@ public class WeaponDetailMiddleView : MonoBehaviour
 
     WeaponDetailMiddleViewModel vm;
     readonly List<GameObject> panels = new List<GameObject>();
+    readonly CompositeDisposable disposable = new CompositeDisposable();
     
     public void Bind(WeaponDetailMiddleViewModel viewModel)
     {
@@ -27,10 +28,55 @@ public class WeaponDetailMiddleView : MonoBehaviour
         panels.Add(infoPanel);
         panels.Add(enhancePanel);
         panels.Add(refinePanel);
+        
+        disposable.Clear();
+        BindTabItems();
 
-        tabSelector.Bind(vm.currentTabIndex);
+        vm.currentTabIndex.Subscribe(OnTabChanged).AddTo(disposable);
+        vm.currentWeaponVM.Value.needBreak
+            .Subscribe(_ => RefreshEnhanceTabLabel())
+            .AddTo(disposable);
+    }
 
-        vm.currentTabIndex.Subscribe(OnTabChanged).AddTo(this);
+    void BindTabItems()
+    {
+        if (tabItems == null)
+        {
+            return;
+        }
+
+        string[] labels = { "详情", GetEnhanceTabLabel(), "精炼" };
+        for (int i = 0; i < tabItems.Length; i++)
+        {
+            if (tabItems[i] == null)
+            {
+                continue;
+            }
+            
+            int index = i;
+            tabItems[i].Bind(index, labels[i], () => vm.SelectTab(index));
+        }
+    }
+
+    public void RefreshEnhanceTabLabel()
+    {
+        if (tabItems == null || tabItems.Length <= 1)
+        {
+            return;
+        }
+
+        tabItems[1].SetLabel(GetEnhanceTabLabel());
+    }
+
+    string GetEnhanceTabLabel()
+    {
+        var weapon = vm.currentWeaponVM.Value;
+        if (weapon == null)
+        {
+            return "强化";
+        }
+
+        return weapon.needBreak.Value ? "突破" : "强化";
     }
 
     void OnTabChanged(int index)
@@ -39,5 +85,20 @@ public class WeaponDetailMiddleView : MonoBehaviour
         {
             panels[i].SetActive(i==index);
         }
+
+        if (tabItems == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < tabItems.Length; i++)
+        {
+            tabItems[i].SetSelected(i == index);
+        }
+    }
+
+    void OnDestroy()
+    {
+        disposable.Dispose();
     }
 }
