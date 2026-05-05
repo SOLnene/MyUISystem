@@ -14,7 +14,7 @@ public class EquipItem : InventoryItem
     //todo:改成计算，删了这个
     public int NextLevelExp { get; private set; } 
     
-    public int GetNextLevelExp() => GetExpRequired(Level);
+    public int GetNextLevelExp() => GetExpRequiredForLevel(Level + 1);
     public int Rank { get; private set; }
     
     
@@ -25,7 +25,7 @@ public class EquipItem : InventoryItem
         Level = level;
         RefinementLevel = refine;
         CurrentExp = currentExp;
-        NextLevelExp = GetExpRequired();
+        NextLevelExp = GetNextLevelExp();
     }
 
 
@@ -77,15 +77,19 @@ public class EquipItem : InventoryItem
     /// </summary>
     public int GetExpRequired(int level = 0)
     {
-        var Level = level == 0 ? this.Level : level;
-        if (Level <= 1) return 0;
+        return GetExpRequiredForLevel(level == 0 ? Level : level);
+    }
+
+    public int GetExpRequiredForLevel(int targetLevel)
+    {
+        if (targetLevel <= 1) return 0;
         
         // 基础参数
         const float baseExp = 100f;      // 初始经验需求
         const float growth = 1.45f;      // 成长系数（可按稀有度调整）
 
         // 经验需求公式
-        float exp = baseExp * Mathf.Pow(Level, growth);
+        float exp = baseExp * Mathf.Pow(targetLevel, growth);
 
         // 根据稀有度放大倍数
         float rarityMultiplier = 1f + (int)ItemRarity * 0.3f; // 稀有度越高需求越多
@@ -216,16 +220,16 @@ public class EquipItem : InventoryItem
         int maxLevel = GetMaxLevel();
         int totalLevelUps = 0;
         // 模拟升级逻辑（与 AddExp 类似，但不真正改变状态）
-        while (previewExp >= previewNextExp && previewLevel < maxLevel)
+        while (previewNextExp > 0 && previewExp >= previewNextExp && previewLevel < maxLevel)
         {
             previewExp -= previewNextExp;
             previewLevel++;
-            previewNextExp = GetExpRequired(previewLevel); // 注意：这里需要一个独立函数
+            previewNextExp = GetExpRequiredForLevel(previewLevel + 1); // 注意：这里需要一个独立函数
             totalLevelUps++;
         }
         
-        int cappedExpGained = (Level == previewLevel && previewExp > GetExpRequired(Level)) 
-            ? GetExpRequired(Level) - CurrentExp 
+        int cappedExpGained = (Level == previewLevel && previewExp > NextLevelExp)
+            ? NextLevelExp - CurrentExp
             : addedExp; // 实际可以提升的经验，不超过 Rank 上限
        
         // 生成预览结构
@@ -268,7 +272,7 @@ public class EquipItem : InventoryItem
     
             CurrentExp -= NextLevelExp;
             Level++;
-            NextLevelExp = GetExpRequired();
+            NextLevelExp = GetNextLevelExp();
             result = ExpGainResult.LeveledUp;
         }
     
@@ -280,7 +284,7 @@ public class EquipItem : InventoryItem
     {
         Level++;
         //CurrentExp = 0;
-        NextLevelExp = GetExpRequired();
+        NextLevelExp = GetNextLevelExp();
     }
 }
 
