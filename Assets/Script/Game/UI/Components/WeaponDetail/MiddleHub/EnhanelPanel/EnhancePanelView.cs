@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Game.UI.Components.CharacterDetail;
 using UnityEngine;
 using TMPro;
 using UniRx;
@@ -39,18 +40,7 @@ public class EnhancePanelView : MonoBehaviour
     
     [Header("通用")]
     [SerializeField]
-    TextMeshProUGUI baseStatLabelText;
-    [SerializeField]
-    TextMeshProUGUI baseStatValueText;
-    [SerializeField]
-    TextMeshProUGUI nextLevelBaseStatValueText;
-    [SerializeField]
-    TextMeshProUGUI subStatLabelText;
-    [SerializeField]
-    TextMeshProUGUI subStatValueText;
-    [SerializeField]
-    TextMeshProUGUI nextLevelSubStatValueText;
-    
+    StatItemView[] statItemViews;
     
     [Space]
     [Header("右下面板")]
@@ -67,6 +57,7 @@ public class EnhancePanelView : MonoBehaviour
         vm = viewModel;
         
         expBar.BindData();
+        BindStatItems();
         
         viewModel.weaponVM
             .Where(w => w != null)
@@ -89,38 +80,17 @@ public class EnhancePanelView : MonoBehaviour
                     }
                 }).AddTo(rootDisposable);
 
-                weapon.attack.Subscribe(value =>
-                {
-                   
-                    baseStatValueText.text = value.ToString();
-                }).AddTo(rootDisposable);
-
-                weapon.critical.Subscribe(value =>
-                {
-                    subStatValueText.text = $"{value}%";
-                }).AddTo(rootDisposable);
-                
-                vm.previewEquip.Subscribe(preview =>
-                {
-                    nextLevelBaseStatValueText.text = preview.nextAtk.ToString();
-                    nextLevelSubStatValueText.text = $"{preview.nextCrit}%";
-                }).AddTo(rootDisposable);
-                
-                vm.showUpgradeAttribute.Subscribe(b =>
-                {
-                    foreach (var arrow in arrows)
-                    {
-                        arrow.SetActive(b);
-                    }
-                    nextLevelBaseStatValueText.gameObject.SetActive(b);
-                    nextLevelSubStatValueText.gameObject.SetActive(b);
-                }).AddTo(rootDisposable);
-
             })
             .AddTo(rootDisposable);
         
         
         rightBottomView.Bind(vm.rightBottomVM);
+    }
+
+    void BindStatItems()
+    {
+        statItemViews[0].Bind(vm.statItemVMs[0]);
+        statItemViews[1].Bind(vm.statItemVMs[1]);
     }
 
     void BindUpgradeUI(EquipItemViewModel weapon)
@@ -138,17 +108,6 @@ public class EnhancePanelView : MonoBehaviour
                 if (expValueText)
                     expValueText.text = $"{exp.cur}/{exp.next}";
             }).AddTo(uiDisposable);
-    
-        weapon.attack.Subscribe(value =>
-        {
-            baseStatValueText.text = value.ToString();
-            
-        }).AddTo(uiDisposable);
-    
-        weapon.critical.Subscribe(value =>
-        {
-            subStatValueText.text = $"{value}%";
-        }).AddTo(uiDisposable);
     
         //经验条绑定
         Observable
@@ -196,15 +155,7 @@ public class EnhancePanelView : MonoBehaviour
             afterIcons[i].color = i < viewModel.rank.Value + 1 ? Color.white : Color.grey;
         }
     }
-
-    void UpdateDisplay(EquipItem item)
-    {
-        levelValueText.text = item.GetDisplayLevelText();
-        baseStatValueText.text = item.GetDisplayMainStatText();
-        subStatValueText.text = item.GetDisplaySubStatText();
-        expValueText.text = item.GetDisplayExpText();
-    }
-
+    
     void OnDestroy()
     {
         uiDisposable.Dispose();

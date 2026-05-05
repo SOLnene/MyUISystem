@@ -55,7 +55,13 @@ namespace Game.UI.Components.CharacterDetail
 		            nextGroup.SetActive(b);
 	            }).AddTo(disposable);
         }
-
+        
+        //为了兼容
+        public override void Bind(StatItemViewModel data)
+        {
+            Bind((object)data);
+        }
+        
         public void OnDestroy()
         {
             disposable.Dispose();

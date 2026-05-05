@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Game.UI.Components.CharacterDetail;
 using UnityEngine;
 using UniRx;
 
@@ -16,11 +17,17 @@ public class EnhancePanelViewModel: IDisposable
     public readonly ReactiveProperty<int> previewExp = new();
     public readonly ReactiveProperty<int> previewCost = new();
     public readonly ReactiveProperty<EquipPreview> previewEquip = new();
+    public readonly StatItemViewModel[] statItemVMs;
     
     public EnhancePanelViewModel(ReactiveProperty<EquipItemViewModel> viewModel)
     {
         weaponVM = viewModel;
         rightBottomVM = new EnhanceRightBottomViewModel(viewModel);
+        statItemVMs = new[]
+        {
+            new StatItemViewModel(null, "基础攻击力"),
+            new StatItemViewModel(null, "暴击率")
+        };
         Observable.CombineLatest(weaponVM.Where(viewModel=>viewModel!=null),
             rightBottomVM.totalExp,
             (weapon, exp) => new { weapon, exp }).Subscribe(
@@ -35,6 +42,8 @@ public class EnhancePanelViewModel: IDisposable
                 previewCost.Value = preview.costGold;
                 previewEquip.SetValueAndForceNotify(preview);
                 showUpgradeAttribute.Value = preview.levelUp > 0 || preview.isBreakPreview;
+                statItemVMs[0].SetValue(x.weapon.attack.Value, preview.nextAtk);
+                statItemVMs[1].SetValue(x.weapon.critical.Value, preview.nextCrit);
             }).AddTo(disposables);
     }
     
@@ -46,6 +55,8 @@ public class EnhancePanelViewModel: IDisposable
         var preview = weaponVM.Value.GetPreviewWithExp(rightBottomVM.totalExp.Value);
         previewEquip.SetValueAndForceNotify(preview);
         showUpgradeAttribute.Value = preview.levelUp > 0 || preview.isBreakPreview;
+        statItemVMs[0].SetValue(w.attack.Value, preview.nextAtk);
+        statItemVMs[1].SetValue(w.critical.Value, preview.nextCrit);
     }
 
     public void Dispose()
