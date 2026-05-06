@@ -20,17 +20,15 @@ public class EnhanceRightBottomView : MonoBehaviour
     [Header("ItemSlots")]
     [SerializeField]
     Transform slotParent;
-    [SerializeField]
-    ItemSlotView slotPrefab;
 
     EnhanceRightBottomViewModel vm;
     readonly List<ItemSlotView> slotsViews = new List<ItemSlotView>();
+    const string materialSlotPrefabAddress = "ui/prefab/item_slot_material";
     
     
     public void Bind(EnhanceRightBottomViewModel viewModel)
     {
         vm = viewModel;
-        slotPrefab = UIManager.Instance.slotPrefab;
         // 绑定消耗文本
         vm.currentConsume.Subscribe(value =>
         {
@@ -71,7 +69,17 @@ public class EnhanceRightBottomView : MonoBehaviour
 
     void AddSlot(ItemSlotViewModel slotVM)
     {
-        var slotView = Instantiate(slotPrefab, slotParent);
+        AddSlotAsync(slotVM).Forget();
+    }
+
+    async UniTask AddSlotAsync(ItemSlotViewModel slotVM)
+    {
+        var slotView = await ItemFactory.InstantiateItemSlot(slotVM, slotParent, materialSlotPrefabAddress);
+        if (slotView == null)
+        {
+            return;
+        }
+
         slotsViews.Add(slotView);
         slotView.Bind(slotVM);
         slotVM.onClick.Subscribe(_ => vm.OnSlotClick(slotVM)).AddTo(this);
@@ -92,18 +100,7 @@ public class EnhanceRightBottomView : MonoBehaviour
     /// </summary>
     void RefreshSlots()
     {
-        foreach (var slotView in slotsViews)
-        {
-            Destroy(slotView.gameObject);
-        }
-        slotsViews.Clear();
-        foreach (var slotVM in vm.slotViewModels)
-        {
-            var slotView = Instantiate(slotPrefab, slotParent);
-            slotsViews.Add(slotView);
-            slotView.Bind(slotVM);
-            slotVM.onClick.Subscribe(_ => vm.OnSlotClick(slotVM)).AddTo(this);
-        }
+        RefreshSlotsAsync().Forget();
     }
     
     /// <summary>
@@ -118,7 +115,12 @@ public class EnhanceRightBottomView : MonoBehaviour
         slotsViews.Clear();
         foreach (var slotVM in vm.slotViewModels)
         {
-            var slotView = await ItemFactory.InstantiateItemSlot(slotVM, slotParent);
+            var slotView = await ItemFactory.InstantiateItemSlot(slotVM, slotParent, materialSlotPrefabAddress);
+            if (slotView == null)
+            {
+                continue;
+            }
+
             slotsViews.Add(slotView);
             slotView.Bind(slotVM);
             slotVM.onClick.Subscribe(_ => vm.OnSlotClick(slotVM)).AddTo(this);
