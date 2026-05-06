@@ -53,6 +53,7 @@ namespace Game.UI.Components.CharacterDetail
 	            {
 		            nextArrow.SetActive(b);
 		            nextGroup.SetActive(b);
+		            value.horizontalAlignment = b ? HorizontalAlignmentOptions.Left : HorizontalAlignmentOptions.Right;
 	            }).AddTo(disposable);
         }
         
