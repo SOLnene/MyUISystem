@@ -19,6 +19,8 @@ public class EnhancePanelViewModel: IDisposable
     public readonly ReactiveProperty<EquipPreview> previewEquip = new();
     public readonly StatItemViewModel[] statItemVMs;
     
+    //转发右下角的请求打开选择面板事件
+    public readonly Subject<MaterialSelectParams> requestOpenItemSelectPanel = new();
     public EnhancePanelViewModel(ReactiveProperty<EquipItemViewModel> viewModel)
     {
         weaponVM = viewModel;
@@ -45,6 +47,10 @@ public class EnhancePanelViewModel: IDisposable
                 statItemVMs[0].SetValue(x.weapon.attack.Value, preview.nextAtk);
                 statItemVMs[1].SetValue(x.weapon.critical.Value, preview.nextCrit);
             }).AddTo(disposables);
+        
+        rightBottomVM.requestOpenItemSelectPanel
+            .Subscribe(requestOpenItemSelectPanel.OnNext)
+            .AddTo(disposables);
     }
     
     public void RefreshPreview()

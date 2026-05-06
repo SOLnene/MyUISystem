@@ -29,7 +29,7 @@ public class InfoPanelView : MonoBehaviour
    Image icon;
    
    [SerializeField]
-   StarDisplay starDisplay;
+   GameObject[] starIcons;
 
    InfoPanelViewModel infoPanelVM;
 
@@ -47,7 +47,7 @@ public class InfoPanelView : MonoBehaviour
         vm.name.Subscribe(name => nameText.text = name).AddTo(disposable);
         vm.desc.Subscribe(desc => descText.text = desc).AddTo(disposable);
         vm.displayMainText.Subscribe(mainText => displayMainText.text = mainText).AddTo(disposable);
-        vm.stars.Subscribe(stars=> starDisplay.SetStarLevel(stars,100,20)).AddTo(disposable);
+        vm.stars.Subscribe(SetStars).AddTo(disposable);
         vm.color.Subscribe(color =>
         {
             //topBgImage.color = color;
@@ -87,7 +87,7 @@ public class InfoPanelView : MonoBehaviour
         Color color = RarityConfig.GetColor(item.ItemRarity);
         //topBgImage.color = color;
         middleBgImage.color = color;
-        starDisplay.SetStarLevel(item.Stars,100,20);
+        SetStars(item.Stars);
     }
     
     private void UpdateDisplay(InventoryItem item)
@@ -98,7 +98,23 @@ public class InfoPanelView : MonoBehaviour
         Color color = RarityConfig.GetColor(item.ItemRarity);
         //topBgImage.color = color;
         middleBgImage.color = color;
-        starDisplay.SetStarLevel(item.Stars,100,20);
+        SetStars(item.Stars);
+    }
+
+    void SetStars(int stars)
+    {
+        if (starIcons == null)
+        {
+            return;
+        }
+
+        for (int i = 0; i < starIcons.Length; i++)
+        {
+            if (starIcons[i] != null)
+            {
+                starIcons[i].SetActive(i < stars);
+            }
+        }
     }
 
     void OnDestroy()

@@ -24,6 +24,8 @@ public class EquipDetailViewModel: IDisposable
     public readonly RefinePanelViewModel refineVM;
     public readonly WeaponDetailBottomViewModel bottomVM;
     
+    /// 转发右下角的请求打开选择面板事件
+    public readonly Subject<MaterialSelectParams> requestOpenItemSelectPanel = new();
     public EquipDetailViewModel(ReactiveProperty<EquipItemViewModel> viewModel,InventoryRepository repo)
     {
         currentWeaponVM = viewModel;
@@ -75,6 +77,10 @@ public class EquipDetailViewModel: IDisposable
         {
             currentWeaponVM.Value.Breakout();
         }).AddTo(disposables);
+        
+        enhanceVM.requestOpenItemSelectPanel
+            .Subscribe(requestOpenItemSelectPanel.OnNext)
+            .AddTo(disposables);
     }
     
     public void SetWeapon(EquipItemViewModel viewModel)

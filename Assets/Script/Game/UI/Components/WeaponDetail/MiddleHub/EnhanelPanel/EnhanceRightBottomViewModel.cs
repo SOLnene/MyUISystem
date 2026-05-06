@@ -22,6 +22,8 @@ public class EnhanceRightBottomViewModel: IDisposable
 
     public readonly ReactiveProperty<EquipItemViewModel> vm;
     
+    public readonly Subject<MaterialSelectParams> requestOpenItemSelectPanel = new();
+    
     CompositeDisposable disposables = new CompositeDisposable();
     
     public EnhanceRightBottomViewModel(ReactiveProperty<EquipItemViewModel> viewModel)
@@ -105,8 +107,11 @@ public class EnhanceRightBottomViewModel: IDisposable
     {
         int index = slotViewModels.IndexOf(viewModel);
         
-        MaterialSelectParams materialSelectParams = new MaterialSelectParams(index,new ItemFilter(ItemCategory.Equip,starLimit),maxConsume,selectService);
-        UIManager.Instance.Open(UIType.ItemSelectPopupView, materialSelectParams);
+        MaterialSelectParams materialSelectParams = new MaterialSelectParams(index
+            ,new ItemFilter(ItemCategory.Equip,starLimit)
+            ,maxConsume
+            ,selectService);
+        requestOpenItemSelectPanel.OnNext(materialSelectParams);
     }
     
     private void AddToFirstEmptySlot(InventoryItem item)

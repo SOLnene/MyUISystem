@@ -53,14 +53,7 @@ public class EnhanceRightBottomView : MonoBehaviour
             {
                 vm.OnQuickAddClicked();
             }).AddTo(this);
-
-        // 初始化ItemSlots
-        /*for (int i = 0; i < vm.slots.Count; i++)
-        {
-            ItemSlotView slotView = Instantiate(slotPrefab, slotParent);
-            slotView.Bind(vm.slots[i]);
-            slotsViews.Add(slotView);
-        }*/
+        
         RefreshSlots();
         
         vm.slotViewModels.ObserveAdd().Subscribe(add => AddSlot(add.Value)).AddTo(this);

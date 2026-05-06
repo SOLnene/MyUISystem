@@ -18,7 +18,11 @@ public class ItemSelectPanelView : MonoBehaviour
     // 全屏点击遮罩
     [SerializeField]
     Button clickHandler;
-
+    //右侧信息面板的关闭遮罩
+    [SerializeField]
+    Button infoPanelCloseHandler;
+    
+    
     const string slotPrefabAddress = "ui/prefab/item_slot_itemselect";
 
     bool showInfopanel;
@@ -59,6 +63,12 @@ public class ItemSelectPanelView : MonoBehaviour
             clickHandler.onClick.RemoveAllListeners();
             clickHandler.onClick.AddListener(OnClickHandlerClicked);
         }
+        
+        if(infoPanelCloseHandler != null)
+        {
+            infoPanelCloseHandler.onClick.RemoveAllListeners();
+            infoPanelCloseHandler.onClick.AddListener(CloseInfoPanel);
+        }
     }
 
     public void Hide()
@@ -77,6 +87,18 @@ public class ItemSelectPanelView : MonoBehaviour
         {
             clickHandler.onClick.RemoveAllListeners();
         }
+        
+        if (infoPanelView != null)
+        {
+            infoPanelView.gameObject.SetActive(false);
+        }
+
+        if (infoPanelCloseHandler != null)
+        {
+            infoPanelCloseHandler.onClick.RemoveAllListeners();
+            infoPanelCloseHandler.gameObject.SetActive(false);
+        }
+        
         gameObject.SetActive(false);
     }
 
@@ -101,6 +123,10 @@ public class ItemSelectPanelView : MonoBehaviour
         if (infoPanelView != null)
         {
             infoPanelView.gameObject.SetActive(showInfopanel);
+            if(infoPanelCloseHandler != null)
+            {
+                infoPanelCloseHandler.gameObject.SetActive(showInfopanel);
+            }
             if (showInfopanel)
             {
                 infoPanelView.Bind(vm.infoPanelViewModel);
@@ -109,10 +135,18 @@ public class ItemSelectPanelView : MonoBehaviour
                     if (slot == null)
                     {
                         infoPanelView.gameObject.SetActive(false);
+                        if(infoPanelCloseHandler != null)
+                        {
+                            infoPanelCloseHandler.gameObject.SetActive(false);
+                        }
                     }
                     else
                     {
                         infoPanelView.gameObject.SetActive(true);
+                        if(infoPanelCloseHandler != null)
+                        {
+                            infoPanelCloseHandler.gameObject.SetActive(showInfopanel);
+                        }
                         vm.infoPanelViewModel.Bind(slot.ItemViewModel);
                     }
                 }).AddTo(disposable);
@@ -144,6 +178,15 @@ public class ItemSelectPanelView : MonoBehaviour
         }
     }
 
+    void CloseInfoPanel()
+    {
+        infoPanelView.gameObject.SetActive(false);
+        if (infoPanelCloseHandler != null)
+        {
+            infoPanelCloseHandler.gameObject.SetActive(false);
+        }
+    }
+    
     void OnClickHandlerClicked()
     {
         vm?.onCancel?.Invoke();

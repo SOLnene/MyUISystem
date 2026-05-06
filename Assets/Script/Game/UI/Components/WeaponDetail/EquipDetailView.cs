@@ -35,7 +35,10 @@ public partial class EquipDetailView : UIView
     RefinePanelView refinePanelView;
     [SerializeField]
     WeaponDetailBottomView bottomView;
+    [SerializeField]
+    ItemSelectPanelView itemSelectPanelView;
     //参考图
+    [Header("参考图")]
     [SerializeField]
     GameObject[] finalImages;
     EquipDetailViewModel equipDetailVm;
@@ -116,6 +119,11 @@ public partial class EquipDetailView : UIView
         {
             img.SetActive(false);
         }
+        
+        if (itemSelectPanelView != null)
+        {
+            itemSelectPanelView.Hide();
+        }
     }
 
     public void Bind(EquipDetailViewModel viewModel)
@@ -139,6 +147,12 @@ public partial class EquipDetailView : UIView
             OnCancel
             );
         
+        equipDetailVm.requestOpenItemSelectPanel
+            .Subscribe(param =>
+            {
+                itemSelectPanelView.Show(param);
+            })
+            .AddTo(disposable);
     }
     
     void OnWeaponChanged(EquipItemViewModel viewModel)
@@ -150,7 +164,7 @@ public partial class EquipDetailView : UIView
         //TopHub.SetTitle(viewModel.Model.ItemName);
     }
     
-    
+  
    public override void OnAddListener()
    {
        base.OnAddListener();
