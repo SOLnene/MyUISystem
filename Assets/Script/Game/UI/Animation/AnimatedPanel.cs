@@ -46,7 +46,7 @@ public class AnimatedPanel : MonoBehaviour
         SetInteractable(true);
     }
 
-    /*public async UniTask<bool> Hide(bool instant = false)
+    public async UniTask<bool> Hide(bool instant = false)
     {
         int version = ++requestVersion;
 
@@ -70,9 +70,9 @@ public class AnimatedPanel : MonoBehaviour
     {
         ++requestVersion;
         SetInteractable(false);
-        motion?.ApplyImmediate(false);
+        motion?.Cancel();
         panelRoot.SetActive(false);
-    }*/
+    }
 
     void SetInteractable(bool interactable)
     {

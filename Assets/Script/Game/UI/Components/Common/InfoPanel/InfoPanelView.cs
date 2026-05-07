@@ -84,6 +84,22 @@ public class InfoPanelView : MonoBehaviour
         }
     }
 
+    public void Hide()
+    {
+        HideAsync().Forget();
+    }
+
+    async UniTask HideAsync()
+    {
+        if (animatedPanel != null)
+        {
+            await animatedPanel.Hide();
+            return;
+        }
+
+        gameObject.SetActive(false);
+    }
+
     async UniTask LoadIconAsync(string iconPath)
     {
         if (string.IsNullOrEmpty(iconPath))

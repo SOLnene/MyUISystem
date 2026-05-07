@@ -10,6 +10,7 @@ public abstract class UIMotionBase : MonoBehaviour
 {
     bool isPlaying;
     bool isShown;
+    bool playingTargetShown;
     int requestVersion;
     CancellationTokenSource motionCts;
     protected Sequence seq;
@@ -36,18 +37,19 @@ public abstract class UIMotionBase : MonoBehaviour
 
         if (instant)
         {
-            ApplyState(shown);
+            ApplyEndState(shown);
             isShown = shown;
             return;
         }
 
         if (shown && replay)
         {
-            ApplyState(false);
+            ApplyEndState(false);
         }
 
         motionCts = new CancellationTokenSource();
         isPlaying = true;
+        playingTargetShown = shown;
 
         try
         {
@@ -58,7 +60,7 @@ public abstract class UIMotionBase : MonoBehaviour
                 return;
             }
 
-            ApplyState(shown);
+            ApplyEndState(shown);
             isShown = shown;
         }
         catch (OperationCanceledException)
@@ -73,18 +75,6 @@ public abstract class UIMotionBase : MonoBehaviour
         }
     }
 
-    void ApplyState(bool shown)
-    {
-        if (shown)
-        {
-            ApplyEndState(true);
-        }
-        else
-        {
-            ApplyIdleState();
-        }
-    }
-    
     /// <summary>
     /// 实际动画内容
     /// </summary>
@@ -93,7 +83,6 @@ public abstract class UIMotionBase : MonoBehaviour
     /// <returns></returns>
     protected abstract UniTask PlayAnimation(bool isEnter,CancellationToken token);
     
-    protected abstract void ApplyIdleState();
     protected abstract void ApplyEndState(bool isEnter);
 
     protected void StopCurrentAnimation()
@@ -110,10 +99,10 @@ public abstract class UIMotionBase : MonoBehaviour
     
     public void Cancel()
     {
-        motionCts?.Cancel();
-        seq?.Kill();
-        ApplyIdleState();
-        isPlaying = false;
+        ++requestVersion;
+        StopCurrentAnimation();
+        ApplyEndState(false);
+        isShown = false;
     }
 
     public virtual void Skip()
@@ -122,8 +111,9 @@ public abstract class UIMotionBase : MonoBehaviour
         {
             return;
         }
-        seq.Kill(true);
-        ApplyEndState(true);
-        isPlaying = false;
+        ++requestVersion;
+        StopCurrentAnimation();
+        ApplyEndState(playingTargetShown);
+        isShown = playingTargetShown;
     }
 }

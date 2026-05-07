@@ -185,7 +185,7 @@ public class ItemSelectPanelView : MonoBehaviour
 
     void CloseInfoPanel()
     {
-        infoPanelView.gameObject.SetActive(false);
+        infoPanelView.Hide();
         if (infoPanelCloseHandler != null)
         {
             infoPanelCloseHandler.gameObject.SetActive(false);

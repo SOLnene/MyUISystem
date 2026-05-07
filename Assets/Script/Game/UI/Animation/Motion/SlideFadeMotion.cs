@@ -40,26 +40,25 @@ public class SlideFadeMotion : UIMotionBase
 
     protected override UniTask PlayAnimation(bool isEnter,CancellationToken token)
     {
+        var fromPos = isEnter ? originPos + originMove : originPos + targetMove;
+        var toPos = isEnter ? originPos + targetMove : originPos + originMove;
+        var fromAlpha = isEnter ? 0f : 1f;
+        var toAlpha = isEnter ? 1f : 0f;
+
         seq?.Kill();
         seq = DOTween.Sequence()
-            .Join(motionRoot.DOAnchorPos(originPos + targetMove, moveDuration)
-                .From(originPos + originMove)
+            .Join(motionRoot.DOAnchorPos(toPos, moveDuration)
+                .From(fromPos)
                 .SetEase(moveEase))
-            .Join(motionGroup.DOFade(1, fadeDuration)
-                    .From(0.0f)
+            .Join(motionGroup.DOFade(toAlpha, fadeDuration)
+                    .From(fromAlpha)
                     .SetEase(fadeEase));
         return seq.AsyncWaitForCompletion().AsUniTask().AttachExternalCancellation(token);
-    }
-
-    protected override void ApplyIdleState()
-    {
-        motionRoot.anchoredPosition = originPos+originMove;
-        motionGroup.alpha = 0;
     }
     
     protected override void ApplyEndState(bool isEnter)
     {
-        motionRoot.anchoredPosition = originPos+targetMove;
-        motionGroup.alpha = 1;
+        motionRoot.anchoredPosition = isEnter ? originPos + targetMove : originPos + originMove;
+        motionGroup.alpha = isEnter ? 1 : 0;
     }
 }
