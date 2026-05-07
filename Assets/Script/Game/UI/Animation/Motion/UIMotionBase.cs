@@ -9,57 +9,82 @@ using UnityEngine;
 public abstract class UIMotionBase : MonoBehaviour
 {
     bool isPlaying;
+    bool isShown;
+    int requestVersion;
     CancellationTokenSource motionCts;
     protected Sequence seq;
-    public async UniTask PlayEnter(bool instant = false)
+    public UniTask PlayEnter(bool instant = false)
     {
-        if (isPlaying)
+        return PlayToState(true, instant,true);
+    }
+
+    public UniTask PlayExit(bool instant = false)
+    {
+        return PlayToState(false, instant,false);
+    }
+
+    async UniTask PlayToState(bool shown, bool instant, bool replay)
+    {
+        if (isPlaying == false && isShown == shown && replay == false)
         {
             return;
         }
-        Cancel();
-        motionCts = new CancellationTokenSource();
-        var token = motionCts.Token;
 
-        isPlaying = true;
-        try
-        {
-            await PlayAnimation(true, token);
-        }
-        catch (OperationCanceledException)
-        {
-            //跳过
-        }
-        finally
-        {
-            isPlaying = false;
-        }
-    }
+        int version = ++requestVersion;
 
-    /*public UniTask PlayExit(bool instant = false)
-    {
-        return PlayInternal(false, instant);
-    }
-
-    async UniTask PlayInternal(bool isEnter, bool instant)
-    {
-        if (isPlaying)
-        {
-            Skip();
-        }
-        isPlaying = true;
+        StopCurrentAnimation();
 
         if (instant)
         {
-            ApplyEndState(isEnter);
+            ApplyState(shown);
+            isShown = shown;
+            return;
+        }
+
+        if (shown && replay)
+        {
+            ApplyState(false);
+        }
+
+        motionCts = new CancellationTokenSource();
+        isPlaying = true;
+
+        try
+        {
+            await PlayAnimation(shown, motionCts.Token);
+
+            if (version != requestVersion)
+            {
+                return;
+            }
+
+            ApplyState(shown);
+            isShown = shown;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (version == requestVersion)
+            {
+                isPlaying = false;
+            }
+        }
+    }
+
+    void ApplyState(bool shown)
+    {
+        if (shown)
+        {
+            ApplyEndState(true);
         }
         else
         {
-            await PlayAnimation(isEnter);
+            ApplyIdleState();
         }
-        isPlaying = false;
-    }*/
-
+    }
+    
     /// <summary>
     /// 实际动画内容
     /// </summary>
@@ -71,6 +96,18 @@ public abstract class UIMotionBase : MonoBehaviour
     protected abstract void ApplyIdleState();
     protected abstract void ApplyEndState(bool isEnter);
 
+    protected void StopCurrentAnimation()
+    {
+        motionCts?.Cancel();
+        motionCts?.Dispose();
+        motionCts = null;
+
+        seq?.Kill();
+        seq = null;
+
+        isPlaying = false;
+    }
+    
     public void Cancel()
     {
         motionCts?.Cancel();

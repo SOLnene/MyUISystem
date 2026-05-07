@@ -148,12 +148,11 @@ public class ItemSelectPanelView : MonoBehaviour
                     }
                     else
                     {
-                        infoPanelView.gameObject.SetActive(true);
                         if(infoPanelCloseHandler != null)
                         {
                             infoPanelCloseHandler.gameObject.SetActive(showInfopanel);
                         }
-                        vm.infoPanelViewModel.Bind(slot.ItemViewModel);
+                        infoPanelView.Show(slot.ItemViewModel);
                     }
                 }).AddTo(disposable);
             }

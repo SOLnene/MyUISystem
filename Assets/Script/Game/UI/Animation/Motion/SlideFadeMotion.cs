@@ -20,17 +20,34 @@ public class SlideFadeMotion : UIMotionBase
     Vector2 targetMove;
     [SerializeField]
     Vector2 originMove;
+    [SerializeField]
+    float moveDuration = 0.35f;
+    [SerializeField]
+    float fadeDuration = 0.25f;
+    [SerializeField]
+    Ease moveEase = Ease.OutCubic;
+    [SerializeField]
+    Ease fadeEase = Ease.Linear;
 
+
+    void Awake()
+    {
+        if (motionRoot != null)
+        {
+            originPos = motionRoot.anchoredPosition;
+        }
+    }
 
     protected override UniTask PlayAnimation(bool isEnter,CancellationToken token)
     {
         seq?.Kill();
         seq = DOTween.Sequence()
-            .Join(motionRoot.DOAnchorPos(originPos + targetMove, 0.35f)
+            .Join(motionRoot.DOAnchorPos(originPos + targetMove, moveDuration)
                 .From(originPos + originMove)
-                .SetEase(Ease.OutCubic))
-            .Join(motionGroup.DOFade(1, 0.25f)
-                    .From(0.0f));
+                .SetEase(moveEase))
+            .Join(motionGroup.DOFade(1, fadeDuration)
+                    .From(0.0f)
+                    .SetEase(fadeEase));
         return seq.AsyncWaitForCompletion().AsUniTask().AttachExternalCancellation(token);
     }
 

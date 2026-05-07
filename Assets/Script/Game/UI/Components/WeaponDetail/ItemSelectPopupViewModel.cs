@@ -64,7 +64,11 @@ public class ItemSelectPopupViewModel
                 slotVM.onClick.Subscribe(_=>
                 {
                     if (lastSelctedSlot.Value == slotVM && slotVM.isChecked.Value)
+                    {
+                        //为了显示infopanel
+                        lastSelctedSlot.SetValueAndForceNotify(slotVM);
                         return;
+                    }
                     // 取消上一个选中
                     if (lastSelctedSlot.Value != null)
                         lastSelctedSlot.Value.isSelected.Value = false;

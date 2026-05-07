@@ -63,6 +63,27 @@ public class InfoPanelView : MonoBehaviour
         }).AddTo(disposable);
     }
 
+    public void Show(ItemViewModel itemViewModel)
+    {
+        if (itemViewModel == null)
+        {
+            return;
+        }
+
+        if (infoPanelVM == null)
+        {
+            Bind(new InfoPanelViewModel());
+        }
+
+        infoPanelVM.Bind(itemViewModel);
+        gameObject.SetActive(true);
+
+        if (animatedPanel != null)
+        {
+            animatedPanel.Show().Forget();
+        }
+    }
+
     async UniTask LoadIconAsync(string iconPath)
     {
         if (string.IsNullOrEmpty(iconPath))
