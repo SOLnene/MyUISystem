@@ -66,6 +66,11 @@ public class CharacterDetailEquipPageView : MonoBehaviour
             enhanceButton.onClick.RemoveAllListeners();
             enhanceButton.onClick.AddListener(OnEnhanceButtonClick);
         }
+        
+        if(itemSelectPopupViewPrefab != null)
+        {
+            itemSelectPopupViewPrefab.gameObject.SetActive(false);
+        }
     }
 
     void BindWeapon(EquipItemViewModel weapon)

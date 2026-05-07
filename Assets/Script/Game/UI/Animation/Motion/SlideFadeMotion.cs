@@ -10,25 +10,17 @@ using UniTaskCompletionSource = Cysharp.Threading.Tasks.UniTaskCompletionSource;
 
 public class SlideFadeMotion : UIMotionBase 
 {
-    #region 控件绑定变量声明，自动生成请勿手改
-		#pragma warning disable 0649
-    [ControlBinding]
+
+    [SerializeField]
     private CanvasGroup motionGroup;
-    [ControlBinding]
+    [SerializeField]
     private RectTransform motionRoot;
-
-		#pragma warning restore 0649
-#endregion
-
     Vector2 originPos;
     [SerializeField]
     Vector2 targetMove;
     [SerializeField]
     Vector2 originMove;
-    protected override void AfterBind()
-    {
-        originPos = motionRoot.anchoredPosition;
-    }
+
 
     protected override UniTask PlayAnimation(bool isEnter,CancellationToken token)
     {

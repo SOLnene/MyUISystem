@@ -31,6 +31,9 @@ public class InfoPanelView : MonoBehaviour
    [SerializeField]
    GameObject[] starIcons;
 
+   [SerializeField]
+   AnimatedPanel animatedPanel;
+   
    InfoPanelViewModel infoPanelVM;
 
    CompositeDisposable disposable = new();

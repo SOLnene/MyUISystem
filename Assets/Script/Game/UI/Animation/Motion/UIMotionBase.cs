@@ -6,7 +6,7 @@ using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
 
-public abstract class UIMotionBase : BindableUI
+public abstract class UIMotionBase : MonoBehaviour
 {
     bool isPlaying;
     CancellationTokenSource motionCts;

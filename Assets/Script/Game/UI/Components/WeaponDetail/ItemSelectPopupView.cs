@@ -22,6 +22,9 @@ public partial class ItemSelectPopupView : UIView
     [SerializeField]
     Button clickHandler;
 
+    [SerializeField]
+    AnimatedPanel animatedPanel;
+    
     //是否显示infopanel,先这样写 
     bool showInfopanel;
     CompositeDisposable disposable = new();

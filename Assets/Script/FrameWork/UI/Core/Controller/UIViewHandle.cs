@@ -253,7 +253,7 @@ public class UIViewHandle
 
     public bool IsOpen()
     {
-        return uiState == UIState.Opening && uiState == UIState.Opened;
+        return uiState == UIState.Opening || uiState == UIState.Opened;
     }
 
     public void AddTopViewNum(int num)

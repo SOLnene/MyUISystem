@@ -21,7 +21,8 @@ public class ItemSelectPanelView : MonoBehaviour
     //右侧信息面板的关闭遮罩
     [SerializeField]
     Button infoPanelCloseHandler;
-    
+    [SerializeField]
+    AnimatedPanel animatedPanel;
     
     const string slotPrefabAddress = "ui/prefab/item_slot_itemselect";
 
@@ -68,6 +69,11 @@ public class ItemSelectPanelView : MonoBehaviour
         {
             infoPanelCloseHandler.onClick.RemoveAllListeners();
             infoPanelCloseHandler.onClick.AddListener(CloseInfoPanel);
+        }
+        
+        if (animatedPanel != null)
+        {
+            animatedPanel.Show().Forget();
         }
     }
 
