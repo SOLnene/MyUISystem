@@ -30,41 +30,46 @@ public class EnhancePanelViewModel: IDisposable
             new StatItemViewModel(null, "基础攻击力"),
             new StatItemViewModel(null, "暴击率")
         };
-        Observable.CombineLatest(weaponVM.Where(viewModel=>viewModel!=null),
-            rightBottomVM.totalExp,
-            (weapon, exp) => new { weapon, exp }).Subscribe(
-            x =>
+        
+        //weaponvm发出变化信号时，返回weaponvn并且只监听最新的武器vm
+        var weaponChanged = weaponVM
+            .Where(weapon => weapon != null)
+            .Select(weapon => weapon.Changed.StartWith(Unit.Default).Select(_ => weapon))
+            .Switch();
+        Observable.CombineLatest(
+                weaponChanged,
+                rightBottomVM.totalExp,
+                (weapon, exp) => new { weapon, exp })
+            .Subscribe(x =>
             {
-                if (x.weapon == null)
-                {
-                    return;
-                }
-                var preview = x.weapon.Model.GetPreviewWithExp(x.exp);
-                previewExp.Value = preview.maxGainExp;
-                previewCost.Value = preview.costGold;
-                previewEquip.SetValueAndForceNotify(preview);
-                showUpgradeAttribute.Value = preview.levelUp > 0 || preview.isBreakPreview;
-                statItemVMs[0].SetValue(x.weapon.attack.Value, preview.nextAtk);
-                statItemVMs[1].SetValue(x.weapon.critical.Value, preview.nextCrit);
-            }).AddTo(disposables);
+                UpdatePreview(x.weapon,x.exp);
+            })
+            .AddTo(disposables);
         
         rightBottomVM.requestOpenItemSelectPanel
             .Subscribe(requestOpenItemSelectPanel.OnNext)
             .AddTo(disposables);
     }
     
-    public void RefreshPreview()
+    void UpdatePreview(EquipItemViewModel weapon, int exp)
     {
-        var w = weaponVM.Value;
-        if (w == null) return;
+        if (weapon == null) return;
 
-        var preview = weaponVM.Value.GetPreviewWithExp(rightBottomVM.totalExp.Value);
+        var preview = weapon.Model.GetPreviewWithExp(exp);
+
+        previewExp.Value = preview.maxGainExp;
+        previewCost.Value = preview.costGold;
         previewEquip.SetValueAndForceNotify(preview);
         showUpgradeAttribute.Value = preview.levelUp > 0 || preview.isBreakPreview;
-        statItemVMs[0].SetValue(w.attack.Value, preview.nextAtk);
-        statItemVMs[1].SetValue(w.critical.Value, preview.nextCrit);
+        statItemVMs[0].SetValue(weapon.attack.Value, preview.nextAtk);
+        statItemVMs[1].SetValue(weapon.critical.Value, preview.nextCrit);
     }
 
+    public void ClearSelectedMaterials()
+    {
+        rightBottomVM.ClearSelectedMaterials();
+    }
+    
     public void Dispose()
     {
         disposables.Dispose();

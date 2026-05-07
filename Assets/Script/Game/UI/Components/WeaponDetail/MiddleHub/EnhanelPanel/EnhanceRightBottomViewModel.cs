@@ -170,6 +170,15 @@ public class EnhanceRightBottomViewModel: IDisposable
         }
     }
     
+    public void ClearSelectedMaterials()
+    {
+        selectService.Clear();
+        //保险
+        currentConsume.Value = 0;
+        totalExp.Value = 0;
+        totalGoldCost.Value = 0;
+    }
+    
     public void Dispose()
     {
         disposables.Dispose();

@@ -26,6 +26,8 @@ public class EquipDetailViewModel: IDisposable
     
     /// 转发右下角的请求打开选择面板事件
     public readonly Subject<MaterialSelectParams> requestOpenItemSelectPanel = new();
+    /// 转发右下角的请求关闭选择面板事件
+    public readonly Subject<Unit> requestCloseItemSelectPanel = new();
     public EquipDetailViewModel(ReactiveProperty<EquipItemViewModel> viewModel,InventoryRepository repo)
     {
         currentWeaponVM = viewModel;
@@ -57,10 +59,16 @@ public class EquipDetailViewModel: IDisposable
         
         bottomVM.onEnhanceClick.Subscribe(_ =>
         {
+            
+            if (enhanceVM.previewExp.Value <= 0)
+            {
+                return;
+            }
             if (GameEconomy.Instance.TrySpendGold(enhanceVM.previewCost.Value)||true)
             {
                 currentWeaponVM.Value.AddExp(enhanceVM.previewExp.Value);
-                enhanceVM.RefreshPreview();
+                enhanceVM.ClearSelectedMaterials();
+                requestCloseItemSelectPanel.OnNext(Unit.Default);
             }
             else
             {

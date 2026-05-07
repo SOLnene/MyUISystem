@@ -153,6 +153,13 @@ public partial class EquipDetailView : UIView
                 itemSelectPanelView.Show(param);
             })
             .AddTo(disposable);
+        
+        equipDetailVm.requestCloseItemSelectPanel
+            .Subscribe(_ =>
+            {
+                itemSelectPanelView.Hide();
+            })
+            .AddTo(disposable);
     }
     
     void OnWeaponChanged(EquipItemViewModel viewModel)
