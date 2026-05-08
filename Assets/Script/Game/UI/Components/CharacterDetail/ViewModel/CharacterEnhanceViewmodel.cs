@@ -11,7 +11,7 @@ namespace Game.UI.Components.CharacterDetail
     {
         public IEnhanceable model;
         public IPromotable promoteModel;
-        public CharacterLevelPreviewViewmodel previewVm;
+        public EnhanceLevelPreviewViewModel previewVm;
         public IMaterialInput materialInput;
 
         public List<StatItemViewModel> statItemViewModels;
@@ -41,7 +41,7 @@ namespace Game.UI.Components.CharacterDetail
             this.onBack = onBack;
             
             this.materialInput = materialInput;
-            previewVm = new CharacterLevelPreviewViewmodel(model, materialInput.TotalExpRp);
+            previewVm = new EnhanceLevelPreviewViewModel(model, materialInput.TotalExpRp);
 
             var statItemList = new List<StatItemViewModel>();
             var previews = model.GetStatPreview(0);

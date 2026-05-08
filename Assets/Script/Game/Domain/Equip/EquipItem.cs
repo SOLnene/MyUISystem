@@ -125,11 +125,29 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     public int GetExpValue()
     {
         // baseExp = 50，稀有度和等级加成
-        float baseExp = 50f;
-        float rarityMultiplier = 0.5f + 0.5f * ((int)ItemRarity + 1); // Common=1, Legendary=5
-        float levelMultiplier = 1f + 0.1f * Level; // 每一级增加10%
-    
-        return Mathf.RoundToInt(baseExp * rarityMultiplier * levelMultiplier);
+        int baseExp = GetBaseWeaponMaterialExp(Stars);
+        int recycledExp = Mathf.RoundToInt(GetInvestedExp() * 0.8f);
+        return baseExp + recycledExp;
+    }
+
+    int GetInvestedExp()
+    {
+        int total = CurrentExp;
+        for (int level = 1; level < Level; level++)
+        {
+            total += LevelSystem.GetExpRequired(level);
+        }
+
+        return total;
+    }
+
+    static int GetBaseWeaponMaterialExp(int stars)
+    {
+        if (stars <= 1) return 600;
+        if (stars == 2) return 1200;
+        if (stars == 3) return 1800;
+        if (stars == 4) return 50000;
+        return 300000;
     }
 
     // 获取当前 rank 的最大等级

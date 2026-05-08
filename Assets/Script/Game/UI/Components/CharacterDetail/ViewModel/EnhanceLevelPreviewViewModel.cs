@@ -4,7 +4,7 @@ using Game.Domain.Character;
 using UniRx;
 using UnityEngine;
 
-public class CharacterLevelPreviewViewmodel
+public class EnhanceLevelPreviewViewModel
 {
     public ReadOnlyReactiveProperty<string> levelText;
     public ReadOnlyReactiveProperty<string> expText;
@@ -21,7 +21,7 @@ public class CharacterLevelPreviewViewmodel
     
     CompositeDisposable disposable = new CompositeDisposable();
     
-    public CharacterLevelPreviewViewmodel(IEnhanceable model,IReadOnlyReactiveProperty<int> previewExp)
+    public EnhanceLevelPreviewViewModel(IEnhanceable model,IReadOnlyReactiveProperty<int> previewExp)
     {
         levelText = model.LevelRP
             .Select(l => $"Lv.{l}")

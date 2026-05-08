@@ -7,7 +7,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 namespace  Game.UI.Components.CharacterDetail
 {
-	public class CharacterLevelPreviewView : BindableUI<CharacterLevelPreviewViewmodel>
+	public class CharacterLevelPreviewView : BindableUI<EnhanceLevelPreviewViewModel>
 	{
     #region 控件绑定变量声明，自动生成请勿手改
 		#pragma warning disable 0649
