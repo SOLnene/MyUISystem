@@ -79,7 +79,37 @@ public class ItemSelectPanelView : MonoBehaviour
 
     public void Hide()
     {
+       HideAsync().Forget();
+    }
+
+    /*1. 先 slotCreateVersion++，阻止异步创建 slot 回来
+    2. 先移除点击监听，避免关闭中重复点击
+    3. 播 ItemSelectPanel 的退出动画
+    4. 动画结束后再回收 slot / 清订阅 / 关子面板*/
+    async UniTask HideAsync()
+    {
         slotCreateVersion++;
+       
+       
+        if (clickHandler != null)
+        {
+            clickHandler.onClick.RemoveAllListeners();
+        }
+      
+        if (infoPanelCloseHandler != null)
+        {
+            infoPanelCloseHandler.onClick.RemoveAllListeners();
+            infoPanelCloseHandler.gameObject.SetActive(false);
+        }
+        if (animatedPanel != null)
+        {
+            await animatedPanel.Hide();
+        }
+        else
+        {
+            gameObject.SetActive(false);
+        }
+        
         foreach (var slot in activeItemSlots)
         {
             if (slot != null)
@@ -89,25 +119,13 @@ public class ItemSelectPanelView : MonoBehaviour
         }
         activeItemSlots.Clear();
         disposable.Clear();
-        if (clickHandler != null)
-        {
-            clickHandler.onClick.RemoveAllListeners();
-        }
-        
+          
         if (infoPanelView != null)
         {
             infoPanelView.gameObject.SetActive(false);
         }
-
-        if (infoPanelCloseHandler != null)
-        {
-            infoPanelCloseHandler.onClick.RemoveAllListeners();
-            infoPanelCloseHandler.gameObject.SetActive(false);
-        }
-        
-        gameObject.SetActive(false);
     }
-
+    
     public void Bind(ItemSelectPopupViewModel viewModel)
     {
         vm = viewModel;
