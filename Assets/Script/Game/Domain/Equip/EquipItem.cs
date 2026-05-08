@@ -2,30 +2,38 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using Game.Domain.Enhance;
+using UniRx;
 using UnityEngine;
 
 [Serializable]
-public class EquipItem : InventoryItem
+public class EquipItem : InventoryItem, IEnhanceable
 {
-    public int Level { get; private set; }
+    public int Level => LevelSystem.Level;
     public int RefinementLevel { get; private set; }
     
-    public int CurrentExp { get; private set; }
+    public int CurrentExp => LevelSystem.CurrentExp;
     //todo:改成计算，删了这个
-    public int NextLevelExp { get; private set; } 
+    public int NextLevelExp => LevelSystem.NextLevelExp; 
     
-    public int GetNextLevelExp() => GetExpRequiredForLevel(Level + 1);
+    public int GetNextLevelExp() => LevelSystem.NextLevelExp;
     public int Rank { get; private set; }
+    readonly ReactiveProperty<int> levelRP;
+    readonly ReactiveProperty<int> expRP;
+    readonly Subject<Unit> changeRP = new();
     
+    public LevelSystem LevelSystem { get; private set; }
+    public IReadOnlyReactiveProperty<int> LevelRP => levelRP;
+    public IReadOnlyReactiveProperty<int> ExpRP => expRP;
+    public IObservable<Unit> ChangeRP => changeRP;
     
     public new EquipDefinition EquipDefinition => base.ItemDefinition as EquipDefinition;
     
     public EquipItem(EquipDefinition def, int level = 1, int refine = 1,int currentExp = 0 , int nextLevelExp = 1000) : base(def)
     {
-        Level = level;
         RefinementLevel = refine;
-        CurrentExp = currentExp;
-        NextLevelExp = GetNextLevelExp();
+        LevelSystem = new LevelSystem(level, currentExp, (int)ItemRarity);
+        levelRP = new ReactiveProperty<int>(Level);
+        expRP = new ReactiveProperty<int>(CurrentExp);
     }
 
 
@@ -183,7 +191,7 @@ public class EquipItem : InventoryItem
         // 扣金币或其他消耗你可以在这里做
         // 成功突破
         Rank = nextRank;
-        CurrentExp = 0;
+        SyncEnhanceState();
         //OnRankChanged?.Invoke(Rank);
 
         // 注意：突破后通常会把 level cap 提升，但不自动满级；保持当前 Level 不变
@@ -213,78 +221,64 @@ public class EquipItem : InventoryItem
     
     public EquipPreview GetPreviewWithExp(int addedExp)
     {
-        // 创建一个临时副本（防止修改真实数据）
-        int previewLevel = Level;
-        int previewExp = CurrentExp + addedExp;
-        int previewNextExp = NextLevelExp;
         int maxLevel = GetMaxLevel();
-        int totalLevelUps = 0;
-        // 模拟升级逻辑（与 AddExp 类似，但不真正改变状态）
-        while (previewNextExp > 0 && previewExp >= previewNextExp && previewLevel < maxLevel)
-        {
-            previewExp -= previewNextExp;
-            previewLevel++;
-            previewNextExp = GetExpRequiredForLevel(previewLevel + 1); // 注意：这里需要一个独立函数
-            totalLevelUps++;
-        }
-        
-        int cappedExpGained = (Level == previewLevel && previewExp > NextLevelExp)
-            ? NextLevelExp - CurrentExp
-            : addedExp; // 实际可以提升的经验，不超过 Rank 上限
+        var levelPreview = LevelSystem.GetPreviewWithExp(addedExp, maxLevel);
        
         // 生成预览结构
         var preview = new EquipPreview
         {
             currentAtk = GetAttack(),
-            nextAtk = GetAttack(previewLevel),
+            nextAtk = GetAttack(levelPreview.finalLevel),
             currentCrit = GetCriticalDamage(),
-            nextCrit = GetCriticalDamage(previewLevel),
-            isBreakPreview = previewLevel >= maxLevel && NeedBreak(),
-            levelUp = totalLevelUps,
-            maxGainExp = cappedExpGained,
-            costGold = GetEnhanceCost(cappedExpGained)
+            nextCrit = GetCriticalDamage(levelPreview.finalLevel),
+            isBreakPreview = levelPreview.finalLevel >= maxLevel && NeedBreak(),
+            levelUp = levelPreview.levelUpCount,
+            maxGainExp = levelPreview.cappedExpGain,
+            costGold = GetEnhanceCost(levelPreview.cappedExpGain)
         };
 
         return preview;
     }
+
+    public List<StatPreviewData> GetStatPreview(int addedExp,bool promoting = false)
+    {
+        var preview = GetPreviewWithExp(addedExp);
+        return new List<StatPreviewData>
+        {
+            new StatPreviewData
+            {
+                label = "基础攻击力",
+                currentValue = preview.currentAtk,
+                nextValue = preview.nextAtk
+            },
+            new StatPreviewData
+            {
+                label = "暴击伤害",
+                currentValue = preview.currentCrit,
+                nextValue = preview.nextCrit
+            }
+        };
+    }
     
     public ExpGainResult AddExp(int exp)
     {
-        if (RankMaxed())
-            return ExpGainResult.MaxLevelReached;
-    
-        int maxLevel = GetMaxLevel();
-        
-        if (Level >= maxLevel)
-            return ExpGainResult.RankLimitReached;
-    
-        CurrentExp += exp;
-        ExpGainResult result = ExpGainResult.None;
-        
-        while (CurrentExp >= NextLevelExp)
-        {
-            if (Level >= maxLevel)
-            {
-                // 经验超出但受Rank限制
-                CurrentExp = Mathf.Min(CurrentExp, NextLevelExp - 1);
-                return ExpGainResult.RankLimitReached;
-            }
-    
-            CurrentExp -= NextLevelExp;
-            Level++;
-            NextLevelExp = GetNextLevelExp();
-            result = ExpGainResult.LeveledUp;
-        }
-    
+        var result = LevelSystem.AddExp(exp, GetMaxLevel());
+        SyncEnhanceState();
         return result;
+    }
+
+    void SyncEnhanceState()
+    {
+        levelRP.Value = Level;
+        expRP.Value = CurrentExp;
+        changeRP.OnNext(Unit.Default);
     }
     
     
     void LevelUp()
     {
-        Level++;
-        //CurrentExp = 0;
-        NextLevelExp = GetNextLevelExp();
+        LevelSystem.AddExp(NextLevelExp, GetMaxLevel());
+        SyncEnhanceState();
     }
 }
 
