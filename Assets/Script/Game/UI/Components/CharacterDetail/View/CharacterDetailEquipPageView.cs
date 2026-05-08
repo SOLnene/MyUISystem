@@ -102,7 +102,7 @@ public class CharacterDetailEquipPageView : MonoBehaviour
         if (firstStatValueText != null) firstStatValueText.text = weapon.Model.GetDisplayMainStatText();
         if (secondStatValueText != null) secondStatValueText.text = weapon.Model.GetDisplaySubStatText();
         if (levelText != null) levelText.text = $"Lv.{weapon.level.Value}";
-        if (levelCapText != null) levelCapText.text = $"/ {weapon.Model.GetMaxLevel()}";
+        if (levelCapText != null) levelCapText.text = $"/ {weapon.Model.GetCurrentMaxLevel()}";
         if (refineLevelText != null) refineLevelText.text = $"精炼{weapon.refineLevel.Value}阶";
         if (descText != null) descText.text = weapon.desc.Value;
 

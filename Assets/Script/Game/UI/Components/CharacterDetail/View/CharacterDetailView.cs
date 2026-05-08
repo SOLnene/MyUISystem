@@ -108,7 +108,7 @@ namespace Game.UI.Components.CharacterDetail
         {
             // 规则：小于当前 rank 最大等级 -> 升级；达到/超过 -> 突破
             int level = vm.model.LevelRP.Value;
-            int maxLevel = vm.model.GetMaxLevel();
+            int maxLevel = vm.model.GetCurrentMaxLevel();
             bool showUpgrade = level < maxLevel;
 
             enhancePanel.gameObject.SetActive(showUpgrade);

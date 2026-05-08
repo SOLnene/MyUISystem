@@ -177,7 +177,7 @@ namespace Game.UI.Components.CharacterDetail
         {
             int currentLevel = model.LevelRP.Value;
             int currentExp = model.ExpRP.Value;
-            int maxLevel = promoteModel.GetMaxLevel();
+            int maxLevel = model.GetCurrentMaxLevel();
 
             int needExp = 0;
 

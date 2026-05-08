@@ -133,7 +133,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     }
 
     // 获取当前 rank 的最大等级
-    public int GetMaxLevel()
+    public int GetCurrentMaxLevel()
     {
         return RankSystem.CurrentRankMaxLevel;
     }
@@ -157,7 +157,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     {
         // 如果已经是最高Rank，则返回当前Rank的最大等级
         if (RankMaxed())
-            return GetMaxLevel();
+            return GetCurrentMaxLevel();
 
         return RankSystem.GetNextRankMaxLevel();
     }
@@ -231,7 +231,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public EquipPreview GetPreviewWithExp(int addedExp)
     {
-        int maxLevel = GetMaxLevel();
+        int maxLevel = GetCurrentMaxLevel();
         var levelPreview = LevelSystem.GetPreviewWithExp(addedExp, maxLevel);
        
         // 生成预览结构
@@ -272,7 +272,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public ExpGainResult AddExp(int exp)
     {
-        var result = LevelSystem.AddExp(exp, GetMaxLevel());
+        var result = LevelSystem.AddExp(exp, GetCurrentMaxLevel());
         levelRP.Value = Level;
         expRP.Value = CurrentExp;
         return result;
@@ -281,7 +281,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     void LevelUp()
     {
-        LevelSystem.AddExp(NextLevelExp, GetMaxLevel());
+        LevelSystem.AddExp(NextLevelExp, GetCurrentMaxLevel());
         levelRP.Value = Level;
         expRP.Value = CurrentExp;
     }

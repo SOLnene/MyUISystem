@@ -60,7 +60,7 @@ namespace Game.Domain.Character
 
         public ExpGainResult AddExp(int exp)
         {
-            var result = LevelSystem.AddExp(exp,GetMaxLevel());
+            var result = LevelSystem.AddExp(exp,GetCurrentMaxLevel());
             if (result == ExpGainResult.LeveledUp)
             {
                 RefreshBaseStats();
@@ -70,7 +70,7 @@ namespace Game.Domain.Character
             return result;
         }
 
-        public int GetMaxLevel()
+        public int GetCurrentMaxLevel()
         {
             return RankSystem.CurrentRankMaxLevel;
         }
@@ -82,7 +82,7 @@ namespace Game.Domain.Character
         /// <returns></returns>
         public List<StatPreviewData> GetStatPreview(int addedExp,bool promoting = false)
         {
-            var preview = LevelSystem.GetPreviewWithExp(addedExp, GetMaxLevel());
+            var preview = LevelSystem.GetPreviewWithExp(addedExp, GetCurrentMaxLevel());
             int previewLevel = preview.finalLevel;
             int rank = promoting?RankSystem.CurrentRank+1: RankSystem.CurrentRank;
             var data = new List<StatPreviewData>

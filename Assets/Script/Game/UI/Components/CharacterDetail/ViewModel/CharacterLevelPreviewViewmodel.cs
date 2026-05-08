@@ -23,7 +23,6 @@ public class CharacterLevelPreviewViewmodel
     
     public CharacterLevelPreviewViewmodel(IEnhanceable model,IReadOnlyReactiveProperty<int> previewExp)
     {
-        var promotableModel = model as IPromotable;
         levelText = model.LevelRP
             .Select(l => $"Lv.{l}")
             .ToReadOnlyReactiveProperty()
@@ -52,7 +51,7 @@ public class CharacterLevelPreviewViewmodel
         
         var previewData = previewExp
             .Select(addedExp => model.LevelSystem.GetPreviewWithExp(addedExp,
-                promotableModel.GetMaxLevel() ))
+                model.GetCurrentMaxLevel() ))
             .Share();
 
         expPlusAmountText = previewExp

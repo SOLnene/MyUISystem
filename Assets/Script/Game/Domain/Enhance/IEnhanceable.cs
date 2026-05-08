@@ -5,7 +5,7 @@ using Game.Domain.Character;
 using Game.Domain.Enhance;
 using UniRx;
 
-public interface IEnhanceable
+public interface IEnhanceable : ILevelCapped
 {
     LevelSystem LevelSystem { get; }
     
