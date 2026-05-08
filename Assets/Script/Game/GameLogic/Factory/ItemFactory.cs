@@ -20,7 +20,7 @@ public static class ItemFactory
             switch (def.category)
             {
                 case ItemCategory.Equip:
-                    items.Add(new EquipItem(def as EquipDefinition, level: Random.Range(1, 10), refine: Random.Range(1, 5)));
+                    AddTestEquipItems(items, def as EquipDefinition);
                     break;
                 case ItemCategory.Consumable:
                     items.Add(new ConsumableItem(def, count: Random.Range(1, 10)));
@@ -35,6 +35,25 @@ public static class ItemFactory
         }
 
         return items;
+    }
+
+    static void AddTestEquipItems(List<InventoryItem> items, EquipDefinition def)
+    {
+        if (def == null) return;
+
+        int copyCount = GetTestEquipCopyCount(def.stars);
+        for (int i = 0; i < copyCount; i++)
+        {
+            items.Add(new EquipItem(def, level: Random.Range(1, 10), refine: Random.Range(1, 5)));
+        }
+    }
+
+    static int GetTestEquipCopyCount(int stars)
+    {
+        if (stars <= 1) return 40;
+        if (stars == 2) return 24;
+        if (stars == 3) return 16;
+        return 1;
     }
 
     public static List<InventoryItem> CreateAllFromDatabase()
