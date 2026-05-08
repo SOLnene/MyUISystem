@@ -45,6 +45,11 @@ public class RankSystem
         return currentLevel >= CurrentRankMaxLevel;
     }
 
+    public bool IsMaxRank()
+    {
+        return CurrentRank >= MaxRank;
+    }
+
     /// <summary>
     /// 执行突破操作，无需材料。只能在CanPromote为true时调用。
     /// </summary>

@@ -6,7 +6,7 @@ using UniRx;
 using UnityEngine;
 
 [Serializable]
-public class EquipItem : InventoryItem, IEnhanceable
+public class EquipItem : InventoryItem, IEnhanceable, IPromotable
 {
     public int Level => LevelSystem.Level;
     public int RefinementLevel { get; private set; }
@@ -16,15 +16,17 @@ public class EquipItem : InventoryItem, IEnhanceable
     public int NextLevelExp => LevelSystem.NextLevelExp; 
     
     public int GetNextLevelExp() => LevelSystem.NextLevelExp;
-    public int Rank { get; private set; }
+    public int Rank => RankSystem.CurrentRank;
     readonly ReactiveProperty<int> levelRP;
     readonly ReactiveProperty<int> expRP;
-    readonly Subject<Unit> changeRP = new();
+    readonly ReactiveProperty<int> rankRP;
     
     public LevelSystem LevelSystem { get; private set; }
+    public RankSystem RankSystem { get; private set; }
     public IReadOnlyReactiveProperty<int> LevelRP => levelRP;
     public IReadOnlyReactiveProperty<int> ExpRP => expRP;
-    public IObservable<Unit> ChangeRP => changeRP;
+    public IReadOnlyReactiveProperty<int> RankRP => rankRP;
+    public IObservable<Unit> ChangeRP { get; }
     
     public new EquipDefinition EquipDefinition => base.ItemDefinition as EquipDefinition;
     
@@ -32,8 +34,12 @@ public class EquipItem : InventoryItem, IEnhanceable
     {
         RefinementLevel = refine;
         LevelSystem = new LevelSystem(level, currentExp, (int)ItemRarity);
+        RankSystem = new RankSystem();
         levelRP = new ReactiveProperty<int>(Level);
         expRP = new ReactiveProperty<int>(CurrentExp);
+        rankRP = new ReactiveProperty<int>(Rank);
+        ChangeRP = Observable.CombineLatest(LevelRP, RankRP)
+            .Select(_ => Unit.Default);
     }
 
 
@@ -129,14 +135,13 @@ public class EquipItem : InventoryItem, IEnhanceable
     // 获取当前 rank 的最大等级
     public int GetMaxLevel()
     {
-        return EquipDefinition.GetMaxLevelForRank(Rank);
+        return RankSystem.CurrentRankMaxLevel;
     }
 
     // 是否可以突破（按当前等级和当前 rank）
     public bool NeedBreak()
     {
-        int maxLevel = GetMaxLevel();
-        return Level >= maxLevel && Rank < EquipDefinition.MaxRank;
+        return RankSystem.CanPromote(Level);
     }
 
     /// <summary>
@@ -145,31 +150,27 @@ public class EquipItem : InventoryItem, IEnhanceable
     /// <returns></returns>
     public bool RankMaxed()
     {
-        return Rank > EquipDefinition.MaxRank;
+        return RankSystem.IsMaxRank();
     }
     
     public int GetNextRankMaxLevel()
     {
         // 如果已经是最高Rank，则返回当前Rank的最大等级
-        if (Rank >= EquipDefinition.MaxRank)
+        if (RankMaxed())
             return GetMaxLevel();
 
-        var nextRank = Rank + 1;
-        var nextInfo = EquipDefinition.GetRankInfo(nextRank);
-        if (nextInfo == null)
-            return GetMaxLevel();
-
-        return nextInfo.maxLevel;
+        return RankSystem.GetNextRankMaxLevel();
     }
     
     // 尝试突破：检查材料，通过 inventoryService 扣除材料，提升 Rank（返回是否成功）
     public bool Breakout()
     {
+        return Promote();
+    }
+    
+    public bool Promote()
+    {
         if (!NeedBreak()) return false;
-
-        var nextRank = Rank + 1;
-        var req = EquipDefinition.GetRankInfo(nextRank);
-        if (req == null) return false;
 
         /*// 检查所有材料
         foreach (var r in req.requirements)
@@ -190,12 +191,21 @@ public class EquipItem : InventoryItem, IEnhanceable
 
         // 扣金币或其他消耗你可以在这里做
         // 成功突破
-        Rank = nextRank;
-        SyncEnhanceState();
+        if (!RankSystem.Promote())
+            return false;
+        
+        rankRP.Value = Rank;
         //OnRankChanged?.Invoke(Rank);
 
         // 注意：突破后通常会把 level cap 提升，但不自动满级；保持当前 Level 不变
         return true;
+    }
+    
+    public int GetPromoteGoldCost()
+    {
+        var nextRank = Rank + 1;
+        var rankInfo = EquipDefinition.GetRankInfo(nextRank);
+        return rankInfo?.goldCost ?? 0;
     }
 
     public bool TryRefine()
@@ -263,22 +273,17 @@ public class EquipItem : InventoryItem, IEnhanceable
     public ExpGainResult AddExp(int exp)
     {
         var result = LevelSystem.AddExp(exp, GetMaxLevel());
-        SyncEnhanceState();
-        return result;
-    }
-
-    void SyncEnhanceState()
-    {
         levelRP.Value = Level;
         expRP.Value = CurrentExp;
-        changeRP.OnNext(Unit.Default);
+        return result;
     }
     
     
     void LevelUp()
     {
         LevelSystem.AddExp(NextLevelExp, GetMaxLevel());
-        SyncEnhanceState();
+        levelRP.Value = Level;
+        expRP.Value = CurrentExp;
     }
 }
 
