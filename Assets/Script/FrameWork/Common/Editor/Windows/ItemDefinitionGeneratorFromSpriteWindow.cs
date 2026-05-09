@@ -135,13 +135,21 @@ public static class RankInfoGenerator
                 maxLevel = maxLevel,
                 attackAddFlat = rarity * (i + 1) * 5,
                 attackAddPercent = 0.02f * (i + 1),
-                requirements = new List<BreakthroughRequirement>()
+                requirements = new List<PromoteMaterialCost>()
             };
 
-            rank.requirements.Add(new BreakthroughRequirement($"{baseMat}{Mathf.Clamp(i + 1, 1, 5)}", (i + 1) * rarity * 2));
+            rank.requirements.Add(new PromoteMaterialCost
+            {
+                materialKey = $"{baseMat}{Mathf.Clamp(i + 1, 1, 5)}",
+                count = (i + 1) * rarity * 2
+            });
 
             // ✅【新增】自动金币需求
-            rank.requirements.Add(new BreakthroughRequirement("gold", baseGoldCost * (i + 1) * rarity));
+            rank.requirements.Add(new PromoteMaterialCost
+            {
+                materialKey = "gold",
+                count = baseGoldCost * (i + 1) * rarity
+            });
 
             ranks.Add(rank);
         }
