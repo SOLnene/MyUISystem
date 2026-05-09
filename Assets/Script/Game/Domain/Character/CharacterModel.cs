@@ -147,7 +147,7 @@ namespace Game.Domain.Character
         /// <returns></returns>
         public int GetPromoteGoldCost()
         {
-            return PromoteCostFormula.GetGoldCost(RankSystem.CurrentRank, Definition.rarity);
+            return GrowthCostFormula.GetPromoteGoldCost(RankSystem.CurrentRank, Definition.rarity);
         }
 
         public void ChangeEquip(EquipItem equipItem)

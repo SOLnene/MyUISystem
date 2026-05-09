@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public static class PromoteCostFormula
+public static class GrowthCostFormula
 {
     static readonly int[] RankBaseCosts =
     {
@@ -21,10 +21,15 @@ public static class PromoteCostFormula
         1.25f
     };
 
-    public static int GetGoldCost(int currentRank, int rarity)
+    public static int GetPromoteGoldCost(int currentRank, int rarity)
     {
         int rankIndex = Mathf.Clamp(currentRank, 0, RankBaseCosts.Length - 1);
         int rarityIndex = Mathf.Clamp(rarity - 1, 0, RarityMultipliers.Length - 1);
         return Mathf.RoundToInt(RankBaseCosts[rankIndex] * RarityMultipliers[rarityIndex]);
+    }
+
+    public static int GetEnhanceGoldCost(int gainedExp)
+    {
+        return Mathf.Max(0, gainedExp);
     }
 }

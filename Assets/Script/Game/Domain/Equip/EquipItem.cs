@@ -23,6 +23,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public LevelSystem LevelSystem { get; private set; }
     public RankSystem RankSystem { get; private set; }
+    public EquipStats Stats { get; }
     public IReadOnlyReactiveProperty<int> LevelRP => levelRP;
     public IReadOnlyReactiveProperty<int> ExpRP => expRP;
     public IReadOnlyReactiveProperty<int> RankRP => rankRP;
@@ -35,11 +36,13 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
         RefinementLevel = refine;
         LevelSystem = new LevelSystem(level, currentExp, (int)ItemRarity);
         RankSystem = new RankSystem();
+        Stats = new EquipStats();
         levelRP = new ReactiveProperty<int>(Level);
         expRP = new ReactiveProperty<int>(CurrentExp);
         rankRP = new ReactiveProperty<int>(Rank);
         ChangeRP = Observable.CombineLatest(LevelRP, RankRP)
             .Select(_ => Unit.Default);
+        RefreshBaseStats();
     }
 
 
@@ -58,8 +61,17 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     public string GetDisplaySubStatText() => $"{GetCriticalDamage()}";
     
     public string GetDisplayExpText() => $"{CurrentExp}/{NextLevelExp}%";
+    void RefreshBaseStats()
+    {
+        Stats.BaseAttack.Value = GetAttack(Level);
+        Stats.CriticalDamage.Value = GetCriticalDamage(Level);
+    }
+    
     public int GetAttack(int level = 0)
     {
+        if (level == 0 && Stats != null)
+            return Mathf.RoundToInt(Stats.BaseAttack.Value);
+        
         var lv = level == 0 ? Level : level;
         // 基础攻击由武器定义决定
         int baseAttack = EquipDefinition.baseAttack; // e.g. 100~200
@@ -68,11 +80,14 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
         // 精炼加成，按星级/精炼等级加固定百分比
         float refineMultiplier = 1 + 0.02f * RefinementLevel; // 每级精炼增加2%
     
-        return Mathf.RoundToInt(baseAttack * levelMultiplier * refineMultiplier);
+        return Mathf.RoundToInt(baseAttack * levelMultiplier * refineMultiplier * (1 + 0.08f * RankSystem.CurrentRank));
     }
 
     public float GetCriticalDamage(int level = 0)
     {
+        if (level == 0 && Stats != null)
+            return Stats.CriticalDamage.Value;
+        
         var lv = level == 0 ? Level : level;
         // 基础暴伤：0.5 = 50%
         float baseCritDamage = EquipDefinition.baseCritDamage;
@@ -83,7 +98,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
         // 星级加成，每颗星增加 10%
         float starBonus = 0.1f * Stars;
 
-        return baseCritDamage + refineBonus + starBonus;
+        return baseCritDamage + refineBonus + starBonus + 0.02f * RankSystem.CurrentRank;
     }
 
     /// <summary>
@@ -113,9 +128,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public int GetEnhanceCost(int gainedExp)
     {
-        int baseEnhanceCost = 100;  // 每点经验基础金币消耗
-        float rarityMultiplier = 0.5f + 0.5f * ((int)ItemRarity + 1);
-        return Mathf.RoundToInt(baseEnhanceCost * rarityMultiplier * (1f + 0.1f * Level) * gainedExp);
+        return GrowthCostFormula.GetEnhanceGoldCost(gainedExp);
     }
     
     /// <summary>
@@ -213,6 +226,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
             return false;
         
         rankRP.Value = Rank;
+        RefreshBaseStats();
         //OnRankChanged?.Invoke(Rank);
 
         // 注意：突破后通常会把 level cap 提升，但不自动满级；保持当前 Level 不变
@@ -221,20 +235,21 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public int GetPromoteGoldCost()
     {
-        return PromoteCostFormula.GetGoldCost(RankSystem.CurrentRank, (int)ItemRarity + 1);
+        return GrowthCostFormula.GetPromoteGoldCost(RankSystem.CurrentRank, (int)ItemRarity + 1);
     }
 
     public bool TryRefine()
     {
         if(RefinementLevel>=GetRefineCap()) return false;
         RefinementLevel++;
+        RefreshBaseStats();
         return true;
     }
 
     
     public int GetRefineCost(int currentLevel)
     {
-        int baseCost = 100;       // 等级1的基础花费
+        int baseCost = 1;       // 等级1的基础花费
         float exponent = 1.5f;    // 指数增长
         return Mathf.RoundToInt(baseCost * Mathf.Pow(currentLevel, exponent));
     }
@@ -289,6 +304,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     public ExpGainResult AddExp(int exp)
     {
         var result = LevelSystem.AddExp(exp, GetCurrentMaxLevel());
+        RefreshBaseStats();
         levelRP.Value = Level;
         expRP.Value = CurrentExp;
         return result;
@@ -298,12 +314,14 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     void LevelUp()
     {
         LevelSystem.AddExp(NextLevelExp, GetCurrentMaxLevel());
+        RefreshBaseStats();
         levelRP.Value = Level;
         expRP.Value = CurrentExp;
     }
 }
 
 // 单阶信息（类似“突破1：上限40，需要材料...，额外属性...”）
+//todo:删了
 [Serializable]
 public class RankInfo
 {

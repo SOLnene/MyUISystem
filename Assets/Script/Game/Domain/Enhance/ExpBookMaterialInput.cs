@@ -47,13 +47,7 @@ public class ExpBookMaterialInput : IMaterialInput
     
     public int GetBookCost(string key)
     {
-        switch(key)
-        {
-            case "expbook_small": return 100;
-            case "expbook_medium": return 500;
-            case "expbook_large": return 2500;
-            default: return 0;
-        }
+        return GrowthCostFormula.GetEnhanceGoldCost(GetBookExp(key));
     }
 
     public int GetTotalExp()

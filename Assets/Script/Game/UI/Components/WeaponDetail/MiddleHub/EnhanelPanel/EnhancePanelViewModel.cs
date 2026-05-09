@@ -77,6 +77,20 @@ public class EnhancePanelViewModel: IDisposable
         statItemVMs[1].SetValue(weapon.critical.Value, preview.nextCrit);
     }
 
+    void RefreshPreviewCost(int enhanceCost)
+    {
+        var weapon = weaponVM.Value;
+        if (weapon == null)
+        {
+            previewCost.Value = 0;
+            return;
+        }
+
+        previewCost.Value = weapon.needBreak.Value
+            ? weapon.Model.GetPromoteGoldCost()
+            : enhanceCost;
+    }
+    
     public void ClearSelectedMaterials()
     {
         rightBottomVM.ClearSelectedMaterials();
