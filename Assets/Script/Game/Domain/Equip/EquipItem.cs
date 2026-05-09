@@ -317,20 +317,6 @@ public class RankInfo
     public float attackAddFlat = 0f;      // 额外固定攻击
     public float attackAddPercent = 0f;   // 额外百分比（如 +5%）
 }
-[Serializable]
-public class BreakthroughRequirement
-{
-    public string materialKey; // 比如 "mat_enhance_1"
-    public int count;
-
-    public BreakthroughRequirement(string key, int c)
-    {
-        materialKey = key;
-        count = c;
-    }
-}
-
-
 
 //todo:升级只管等级不管属性
 public struct EquipPreview

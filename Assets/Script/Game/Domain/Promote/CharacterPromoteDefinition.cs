@@ -17,6 +17,6 @@ public class CharacterPromoteDefinition : ScriptableObject
     /// <summary>
     /// 每一阶的突破规则资产引用列表（按 rank 升序配置）
     /// </summary>
-    public List<CharacterRankPromoteRule> rankRules = new List<CharacterRankPromoteRule>();
+    public List<PromoteRankRule> rankRules = new List<PromoteRankRule>();
 }
 

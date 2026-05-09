@@ -6,8 +6,8 @@ using UnityEngine;
 /// 单个阶级的突破材料配置，做成 ScriptableObject，便于在不同角色之间复用、排列组合。
 /// 建议放在 Assets/GameData/Promote 下，与 CharacterPromoteDefinition 一起使用。
 /// </summary>
-[CreateAssetMenu(menuName = "Game/Promote/Character Rank Rule")]
-public class CharacterRankPromoteRule : ScriptableObject
+[CreateAssetMenu(menuName = "Game/Promote/Promote Rank Rule")]
+public class PromoteRankRule : ScriptableObject
 {
     /// <summary>
     /// 阶级编号（0 起始：0阶→1阶...）
