@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using Game.UI.Components.CharacterDetail;
 using UnityEngine;
 using TMPro;
@@ -27,17 +28,8 @@ public class EnhancePanelView : MonoBehaviour
     TextMeshProUGUI expPlusValueText;
     [SerializeField]
     EnhancePanelExpBar expBar;
-    
-    [Header("突破界面")]
     [SerializeField]
-    TextMeshProUGUI currentLevelText;
-    [SerializeField]
-    TextMeshProUGUI afterLevelText;
-    [SerializeField]
-    GameObject currentStarContent;
-    [SerializeField]
-    GameObject afterStarContent;
-    
+    PromoteLevelPreviewView promoteLevelPreviewView;
     [Header("通用")]
     [SerializeField]
     StatItemView[] statItemViews;
@@ -50,7 +42,6 @@ public class EnhancePanelView : MonoBehaviour
     EnhancePanelViewModel vm;
 
     CompositeDisposable rootDisposable = new();
-    CompositeDisposable uiDisposable=new();
     
     public void Bind(EnhancePanelViewModel viewModel)
     {
@@ -58,26 +49,16 @@ public class EnhancePanelView : MonoBehaviour
         
         expBar.BindData();
         BindStatItems();
+        BindPromotePreview();
         
         viewModel.weaponVM
             .Where(w => w != null)
             .Subscribe(weapon =>
             {
+                BindUpgradeUI(weapon);
                 weapon.needBreak.Subscribe(b =>
                 {
-                    upgradePanel.SetActive(!b);
-                    breakOutPanel.SetActive(b);
-                    
-                    uiDisposable.Clear();
-                    
-                    if (b)
-                    {
-                        BindBreakoutUI(weapon);
-                    }
-                    else
-                    {
-                        BindUpgradeUI(weapon);
-                    }
+                    SwitchPreviewMode(b).Forget();
                 }).AddTo(rootDisposable);
 
             })
@@ -93,13 +74,21 @@ public class EnhancePanelView : MonoBehaviour
         statItemViews[1].Bind(vm.statItemVMs[1]);
     }
 
+    void BindPromotePreview()
+    {
+        if (promoteLevelPreviewView == null)
+            return;
+
+        promoteLevelPreviewView.Bind(vm.promotePreviewVm);
+    }
+
     void BindUpgradeUI(EquipItemViewModel weapon)
     {
         weapon.level.Subscribe(value =>
         {
             if (levelValueText)
                 levelValueText.text = $"Lv.{value}";
-        }).AddTo(uiDisposable);
+        }).AddTo(rootDisposable);
     
         Observable.CombineLatest(weapon.currentExp, weapon.nextLevelExp, 
                 (cur, next) => new { cur, next })
@@ -107,7 +96,7 @@ public class EnhancePanelView : MonoBehaviour
             {
                 if (expValueText)
                     expValueText.text = $"{exp.cur}/{exp.next}";
-            }).AddTo(uiDisposable);
+            }).AddTo(rootDisposable);
     
         //经验条绑定
         Observable
@@ -121,44 +110,49 @@ public class EnhancePanelView : MonoBehaviour
                 if (expBar)
                     expBar.SetValue(exp.cur, exp.next,exp.cur+exp.previewExp);
             })
-            .AddTo(uiDisposable);
+            .AddTo(rootDisposable);
         
         vm.rightBottomVM.totalExp.Subscribe(exp =>
         {
             expPlusValueText.text = $"+{exp}";
-        }).AddTo(uiDisposable);
+        }).AddTo(rootDisposable);
     }
     
-    void BindBreakoutUI(EquipItemViewModel weapon)
+    void ShowPromotePreview()
     {
-        SetStars(weapon);
-        currentLevelText.text = $"Lv.{weapon.level.Value}";
-        afterLevelText.text = $"Lv.{weapon.nextRankMaxLevel.Value}";
-    }
-    
-    void SetStars(EquipItemViewModel viewModel)
-    {
-        var currentIcons = currentStarContent.GetComponentsInChildren<Image>();
-        for (int i = 0; i < currentIcons.Length; i++)
+        if (promoteLevelPreviewView != null)
         {
-            currentIcons[i].color = i < viewModel.rank.Value ? Color.white : Color.grey;
+            promoteLevelPreviewView.Show().Forget();
         }
-        afterLevelText.gameObject.SetActive(!viewModel.maxRanked.Value);
-        afterStarContent.SetActive(!viewModel.maxRanked.Value);
-        if (viewModel.maxRanked.Value)
+    }
+
+    async UniTask SwitchPreviewMode(bool isPromote)
+    {
+        if (isPromote)
         {
+            if (upgradePanel != null)
+                upgradePanel.SetActive(false);
+            if (breakOutPanel != null)
+                breakOutPanel.SetActive(true);
+
+            ShowPromotePreview();
             return;
         }
-        var afterIcons = afterStarContent.GetComponentsInChildren<Image>();
-        for (int i = 0; i < afterIcons.Length; i++)
+
+        if (promoteLevelPreviewView != null && promoteLevelPreviewView.gameObject.activeInHierarchy)
         {
-            afterIcons[i].color = i < viewModel.rank.Value + 1 ? Color.white : Color.grey;
+            await promoteLevelPreviewView.Hide();
         }
+
+        if (breakOutPanel != null)
+            breakOutPanel.SetActive(false);
+        if (upgradePanel != null)
+            upgradePanel.SetActive(true);
     }
     
     void OnDestroy()
     {
-        uiDisposable.Dispose();
+        rootDisposable.Dispose();
     }
     
 }

@@ -45,45 +45,11 @@ public partial class EquipDetailView : UIView
 
     EquipItemViewModel equipItemVm;
     readonly CompositeDisposable disposable = new CompositeDisposable();
-    
-    /// <summary>
-    /// 测试
-    /// </summary>
-    /// <exception cref="NotImplementedException"></exception>
-    void Start()
-    {
-        return;
-        UIControlData ctrlData = gameObject.GetComponent<UIControlData>();
-        if (ctrlData != null)
-        {
-            ctrlData.BindDataTo(this);
-        }
-        //OnOpen(ItemFactory.CreateWeaponItem());
-        //todo:放到类似context的地方
-        var item = ItemFactory.CreateWeaponItem();
-        equipItemVm = new EquipItemViewModel(item);
-        var weapon = new ReactiveProperty<EquipItemViewModel>(equipItemVm);
-        if (equipDetailVm == null)
-        {
-            equipDetailVm = new EquipDetailViewModel(weapon,GameContext.Instance.InventoryRepository);
-        } 
-        
-        Bind(equipDetailVm);
-        //子view绑定vm
-        MiddleHub.Bind(equipDetailVm.MiddleVM);
-        infoPanelView.Bind(equipDetailVm.infoVm);
-        enhancePanelView.Bind(equipDetailVm.enhanceVM);
-     
-        equipDetailVm.SetWeapon(equipItemVm);
-    }
-
 
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
         base.OnInit(uiControlData,handle);
     }
-
-   
     
     public override void OnOpen(object data)
     {
