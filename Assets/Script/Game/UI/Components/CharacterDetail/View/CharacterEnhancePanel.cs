@@ -9,7 +9,7 @@ namespace Game.UI.Components.CharacterDetail
       #region 控件绑定变量声明，自动生成请勿手改
 		#pragma warning disable 0649
 	    [ControlBinding]
-	    private BindableUI upgradePanel;
+	    private EnhanceLevelPreviewView upgradePanel;
 	    [ControlBinding]
 	    private BindableUI[] statItems;
 	    [ControlBinding]

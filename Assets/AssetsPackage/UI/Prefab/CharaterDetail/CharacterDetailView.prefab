@@ -3270,7 +3270,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   ctrlItemDatas:
   - name: upgradePanel
-    type: BindableUI
+    type: EnhanceLevelPreviewView
     targets:
     - {fileID: 8167093321400356476}
   - name: statItems
@@ -5114,6 +5114,7 @@ MonoBehaviour:
   expPlusAmoutText: {fileID: 5282047080811282379}
   expText: {fileID: 1809813285306993488}
   levelBar: {fileID: 8658072079381318737}
+  animatedPanel: {fileID: 0}
 --- !u!114 &7539817375162715713
 MonoBehaviour:
   m_ObjectHideFlags: 0

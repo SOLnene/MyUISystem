@@ -161,6 +161,8 @@ namespace SkierFramework
             {"CharacterDetailTabView",typeof(CharacterDetailTabView)},
             {"CharacterDetailPreviewView",typeof(CharacterDetailPreviewView)},
             {"CharacterDetailInfoPanelView",typeof(CharacterDetailInfoPanelView)},
+            ///////////////后续添加的通用组件///////////////
+            {"EnhanceLevelPreviewView",typeof(EnhanceLevelPreviewView)},
             ///////////////UI通用动画///////////////
             {"ISelectableFeedback",typeof(ISelectableFeedback)},
             {"ItemGlowScaleFeedback",typeof(ItemGlowScaleFeedback)},

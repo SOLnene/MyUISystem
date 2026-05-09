@@ -14,20 +14,6 @@ public class EnhancePanelView : MonoBehaviour
     [SerializeField]
     GameObject breakOutPanel;
     
-    [Header("可升级情况界面")]
-    [SerializeField]
-    GameObject unMaxLevelPanel;
-    [SerializeField]
-    TextMeshProUGUI levelValueText;
-    [SerializeField]
-    List<GameObject> arrows;
-
-    [SerializeField]
-    TextMeshProUGUI expValueText;
-    [SerializeField]
-    TextMeshProUGUI expPlusValueText;
-    [SerializeField]
-    EnhancePanelExpBar expBar;
     [SerializeField]
     EnhanceLevelPreviewView enhanceLevelPreviewView;
     [SerializeField]
@@ -49,16 +35,14 @@ public class EnhancePanelView : MonoBehaviour
     {
         vm = viewModel;
         
-        expBar.BindData();
         BindStatItems();
         BindEnhancePreview();
         BindPromotePreview();
-        
+        //todo：不一定要考虑武器切换
         viewModel.weaponVM
             .Where(w => w != null)
             .Subscribe(weapon =>
             {
-                BindUpgradeUI(weapon);
                 weapon.needBreak.Subscribe(b =>
                 {
                     SwitchPreviewMode(b).Forget();
@@ -92,81 +76,42 @@ public class EnhancePanelView : MonoBehaviour
 
         promoteLevelPreviewView.Bind(vm.promotePreviewVm);
     }
+    
+    UniTask SwitchPreviewMode(bool isPromote)
+    {
+        return isPromote ? SwitchToPromoteMode() : SwitchToEnhanceMode();
+    }
+    
+    async UniTask SwitchToPromoteMode()
+    {
+        if (enhanceLevelPreviewView != null && enhanceLevelPreviewView.gameObject.activeInHierarchy)
+            await enhanceLevelPreviewView.Hide();
 
-    void BindUpgradeUI(EquipItemViewModel weapon)
-    {
-        weapon.level.Subscribe(value =>
-        {
-            if (levelValueText)
-                levelValueText.text = $"Lv.{value}";
-        }).AddTo(rootDisposable);
-    
-        Observable.CombineLatest(weapon.currentExp, weapon.nextLevelExp, 
-                (cur, next) => new { cur, next })
-            .Subscribe(exp =>
-            {
-                if (expValueText)
-                    expValueText.text = $"{exp.cur}/{exp.next}";
-            }).AddTo(rootDisposable);
-    
-        //经验条绑定
-        Observable
-            .CombineLatest(
-                weapon.currentExp.StartWith(weapon.currentExp.Value),
-                weapon.nextLevelExp.StartWith(weapon.nextLevelExp.Value),
-                vm.previewExp.StartWith(vm.previewExp.Value),
-                (cur, next,previewExp) => new { cur, next,previewExp })
-            .Subscribe(exp =>
-            {
-                if (expBar)
-                    expBar.SetValue(exp.cur, exp.next,exp.cur+exp.previewExp);
-            })
-            .AddTo(rootDisposable);
-        
-        vm.rightBottomVM.totalExp.Subscribe(exp =>
-        {
-            expPlusValueText.text = $"+{exp}";
-        }).AddTo(rootDisposable);
-    }
-    
-    void ShowEnhancePreview()
-    {
-        if (enhanceLevelPreviewView != null)
-        {
-            enhanceLevelPreviewView.Show().Forget();
-        }
-    }
-    
-    void ShowPromotePreview()
-    {
+        SetPanelActive(upgradePanel, false);
+        SetPanelActive(breakOutPanel, true);
+
         if (promoteLevelPreviewView != null)
-        {
-            promoteLevelPreviewView.Show().Forget();
-        }
+            await promoteLevelPreviewView.Show();
     }
-
-    async UniTask SwitchPreviewMode(bool isPromote)
+    
+    async UniTask SwitchToEnhanceMode()
     {
-        if (isPromote)
-        {
-            if (upgradePanel != null)
-                upgradePanel.SetActive(false);
-            if (breakOutPanel != null)
-                breakOutPanel.SetActive(true);
-
-            ShowPromotePreview();
-            return;
-        }
-
         if (promoteLevelPreviewView != null && promoteLevelPreviewView.gameObject.activeInHierarchy)
         {
             await promoteLevelPreviewView.Hide();
         }
 
-        if (breakOutPanel != null)
-            breakOutPanel.SetActive(false);
-        if (upgradePanel != null)
-            upgradePanel.SetActive(true);
+        SetPanelActive(breakOutPanel, false);
+        SetPanelActive(upgradePanel, true);
+
+        if (enhanceLevelPreviewView != null)
+            await enhanceLevelPreviewView.Show();
+    }
+    
+    void SetPanelActive(GameObject panel, bool active)
+    {
+        if (panel != null)
+            panel.SetActive(active);
     }
     
     void OnDestroy()

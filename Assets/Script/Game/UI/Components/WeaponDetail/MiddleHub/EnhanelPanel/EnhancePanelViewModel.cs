@@ -83,6 +83,7 @@ public class EnhancePanelViewModel: IDisposable
     
     public void Dispose()
     {
+        enhanceLevelPreviewVm?.Dispose();
         promotePreviewVm?.Dispose();
         disposables.Dispose();
     }

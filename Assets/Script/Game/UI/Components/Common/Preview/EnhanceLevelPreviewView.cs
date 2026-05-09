@@ -8,7 +8,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 namespace  Game.UI.Components.CharacterDetail
 {
-	public class EnhanceLevelPreviewView : BindableUI<EnhanceLevelPreviewViewModel>
+	public class EnhanceLevelPreviewView : MonoBehaviour
 	{
 		[SerializeField]
 		private TextMeshProUGUI levelText;
@@ -24,20 +24,13 @@ namespace  Game.UI.Components.CharacterDetail
 		AnimatedPanel animatedPanel;
 
 		CompositeDisposable disposable = new CompositeDisposable();
-		//CharacterLevelPreviewViewmodel vm;
-		public void BindData(UIControlData uiControlData)
-		{
-			if (uiControlData != null)
-			{
-				uiControlData.BindDataTo(this);
-			}
-		}
+		EnhanceLevelPreviewViewModel Vm;
 
-		public override void Bind(object data)
+
+		public void Bind(EnhanceLevelPreviewViewModel viewModel)
 		{
-			base.Bind(data);
 			disposable.Clear();
-			
+			Vm = viewModel;
 			Vm.levelText.Subscribe(
 				value =>
 				{
@@ -58,6 +51,7 @@ namespace  Game.UI.Components.CharacterDetail
 			Vm.levelUpText.Subscribe(
 				value => {
 					levelPlusText.text = value;
+					Debug.Log("levelup value" + value);
 				}).AddTo(disposable);
 			
 			Observable.CombineLatest(Vm.expProgress, Vm.previewProgress,
