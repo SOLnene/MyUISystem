@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using SkierFramework;
 using TMPro;
 using UniRx;
@@ -9,23 +10,18 @@ namespace  Game.UI.Components.CharacterDetail
 {
 	public class EnhanceLevelPreviewView : BindableUI<EnhanceLevelPreviewViewModel>
 	{
-    #region 控件绑定变量声明，自动生成请勿手改
-		#pragma warning disable 0649
-		[ControlBinding]
+		[SerializeField]
 		private TextMeshProUGUI levelText;
-		[ControlBinding]
+		[SerializeField]
 		private TextMeshProUGUI levelPlusText;
-		[ControlBinding]
+		[SerializeField]
 		private TextMeshProUGUI expPlusAmoutText;
-		[ControlBinding]
+		[SerializeField]
 		private TextMeshProUGUI expText;
-		[ControlBinding]
+		[SerializeField]
 		private BarBase levelBar;
-
-		#pragma warning restore 0649
-#endregion
-
-
+		[SerializeField]
+		AnimatedPanel animatedPanel;
 
 		CompositeDisposable disposable = new CompositeDisposable();
 		//CharacterLevelPreviewViewmodel vm;
@@ -84,6 +80,26 @@ namespace  Game.UI.Components.CharacterDetail
 				expPlusAmoutText.gameObject.SetActive(isAdding);
 			}).AddTo(disposable);
 					
+		}
+		
+		public async UniTask Show()
+		{
+			gameObject.SetActive(true);
+
+			if (animatedPanel != null)
+				await animatedPanel.Show();
+		}
+
+		public async UniTask Hide()
+		{
+			if (animatedPanel != null)
+			{
+				await animatedPanel.Hide();
+			}
+			else
+			{
+				gameObject.SetActive(false);
+			}
 		}
 		
 		public void OnDestroy()

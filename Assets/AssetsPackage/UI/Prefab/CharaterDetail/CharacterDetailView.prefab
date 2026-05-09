@@ -5109,6 +5109,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 4bb9f7c5cdd50b545987717a0476c538, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  levelText: {fileID: 681307986706626669}
+  levelPlusText: {fileID: 1614538243397101993}
+  expPlusAmoutText: {fileID: 5282047080811282379}
+  expText: {fileID: 1809813285306993488}
+  levelBar: {fileID: 8658072079381318737}
 --- !u!114 &7539817375162715713
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -18178,6 +18183,18 @@ PrefabInstance:
     - target: {fileID: 4199198993820768097, guid: dc9c2aa0bfc23c744adc932c2b3348e3, type: 3}
       propertyPath: m_Name
       value: ItemSelectPopupView
+      objectReference: {fileID: 0}
+    - target: {fileID: 4892057006947564914, guid: dc9c2aa0bfc23c744adc932c2b3348e3, type: 3}
+      propertyPath: m_AnchorMax.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4892057006947564914, guid: dc9c2aa0bfc23c744adc932c2b3348e3, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 4892057006947564914, guid: dc9c2aa0bfc23c744adc932c2b3348e3, type: 3}
+      propertyPath: m_SizeDelta.x
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 4966340115919088115, guid: dc9c2aa0bfc23c744adc932c2b3348e3, type: 3}
       propertyPath: m_SizeDelta.y

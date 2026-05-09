@@ -29,6 +29,8 @@ public class EnhancePanelView : MonoBehaviour
     [SerializeField]
     EnhancePanelExpBar expBar;
     [SerializeField]
+    EnhanceLevelPreviewView enhanceLevelPreviewView;
+    [SerializeField]
     PromoteLevelPreviewView promoteLevelPreviewView;
     [Header("通用")]
     [SerializeField]
@@ -49,6 +51,7 @@ public class EnhancePanelView : MonoBehaviour
         
         expBar.BindData();
         BindStatItems();
+        BindEnhancePreview();
         BindPromotePreview();
         
         viewModel.weaponVM
@@ -74,6 +77,14 @@ public class EnhancePanelView : MonoBehaviour
         statItemViews[1].Bind(vm.statItemVMs[1]);
     }
 
+    void BindEnhancePreview()
+    {
+        if (enhanceLevelPreviewView == null)
+            return;
+
+        enhanceLevelPreviewView.Bind(vm.enhanceLevelPreviewVm);
+    }
+    
     void BindPromotePreview()
     {
         if (promoteLevelPreviewView == null)
@@ -116,6 +127,14 @@ public class EnhancePanelView : MonoBehaviour
         {
             expPlusValueText.text = $"+{exp}";
         }).AddTo(rootDisposable);
+    }
+    
+    void ShowEnhancePreview()
+    {
+        if (enhanceLevelPreviewView != null)
+        {
+            enhanceLevelPreviewView.Show().Forget();
+        }
     }
     
     void ShowPromotePreview()

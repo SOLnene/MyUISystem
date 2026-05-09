@@ -18,6 +18,8 @@ public class EnhancePanelViewModel: IDisposable
     public readonly ReactiveProperty<int> previewCost = new();
     public readonly ReactiveProperty<EquipPreview> previewEquip = new();
     public readonly StatItemViewModel[] statItemVMs;
+    
+    public readonly EnhanceLevelPreviewViewModel enhanceLevelPreviewVm;
     public readonly PromoteLevelPreviewViewModel promotePreviewVm;
     
     //转发右下角的请求打开选择面板事件
@@ -26,9 +28,14 @@ public class EnhancePanelViewModel: IDisposable
     {
         weaponVM = viewModel;
         rightBottomVM = new EnhanceRightBottomViewModel(viewModel);
+        enhanceLevelPreviewVm = weaponVM.Value != null
+            ? new EnhanceLevelPreviewViewModel(weaponVM.Value.Model,previewExp)
+            : null;
+        
         promotePreviewVm = weaponVM.Value != null
             ? new PromoteLevelPreviewViewModel(weaponVM.Value.Model)
             : null;
+        
         statItemVMs = new[]
         {
             new StatItemViewModel(null, "基础攻击力"),
