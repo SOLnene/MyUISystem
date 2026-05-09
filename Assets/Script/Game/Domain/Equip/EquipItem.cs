@@ -221,9 +221,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public int GetPromoteGoldCost()
     {
-        var nextRank = Rank + 1;
-        var rankInfo = EquipDefinition.GetRankInfo(nextRank);
-        return rankInfo?.goldCost ?? 0;
+        return PromoteCostFormula.GetGoldCost(RankSystem.CurrentRank, (int)ItemRarity + 1);
     }
 
     public bool TryRefine()

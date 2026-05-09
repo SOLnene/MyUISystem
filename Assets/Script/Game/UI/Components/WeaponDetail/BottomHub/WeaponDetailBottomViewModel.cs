@@ -21,11 +21,7 @@ public class WeaponDetailBottomViewModel : IDisposable
     
     
     CompositeDisposable disposables = new();
-
-    public WeaponDetailBottomViewModel() : this(new ReactiveProperty<int>(0))
-    {
-    }
-
+    
     public WeaponDetailBottomViewModel(ReactiveProperty<int> selectedTabIndex)
     {
         this.selectedTabIndex = selectedTabIndex;
@@ -36,16 +32,6 @@ public class WeaponDetailBottomViewModel : IDisposable
                 Debug.Log($"执行强化:金币-{totalCostGold.Value}")
             ).AddTo(disposables);
         onBreakoutClick.Subscribe(_ => Debug.Log("执行突破")).AddTo(disposables);
-    }
-
-    public void SetIndex(int index)
-    {
-        selectedTabIndex.Value = index;
-    }
-    
-    public void SetValues(int gold)
-    {
-        totalCostGold.Value = gold;
     }
     
     public void Dispose()
