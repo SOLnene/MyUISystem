@@ -312,7 +312,7 @@ public class RankInfo
     public int rank;             // 0 = 未突破（基础），1 = 突破一次 ...
     public int maxLevel;         // 该 rank 的等级上限 (例如 20,40,60...)
     public int goldCost;   
-    public List<BreakthroughRequirement> requirements = new();
+    public List<PromoteMaterialCost> requirements = new();
     // 可扩展：突破带来的固定属性加成或解锁（例如攻击力提升、精炼上限等）
     public float attackAddFlat = 0f;      // 额外固定攻击
     public float attackAddPercent = 0f;   // 额外百分比（如 +5%）

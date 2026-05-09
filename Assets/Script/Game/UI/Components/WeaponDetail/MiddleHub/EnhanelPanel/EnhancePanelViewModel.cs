@@ -21,6 +21,7 @@ public class EnhancePanelViewModel: IDisposable
     
     public readonly EnhanceLevelPreviewViewModel enhanceLevelPreviewVm;
     public readonly PromoteLevelPreviewViewModel promotePreviewVm;
+    public readonly PromoteMaterialPreviewViewModel promoteMaterialPreviewVm = new();
     
     //转发右下角的请求打开选择面板事件
     public readonly Subject<MaterialSelectParams> requestOpenItemSelectPanel = new();
@@ -79,6 +80,25 @@ public class EnhancePanelViewModel: IDisposable
     public void ClearSelectedMaterials()
     {
         rightBottomVM.ClearSelectedMaterials();
+    }
+
+    public void RefreshPromoteMaterialPreview()
+    {
+        var weapon = weaponVM.Value;
+        if (weapon == null)
+        {
+            promoteMaterialPreviewVm.SetMaterials(null);
+            return;
+        }
+
+        var promoteDefinition = GameDatabase.PromoteDatabase.Get("hutao");
+        if (promoteDefinition == null || weapon.Model.Rank >= promoteDefinition.rankRules.Count)
+        {
+            promoteMaterialPreviewVm.SetMaterials(null);
+            return;
+        }
+
+        promoteMaterialPreviewVm.SetMaterials(promoteDefinition.rankRules[weapon.Model.Rank].materials);
     }
     
     public void Dispose()

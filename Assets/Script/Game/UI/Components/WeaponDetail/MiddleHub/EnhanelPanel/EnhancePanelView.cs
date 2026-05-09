@@ -22,6 +22,10 @@ public class EnhancePanelView : MonoBehaviour
     [SerializeField]
     StatItemView[] statItemViews;
     
+    [SerializeField]
+    GameObject enhanceMaterialPreviewView;
+    [SerializeField]
+    PromoteMaterialPreviewView promoteMaterialPreviewView;
     [Space]
     [Header("右下面板")]
     [SerializeField]
@@ -89,6 +93,12 @@ public class EnhancePanelView : MonoBehaviour
 
         SetPanelActive(upgradePanel, false);
         SetPanelActive(breakOutPanel, true);
+        SetPanelActive(enhanceMaterialPreviewView, false);
+        SetPanelActive(promoteMaterialPreviewView, true);
+
+        vm.RefreshPromoteMaterialPreview();
+        if (promoteMaterialPreviewView != null)
+            await promoteMaterialPreviewView.Bind(vm.promoteMaterialPreviewVm);
 
         if (promoteLevelPreviewView != null)
             await promoteLevelPreviewView.Show();
@@ -103,6 +113,8 @@ public class EnhancePanelView : MonoBehaviour
 
         SetPanelActive(breakOutPanel, false);
         SetPanelActive(upgradePanel, true);
+        SetPanelActive(promoteMaterialPreviewView, false);
+        SetPanelActive(enhanceMaterialPreviewView, true);
 
         if (enhanceLevelPreviewView != null)
             await enhanceLevelPreviewView.Show();
@@ -112,6 +124,12 @@ public class EnhancePanelView : MonoBehaviour
     {
         if (panel != null)
             panel.SetActive(active);
+    }
+
+    void SetPanelActive(Component component, bool active)
+    {
+        if (component != null)
+            component.gameObject.SetActive(active);
     }
     
     void OnDestroy()
