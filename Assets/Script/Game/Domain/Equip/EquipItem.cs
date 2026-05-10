@@ -67,12 +67,13 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
         Stats.CriticalDamage.Value = GetCriticalDamage(Level);
     }
     
-    public int GetAttack(int level = 0)
+    public int GetAttack(int level = 0, int rank = -1)
     {
-        if (level == 0 && Stats != null)
+        if (level == 0 && rank < 0 && Stats != null)
             return Mathf.RoundToInt(Stats.BaseAttack.Value);
         
         var lv = level == 0 ? Level : level;
+        var currentRank = rank < 0 ? RankSystem.CurrentRank : rank;
         // 基础攻击由武器定义决定
         int baseAttack = EquipDefinition.baseAttack; // e.g. 100~200
         // 等级成长，简单线性或略微非线性
@@ -80,15 +81,16 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
         // 精炼加成，按星级/精炼等级加固定百分比
         float refineMultiplier = 1 + 0.02f * RefinementLevel; // 每级精炼增加2%
     
-        return Mathf.RoundToInt(baseAttack * levelMultiplier * refineMultiplier * (1 + 0.08f * RankSystem.CurrentRank));
+        return Mathf.RoundToInt(baseAttack * levelMultiplier * refineMultiplier * (1 + 0.08f * currentRank));
     }
 
-    public float GetCriticalDamage(int level = 0)
+    public float GetCriticalDamage(int level = 0, int rank = -1)
     {
-        if (level == 0 && Stats != null)
+        if (level == 0 && rank < 0 && Stats != null)
             return Stats.CriticalDamage.Value;
         
         var lv = level == 0 ? Level : level;
+        var currentRank = rank < 0 ? RankSystem.CurrentRank : rank;
         // 基础暴伤：0.5 = 50%
         float baseCritDamage = EquipDefinition.baseCritDamage;
 
@@ -98,7 +100,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
         // 星级加成，每颗星增加 10%
         float starBonus = 0.1f * Stars;
 
-        return baseCritDamage + refineBonus + starBonus + 0.02f * RankSystem.CurrentRank;
+        return baseCritDamage + refineBonus + starBonus + 0.02f * currentRank;
     }
 
     /// <summary>
@@ -260,22 +262,26 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
         return 5;
     }
     
-    public EquipPreview GetPreviewWithExp(int addedExp)
+    public EquipPreview GetPreviewWithExp(int addedExp, bool promoting = false)
     {
         int maxLevel = GetCurrentMaxLevel();
         var levelPreview = LevelSystem.GetPreviewWithExp(addedExp, maxLevel);
+        int previewRank = promoting && !RankSystem.IsMaxRank()
+            ? RankSystem.CurrentRank + 1
+            : RankSystem.CurrentRank;
+        int previewLevel = promoting ? Level : levelPreview.finalLevel;
        
         // 生成预览结构
         var preview = new EquipPreview
         {
             currentAtk = GetAttack(),
-            nextAtk = GetAttack(levelPreview.finalLevel),
+            nextAtk = GetAttack(previewLevel, previewRank),
             currentCrit = GetCriticalDamage(),
-            nextCrit = GetCriticalDamage(levelPreview.finalLevel),
-            isBreakPreview = levelPreview.finalLevel >= maxLevel && NeedBreak(),
-            levelUp = levelPreview.levelUpCount,
-            maxGainExp = levelPreview.cappedExpGain,
-            costGold = GetEnhanceCost(levelPreview.cappedExpGain)
+            nextCrit = GetCriticalDamage(previewLevel, previewRank),
+            isBreakPreview = promoting || levelPreview.finalLevel >= maxLevel && NeedBreak(),
+            levelUp = promoting ? 0 : levelPreview.levelUpCount,
+            maxGainExp = promoting ? 0 : levelPreview.cappedExpGain,
+            costGold = promoting ? GetPromoteGoldCost() : GetEnhanceCost(levelPreview.cappedExpGain)
         };
 
         return preview;
@@ -283,7 +289,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
 
     public List<StatPreviewData> GetStatPreview(int addedExp,bool promoting = false)
     {
-        var preview = GetPreviewWithExp(addedExp);
+        var preview = GetPreviewWithExp(addedExp, promoting);
         return new List<StatPreviewData>
         {
             new StatPreviewData

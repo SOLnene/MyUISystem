@@ -83,9 +83,9 @@ public class EquipItemViewModel: ItemViewModel
         SyncFromModel();
     }
     
-    public EquipPreview GetPreviewWithExp(int addedExp)
+    public EquipPreview GetPreviewWithExp(int addedExp, bool promoting = false)
     {
-        return Model.GetPreviewWithExp(addedExp);
+        return Model.GetPreviewWithExp(addedExp, promoting);
     }
     
     public NextAttribute GetNextAttribute()

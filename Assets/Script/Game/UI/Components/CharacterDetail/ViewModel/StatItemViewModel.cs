@@ -2,6 +2,12 @@ using UniRx;
 using UnityEngine;
 namespace Game.UI.Components.CharacterDetail
 {
+    public enum StatValueFormat
+    {
+        Number,
+        Percent
+    }
+    
     public class StatItemViewModel
     {
         //todo:存标识，做enum
@@ -9,6 +15,7 @@ namespace Game.UI.Components.CharacterDetail
         public Sprite icon;
     
         public string label;
+        readonly StatValueFormat valueFormat;
 
         public readonly ReactiveProperty<float> currentValue = new ReactiveProperty<float>();
         public readonly ReactiveProperty<float> nextValue = new ReactiveProperty<float>(); 
@@ -26,19 +33,27 @@ namespace Game.UI.Components.CharacterDetail
         /// <param name="label"></param>
         /// <param name="currentValue"></param>
         /// <param name="nextValue"></param> 无升级时，传当前值
-        public StatItemViewModel(Sprite icon, string label)
+        public StatItemViewModel(Sprite icon, string label, StatValueFormat valueFormat = StatValueFormat.Number)
         {
             this.icon = icon;
             this.label = label;
+            this.valueFormat = valueFormat;
             valueText = currentValue
-                .Select(v => v.ToString("N0"))
+                .Select(FormatValue)
                 .ToReadOnlyReactiveProperty();
             nextValueText = nextValue
-                .Select(v => v.ToString("N0"))
+                .Select(FormatValue)
                 .ToReadOnlyReactiveProperty();
             IsUpgrade = currentValue
                 .CombineLatest(nextValue, (c, n) => n > c)
                 .ToReadOnlyReactiveProperty();
+        }
+
+        string FormatValue(float value)
+        {
+            return valueFormat == StatValueFormat.Percent
+                ? value.ToString("P0")
+                : value.ToString("N0");
         }
         
         public void SetValue(float current,float next)

@@ -4993,6 +4993,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 1290220155}
     m_Modifications:
+    - target: {fileID: 135550273436107114, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
+      propertyPath: motionGroup
+      value: 
+      objectReference: {fileID: 1958427802}
     - target: {fileID: 369496197540370796, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -5249,6 +5253,10 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -25.28705
       objectReference: {fileID: 0}
+    - target: {fileID: 2584365284154657841, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
+      propertyPath: inputGroup
+      value: 
+      objectReference: {fileID: 1958427802}
     - target: {fileID: 2910112060947493073, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -5588,7 +5596,7 @@ PrefabInstance:
     - target: {fileID: 6902501617029070553, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
       propertyPath: animatedPanel
       value: 
-      objectReference: {fileID: 1958427799}
+      objectReference: {fileID: 0}
     - target: {fileID: 7005892215838784006, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
       propertyPath: m_AnchorMax.x
       value: 0
@@ -5776,16 +5784,7 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 269556680566796177, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1958427800}
-    - targetCorrespondingSourceObject: {fileID: 269556680566796177, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1958427799}
-    - targetCorrespondingSourceObject: {fileID: 269556680566796177, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 1958427798}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
 --- !u!224 &790900448 stripped
 RectTransform:
@@ -11588,63 +11587,11 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1955342282}
   m_CullTransparentMesh: 1
---- !u!1 &1958427796 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 269556680566796177, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
-  m_PrefabInstance: {fileID: 790900447}
-  m_PrefabAsset: {fileID: 0}
---- !u!224 &1958427797 stripped
-RectTransform:
-  m_CorrespondingSourceObject: {fileID: 3399657240325731626, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
-  m_PrefabInstance: {fileID: 790900447}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &1958427798
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1958427796}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 82e8af1c72efe834bb395144422b2b42, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  motionGroup: {fileID: 1958427800}
-  motionRoot: {fileID: 1958427797}
-  targetMove: {x: 0, y: 0}
-  originMove: {x: 0, y: 50}
-  moveDuration: 0.35
-  fadeDuration: 0.25
-  moveEase: 9
-  fadeEase: 1
---- !u!114 &1958427799
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1958427796}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: f5d20f43324ef5240b901dd4dd7c8ae3, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  panelRoot: {fileID: 1958427796}
-  motion: {fileID: 1958427798}
-  inputGroup: {fileID: 1958427800}
---- !u!225 &1958427800
+--- !u!225 &1958427802 stripped
 CanvasGroup:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
+  m_CorrespondingSourceObject: {fileID: 8838675808387234726, guid: 6df63b977199af34cbaa7a0f707b73a9, type: 3}
+  m_PrefabInstance: {fileID: 790900447}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1958427796}
-  m_Enabled: 1
-  m_Alpha: 1
-  m_Interactable: 1
-  m_BlocksRaycasts: 1
-  m_IgnoreParentGroups: 0
 --- !u!1 &1969062559
 GameObject:
   m_ObjectHideFlags: 0

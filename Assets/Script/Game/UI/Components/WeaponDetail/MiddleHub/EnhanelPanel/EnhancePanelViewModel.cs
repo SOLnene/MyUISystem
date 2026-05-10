@@ -40,7 +40,7 @@ public class EnhancePanelViewModel: IDisposable
         statItemVMs = new[]
         {
             new StatItemViewModel(null, "基础攻击力"),
-            new StatItemViewModel(null, "暴击率")
+            new StatItemViewModel(null, "暴击伤害", StatValueFormat.Percent)
         };
         
         //weaponvm发出变化信号时，返回weaponvn并且只监听最新的武器vm
@@ -67,14 +67,43 @@ public class EnhancePanelViewModel: IDisposable
     {
         if (weapon == null) return;
 
+        if (weapon.needBreak.Value)
+        {
+            UpdatePromotePreview(weapon);
+            return;
+        }
+
+        UpdateEnhancePreview(weapon, exp);
+    }
+
+    void UpdateEnhancePreview(EquipItemViewModel weapon, int exp)
+    {
         var preview = weapon.Model.GetPreviewWithExp(exp);
+        var statPreviews = weapon.Model.GetStatPreview(exp);
 
         previewExp.Value = preview.maxGainExp;
         previewCost.Value = preview.costGold;
         previewEquip.SetValueAndForceNotify(preview);
         showUpgradeAttribute.Value = preview.levelUp > 0 || preview.isBreakPreview;
-        statItemVMs[0].SetValue(weapon.attack.Value, preview.nextAtk);
-        statItemVMs[1].SetValue(weapon.critical.Value, preview.nextCrit);
+        
+        if (statPreviews.Count > 0)
+            statItemVMs[0].SetValue(statPreviews[0].currentValue, statPreviews[0].nextValue);
+        if (statPreviews.Count > 1)
+            statItemVMs[1].SetValue(statPreviews[1].currentValue, statPreviews[1].nextValue);
+    }
+
+    void UpdatePromotePreview(EquipItemViewModel weapon)
+    {
+        var statPreviews = weapon.Model.GetStatPreview(0, true);
+
+        previewExp.Value = 0;
+        previewCost.Value = weapon.Model.GetPromoteGoldCost();
+        showUpgradeAttribute.Value = true;
+        
+        if (statPreviews.Count > 0)
+            statItemVMs[0].SetValue(statPreviews[0].currentValue, statPreviews[0].nextValue);
+        if (statPreviews.Count > 1)
+            statItemVMs[1].SetValue(statPreviews[1].currentValue, statPreviews[1].nextValue);
     }
 
     void RefreshPreviewCost(int enhanceCost)
