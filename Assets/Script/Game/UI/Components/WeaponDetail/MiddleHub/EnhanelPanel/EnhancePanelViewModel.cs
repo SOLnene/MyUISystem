@@ -40,6 +40,8 @@ public class EnhancePanelViewModel: IDisposable
         statItemVMs = new[]
         {
             new StatItemViewModel(null, "基础攻击力"),
+            new StatItemViewModel(null, "暴击伤害", StatValueFormat.Percent),
+            new StatItemViewModel(null, "基础攻击力"),
             new StatItemViewModel(null, "暴击伤害", StatValueFormat.Percent)
         };
         
@@ -101,9 +103,9 @@ public class EnhancePanelViewModel: IDisposable
         showUpgradeAttribute.Value = true;
         
         if (statPreviews.Count > 0)
-            statItemVMs[0].SetValue(statPreviews[0].currentValue, statPreviews[0].nextValue);
+            statItemVMs[2].SetValue(statPreviews[0].currentValue, statPreviews[0].nextValue);
         if (statPreviews.Count > 1)
-            statItemVMs[1].SetValue(statPreviews[1].currentValue, statPreviews[1].nextValue);
+            statItemVMs[3].SetValue(statPreviews[1].currentValue, statPreviews[1].nextValue);
     }
 
     void RefreshPreviewCost(int enhanceCost)

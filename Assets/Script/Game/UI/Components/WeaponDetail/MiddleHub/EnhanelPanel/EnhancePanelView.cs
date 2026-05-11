@@ -62,8 +62,12 @@ public class EnhancePanelView : MonoBehaviour
 
     void BindStatItems()
     {
-        statItemViews[0].Bind(vm.statItemVMs[0]);
-        statItemViews[1].Bind(vm.statItemVMs[1]);
+        int count = Mathf.Min(statItemViews.Length, vm.statItemVMs.Length);
+        for (int i = 0; i < count; i++)
+        {
+            if (statItemViews[i] != null)
+                statItemViews[i].Bind(vm.statItemVMs[i]);
+        }
     }
 
     void BindEnhancePreview()
@@ -89,36 +93,24 @@ public class EnhancePanelView : MonoBehaviour
     
     async UniTask SwitchToPromoteMode()
     {
-        if (enhanceLevelPreviewView != null && enhanceLevelPreviewView.gameObject.activeInHierarchy)
-            await enhanceLevelPreviewView.Hide();
-
-        SetPanelActive(enhancePanel, false);
-        SetPanelActive(promotePanel, true);
-        SetPanelActive(enhanceMaterialPreviewView, false);
-        SetPanelActive(promoteMaterialPreviewView, true);
-
         vm.RefreshPromoteMaterialPreview();
         if (promoteMaterialPreviewView != null)
             await promoteMaterialPreviewView.Bind(vm.promoteMaterialPreviewVm);
 
-        if (promoteLevelPreviewView != null)
-            await promoteLevelPreviewView.Show();
+        if (enhancePanel != null && enhancePanel.gameObject.activeInHierarchy)
+            await enhancePanel.Hide();
+
+        if (promotePanel != null)
+            await promotePanel.Show();
     }
     
     async UniTask SwitchToEnhanceMode()
     {
-        if (promoteLevelPreviewView != null && promoteLevelPreviewView.gameObject.activeInHierarchy)
-        {
-            await promoteLevelPreviewView.Hide();
-        }
+        if (promotePanel != null && promotePanel.gameObject.activeInHierarchy)
+            await promotePanel.Hide();
 
-        SetPanelActive(promotePanel, false);
-        SetPanelActive(enhancePanel, true);
-        SetPanelActive(promoteMaterialPreviewView, false);
-        SetPanelActive(enhanceMaterialPreviewView, true);
-
-        if (enhanceLevelPreviewView != null)
-            await enhanceLevelPreviewView.Show();
+        if (enhancePanel != null)
+            await enhancePanel.Show();
     }
     
     void SetPanelActive(GameObject panel, bool active)
