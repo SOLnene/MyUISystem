@@ -11,10 +11,13 @@ using UnityEngine.UI;
 public class EnhancePanelView : MonoBehaviour
 {
     [SerializeField]
-    AnimatedPanel enhancePanel;
+    GameObject enhancePanel;
     [SerializeField]
-    AnimatedPanel promotePanel;
-    
+    GameObject promotePanel;
+    /*[SerializeField]
+    AnimatedPanel bottomPanel;*/
+    [SerializeField]
+    AnimatedPanel animatedPanelRoot;
     [SerializeField]
     EnhanceLevelPreviewView enhanceLevelPreviewView;
     [SerializeField]
@@ -55,8 +58,6 @@ public class EnhancePanelView : MonoBehaviour
 
             })
             .AddTo(rootDisposable);
-        
-        
         rightBottomView.Bind(vm.rightBottomVM);
     }
 
@@ -88,6 +89,7 @@ public class EnhancePanelView : MonoBehaviour
     
     UniTask SwitchPreviewMode(bool isPromote)
     {
+        Debug.Log("切换预览模式，是否晋升："+isPromote);
         return isPromote ? SwitchToPromoteMode() : SwitchToEnhanceMode();
     }
     
@@ -97,20 +99,43 @@ public class EnhancePanelView : MonoBehaviour
         if (promoteMaterialPreviewView != null)
             await promoteMaterialPreviewView.Bind(vm.promoteMaterialPreviewVm);
 
-        if (enhancePanel != null && enhancePanel.gameObject.activeInHierarchy)
-            await enhancePanel.Hide();
+        await UniTask.WhenAll(
+            HideIfActive(enhancePanel),
+            HideIfActive(bottomPanel));
 
-        if (promotePanel != null)
-            await promotePanel.Show();
+        await UniTask.WhenAll(
+            ShowIfNotNull(promotePanel),
+            ShowIfNotNull(bottomPanel));
     }
     
     async UniTask SwitchToEnhanceMode()
     {
-        if (promotePanel != null && promotePanel.gameObject.activeInHierarchy)
-            await promotePanel.Hide();
+        await UniTask.WhenAll(
+            HideIfActive(promotePanel),
+            HideIfActive(bottomPanel));
 
-        if (enhancePanel != null)
-            await enhancePanel.Show();
+        await UniTask.WhenAll(
+            ShowIfNotNull(enhancePanel),
+            ShowIfNotNull(bottomPanel));
+    }
+
+    async UniTask HideIfActive(AnimatedPanel panel)
+    {
+        if (panel != null)
+        {
+            Debug.Log("隐藏面板："+panel.gameObject.name);
+            await panel.Hide();
+        }
+            
+    }
+
+    async UniTask ShowIfNotNull(AnimatedPanel panel)
+    {
+        if (panel != null)
+        {
+            Debug.Log("显示面板："+panel?.gameObject.name);
+            await panel.Show();
+        }
     }
     
     void SetPanelActive(GameObject panel, bool active)

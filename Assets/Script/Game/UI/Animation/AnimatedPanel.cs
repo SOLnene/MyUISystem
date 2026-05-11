@@ -26,6 +26,24 @@ public class AnimatedPanel : MonoBehaviour
         }
     }
 
+    public void AutoBind(GameObject root, UIMotionBase motion, CanvasGroup inputGroup)
+    {
+        if (panelRoot == null)
+        {
+            panelRoot = root;
+        }
+
+        if (this.motion == null)
+        {
+            this.motion = motion;
+        }
+
+        if (this.inputGroup == null)
+        {
+            this.inputGroup = inputGroup;
+        }
+    }
+
     public async UniTask Show(bool instant = false)
     {
         int version = ++requestVersion;

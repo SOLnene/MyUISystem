@@ -29,6 +29,35 @@ public class SlideFadeMotion : UIMotionBase
     [SerializeField]
     Ease fadeEase = Ease.Linear;
 
+    void Reset()
+    {
+        AutoBindReferences();
+    }
+
+    void AutoBindReferences()
+    {
+        if (motionGroup == null)
+        {
+            motionGroup = GetComponent<CanvasGroup>();
+            if (motionGroup == null)
+            {
+                motionGroup = gameObject.AddComponent<CanvasGroup>();
+            }
+        }
+
+        if (motionRoot == null)
+        {
+            motionRoot = transform as RectTransform;
+        }
+
+        var animatedPanel = GetComponent<AnimatedPanel>();
+        if (animatedPanel == null)
+        {
+            animatedPanel = gameObject.AddComponent<AnimatedPanel>();
+        }
+
+        animatedPanel.AutoBind(gameObject, this, motionGroup);
+    }
 
     void Awake()
     {
