@@ -116,7 +116,6 @@ public class EnhancePanelView : MonoBehaviour
     {
         if (animatedPanelRoot != null)
         {
-            await animatedPanelRoot.Show(true);
             await animatedPanelRoot.Hide();
         }
     }
