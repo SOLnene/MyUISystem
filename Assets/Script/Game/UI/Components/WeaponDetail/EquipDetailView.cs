@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using SkierFramework;
 using UnityEngine;
 using UnityEngine.UI;
@@ -45,6 +46,9 @@ public partial class EquipDetailView : UIView
 
     EquipItemViewModel equipItemVm;
     readonly CompositeDisposable disposable = new CompositeDisposable();
+    int currentTabIndex = -1;
+    int requestedTabIndex = -1;
+    bool isPlayingTabSwitch;
 
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -81,6 +85,8 @@ public partial class EquipDetailView : UIView
         bottomView.Bind(equipDetailVm.bottomVM);
         
         equipDetailVm.ApplyOpenParams(param);
+        ApplyTabImmediate(equipDetailVm.currentTabIndex.Value);
+        BindTabFlow();
         foreach (var img in finalImages)
         {
             img.SetActive(false);
@@ -127,6 +133,68 @@ public partial class EquipDetailView : UIView
             })
             .AddTo(disposable);
     }
+
+    void BindTabFlow()
+    {
+        equipDetailVm.currentTabIndex
+            .Skip(1)
+            .Subscribe(index => SwitchTab(index).Forget())
+            .AddTo(disposable);
+    }
+
+    void ApplyTabImmediate(int index)
+    {
+        currentTabIndex = index;
+        requestedTabIndex = index;
+        MiddleHub.ApplyTabImmediate(index);
+        bottomView.SetTabContent(index);
+        bottomView.ShowImmediate();
+    }
+
+    async UniTask SwitchTab(int nextIndex)
+    {
+        requestedTabIndex = nextIndex;
+
+        if (isPlayingTabSwitch)
+            return;
+
+        isPlayingTabSwitch = true;
+        try
+        {
+            while (requestedTabIndex != currentTabIndex)
+            {
+                await SwitchTabOnce(requestedTabIndex);
+            }
+        }
+        finally
+        {
+            isPlayingTabSwitch = false;
+        }
+    }
+
+    async UniTask SwitchTabOnce(int nextIndex)
+    {
+        int previousIndex = currentTabIndex;
+
+        if (previousIndex >= 0)
+        {
+            await UniTask.WhenAll(
+                MiddleHub.HideContent(),
+                bottomView.Hide());
+
+            MiddleHub.SetPanelActive(previousIndex, false);
+        }
+
+        bottomView.SetTabContent(nextIndex);
+        MiddleHub.SetPanelActive(nextIndex, true);
+        MiddleHub.SetTabSelected(nextIndex);
+
+        await UniTask.WhenAll(
+            MiddleHub.ShowContent(),
+            bottomView.Show());
+
+        currentTabIndex = nextIndex;
+    }
     
     void OnWeaponChanged(EquipItemViewModel viewModel)
     {
@@ -169,6 +237,9 @@ public partial class EquipDetailView : UIView
         disposable.Clear();
         equipDetailVm?.Dispose();
         equipDetailVm = null;
+        currentTabIndex = -1;
+        requestedTabIndex = -1;
+        isPlayingTabSwitch = false;
     }
 
     public override void OnRelease()

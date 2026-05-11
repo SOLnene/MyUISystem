@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UniRx;
 using UnityEngine;
 
@@ -15,6 +16,8 @@ public class WeaponDetailMiddleView : MonoBehaviour
     GameObject enhancePanel;
     [SerializeField]
     GameObject refinePanel;
+    [SerializeField]
+    AnimatedPanel animatedRoot;
 
     WeaponDetailMiddleViewModel vm;
     readonly List<GameObject> panels = new List<GameObject>();
@@ -32,7 +35,6 @@ public class WeaponDetailMiddleView : MonoBehaviour
         disposable.Clear();
         BindTabItems();
 
-        vm.currentTabIndex.Subscribe(OnTabChanged).AddTo(disposable);
         vm.currentWeaponVM.Value.needBreak
             .Subscribe(_ => RefreshEnhanceTabLabel())
             .AddTo(disposable);
@@ -79,22 +81,51 @@ public class WeaponDetailMiddleView : MonoBehaviour
         return weapon.needBreak.Value ? "突破" : "强化";
     }
 
-    void OnTabChanged(int index)
+    public void ApplyTabImmediate(int index)
+    {
+        SetPanelActive(index);
+        SetTabSelected(index);
+        ShowImmediate();
+    }
+
+    public void SetPanelActive(int index)
     {
         for (int i = 0; i < panels.Count; i++)
-        {
-            panels[i].SetActive(i==index);
-        }
+            SetPanelActive(i, i == index);
+    }
 
-        if (tabItems == null)
-        {
+    public void SetPanelActive(int index, bool active)
+    {
+        if (index < 0 || index >= panels.Count || panels[index] == null)
             return;
-        }
+
+        panels[index].SetActive(active);
+    }
+
+    public async UniTask HideContent()
+    {
+        if (animatedRoot != null)
+            await animatedRoot.Hide();
+    }
+
+    public async UniTask ShowContent()
+    {
+        if (animatedRoot != null)
+            await animatedRoot.Show();
+    }
+
+    public void ShowImmediate()
+    {
+        animatedRoot?.Show(true).Forget();
+    }
+
+    public void SetTabSelected(int index)
+    {
+        if (tabItems == null)
+            return;
 
         for (int i = 0; i < tabItems.Length; i++)
-        {
             tabItems[i].SetSelected(i == index);
-        }
     }
 
     void OnDestroy()

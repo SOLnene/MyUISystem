@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UniRx;
 using UniRx.Triggers;
@@ -25,6 +26,8 @@ public class WeaponDetailBottomView : MonoBehaviour
     GameObject enhanceContent;
     [SerializeField]
     GameObject refineContent;
+    [SerializeField]
+    AnimatedPanel contentMotion;
 
     WeaponDetailBottomViewModel vm;
     
@@ -55,14 +58,30 @@ public class WeaponDetailBottomView : MonoBehaviour
             enhanceBtn.onClick.AsObservable().Subscribe(_=>vm.onEnhanceClick.Execute()).AddTo(disposable);
         if (breakBtn)
             breakBtn.onClick.AsObservable().Subscribe(_ => vm.onBreakoutClick.Execute()).AddTo(disposable);
-        vm.selectedTabIndex.Subscribe(index => SetActive(index)).AddTo(disposable);
     }
 
-    void SetActive(int index)
+    public void SetTabContent(int index)
     {
         infoContent.SetActive(index==0);
         enhanceContent.SetActive(index==1);
         refineContent.SetActive(index==2);
+    }
+
+    public async UniTask Hide()
+    {
+        if (contentMotion != null)
+            await contentMotion.Hide();
+    }
+
+    public async UniTask Show()
+    {
+        if (contentMotion != null)
+            await contentMotion.Show();
+    }
+
+    public void ShowImmediate()
+    {
+        contentMotion?.Show(true).Forget();
     }
     
     private void OnDestroy()
