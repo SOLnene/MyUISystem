@@ -6,13 +6,14 @@ using UnityEngine;
 using TMPro;
 using UniRx;
 using UniRx.Triggers;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 public class EnhancePanelView : MonoBehaviour
 {
     [SerializeField]
-    GameObject upgradePanel;
+    AnimatedPanel enhancePanel;
     [SerializeField]
-    GameObject breakOutPanel;
+    AnimatedPanel promotePanel;
     
     [SerializeField]
     EnhanceLevelPreviewView enhanceLevelPreviewView;
@@ -91,8 +92,8 @@ public class EnhancePanelView : MonoBehaviour
         if (enhanceLevelPreviewView != null && enhanceLevelPreviewView.gameObject.activeInHierarchy)
             await enhanceLevelPreviewView.Hide();
 
-        SetPanelActive(upgradePanel, false);
-        SetPanelActive(breakOutPanel, true);
+        SetPanelActive(enhancePanel, false);
+        SetPanelActive(promotePanel, true);
         SetPanelActive(enhanceMaterialPreviewView, false);
         SetPanelActive(promoteMaterialPreviewView, true);
 
@@ -111,8 +112,8 @@ public class EnhancePanelView : MonoBehaviour
             await promoteLevelPreviewView.Hide();
         }
 
-        SetPanelActive(breakOutPanel, false);
-        SetPanelActive(upgradePanel, true);
+        SetPanelActive(promotePanel, false);
+        SetPanelActive(enhancePanel, true);
         SetPanelActive(promoteMaterialPreviewView, false);
         SetPanelActive(enhanceMaterialPreviewView, true);
 
