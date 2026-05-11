@@ -67,13 +67,13 @@ public class WeaponDetailBottomView : MonoBehaviour
         refineContent.SetActive(index==2);
     }
 
-    public async UniTask Hide()
+    public async UniTask HideContent()
     {
         if (contentMotion != null)
             await contentMotion.Hide();
     }
 
-    public async UniTask Show()
+    public async UniTask ShowContent()
     {
         if (contentMotion != null)
             await contentMotion.Show();

@@ -21,9 +21,9 @@ public class SlideFadeMotion : UIMotionBase
     [SerializeField]
     Vector2 originMove;
     [SerializeField]
-    float moveDuration = 0.35f;
+    float moveDuration = 0.18f;
     [SerializeField]
-    float fadeDuration = 0.25f;
+    float fadeDuration = 0.12f;
     [SerializeField]
     Ease moveEase = Ease.OutCubic;
     [SerializeField]

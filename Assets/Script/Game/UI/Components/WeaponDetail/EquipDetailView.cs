@@ -47,8 +47,7 @@ public partial class EquipDetailView : UIView
     EquipItemViewModel equipItemVm;
     readonly CompositeDisposable disposable = new CompositeDisposable();
     int currentTabIndex = -1;
-    int requestedTabIndex = -1;
-    bool isPlayingTabSwitch;
+    bool isSwitchingTab;
 
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -145,7 +144,6 @@ public partial class EquipDetailView : UIView
     void ApplyTabImmediate(int index)
     {
         currentTabIndex = index;
-        requestedTabIndex = index;
         MiddleHub.ApplyTabImmediate(index);
         bottomView.SetTabContent(index);
         bottomView.ShowImmediate();
@@ -153,47 +151,43 @@ public partial class EquipDetailView : UIView
 
     async UniTask SwitchTab(int nextIndex)
     {
-        requestedTabIndex = nextIndex;
-
-        if (isPlayingTabSwitch)
+        if (isSwitchingTab || nextIndex == currentTabIndex)
             return;
 
-        isPlayingTabSwitch = true;
+        isSwitchingTab = true;
         try
         {
-            while (requestedTabIndex != currentTabIndex)
-            {
-                await SwitchTabOnce(requestedTabIndex);
-            }
+            await HideTabContent();
+            ApplyTabContent(nextIndex);
+            await ShowTabContent();
+            currentTabIndex = nextIndex;
         }
         finally
         {
-            isPlayingTabSwitch = false;
+            isSwitchingTab = false;
         }
     }
 
-    async UniTask SwitchTabOnce(int nextIndex)
+    async UniTask HideTabContent()
     {
-        int previousIndex = currentTabIndex;
+        await UniTask.WhenAll(
+            MiddleHub.HideContent(),
+            bottomView.HideContent());
+    }
 
-        if (previousIndex >= 0)
-        {
-            await UniTask.WhenAll(
-                MiddleHub.HideContent(),
-                bottomView.Hide());
-
-            MiddleHub.SetPanelActive(previousIndex, false);
-        }
-
+    void ApplyTabContent(int nextIndex)
+    {
+        MiddleHub.SetPanelActive(currentTabIndex, false);
         bottomView.SetTabContent(nextIndex);
         MiddleHub.SetPanelActive(nextIndex, true);
         MiddleHub.SetTabSelected(nextIndex);
+    }
 
+    async UniTask ShowTabContent()
+    {
         await UniTask.WhenAll(
             MiddleHub.ShowContent(),
-            bottomView.Show());
-
-        currentTabIndex = nextIndex;
+            bottomView.ShowContent());
     }
     
     void OnWeaponChanged(EquipItemViewModel viewModel)
@@ -238,8 +232,7 @@ public partial class EquipDetailView : UIView
         equipDetailVm?.Dispose();
         equipDetailVm = null;
         currentTabIndex = -1;
-        requestedTabIndex = -1;
-        isPlayingTabSwitch = false;
+        isSwitchingTab = false;
     }
 
     public override void OnRelease()
