@@ -14,8 +14,6 @@ public class EnhancePanelView : MonoBehaviour
     GameObject enhancePanel;
     [SerializeField]
     GameObject promotePanel;
-    /*[SerializeField]
-    AnimatedPanel bottomPanel;*/
     [SerializeField]
     AnimatedPanel animatedPanelRoot;
     [SerializeField]
@@ -41,6 +39,7 @@ public class EnhancePanelView : MonoBehaviour
     
     public void Bind(EnhancePanelViewModel viewModel)
     {
+        rootDisposable.Clear();
         vm = viewModel;
         
         BindStatItems();
@@ -99,43 +98,33 @@ public class EnhancePanelView : MonoBehaviour
         if (promoteMaterialPreviewView != null)
             await promoteMaterialPreviewView.Bind(vm.promoteMaterialPreviewVm);
 
-        await UniTask.WhenAll(
-            HideIfActive(enhancePanel),
-            HideIfActive(bottomPanel));
-
-        await UniTask.WhenAll(
-            ShowIfNotNull(promotePanel),
-            ShowIfNotNull(bottomPanel));
+        await HideContent();
+        SetPanelActive(enhancePanel, false);
+        SetPanelActive(promotePanel, true);
+        await ShowContent();
     }
     
     async UniTask SwitchToEnhanceMode()
     {
-        await UniTask.WhenAll(
-            HideIfActive(promotePanel),
-            HideIfActive(bottomPanel));
-
-        await UniTask.WhenAll(
-            ShowIfNotNull(enhancePanel),
-            ShowIfNotNull(bottomPanel));
+        await HideContent();
+        SetPanelActive(promotePanel, false);
+        SetPanelActive(enhancePanel, true);
+        await ShowContent();
     }
 
-    async UniTask HideIfActive(AnimatedPanel panel)
+    async UniTask HideContent()
     {
-        if (panel != null)
+        if (animatedPanelRoot != null)
         {
-            Debug.Log("隐藏面板："+panel.gameObject.name);
-            await panel.Hide();
+            await animatedPanelRoot.Show(true);
+            await animatedPanelRoot.Hide();
         }
-            
     }
 
-    async UniTask ShowIfNotNull(AnimatedPanel panel)
+    async UniTask ShowContent()
     {
-        if (panel != null)
-        {
-            Debug.Log("显示面板："+panel?.gameObject.name);
-            await panel.Show();
-        }
+        if (animatedPanelRoot != null)
+            await animatedPanelRoot.Show();
     }
     
     void SetPanelActive(GameObject panel, bool active)
