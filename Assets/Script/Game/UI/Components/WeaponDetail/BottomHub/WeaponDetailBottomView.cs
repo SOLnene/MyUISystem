@@ -20,10 +20,13 @@ public class WeaponDetailBottomView : MonoBehaviour
     Button breakBtn;
     [SerializeField]
     TextMeshProUGUI goldText;
+    
     [SerializeField]
     GameObject infoContent;
     [SerializeField]
     GameObject enhanceContent;
+     [SerializeField]
+    GameObject promoteContent;
     [SerializeField]
     GameObject refineContent;
     [SerializeField]

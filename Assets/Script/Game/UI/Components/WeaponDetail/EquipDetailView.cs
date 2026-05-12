@@ -37,6 +37,8 @@ public partial class EquipDetailView : UIView
     [SerializeField]
     WeaponDetailBottomView bottomView;
     [SerializeField]
+    UITransitionGroup pageTransition;
+    [SerializeField]
     ItemSelectPanelView itemSelectPanelView;
     //参考图
     [Header("参考图")]
@@ -48,6 +50,7 @@ public partial class EquipDetailView : UIView
     readonly CompositeDisposable disposable = new CompositeDisposable();
     int currentTabIndex = -1;
     bool isSwitchingTab;
+    bool isClosing;
 
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -57,6 +60,7 @@ public partial class EquipDetailView : UIView
     public override void OnOpen(object data)
     {
         base.OnOpen(data);
+        isClosing = false;
         //todo:view中不允许创建vm，放到类似context的地方
         
         var param = data as EquipDetailOpenParams;
@@ -95,6 +99,8 @@ public partial class EquipDetailView : UIView
         {
             itemSelectPanelView.Hide();
         }
+
+        pageTransition?.Show().Forget();
     }
 
     public void Bind(EquipDetailViewModel viewModel)
@@ -225,6 +231,26 @@ public partial class EquipDetailView : UIView
        OnCancel();
    }
 
+    public override void OnCancel()
+    {
+        if (isClosing)
+            return;
+
+        CloseWithTransition().Forget();
+    }
+
+    async UniTask CloseWithTransition()
+    {
+        isClosing = true;
+
+        if (pageTransition != null)
+        {
+            await pageTransition.Hide();
+        }
+
+        base.OnCancel();
+    }
+
     public override void OnClose()
     {
         base.OnClose();
@@ -233,6 +259,7 @@ public partial class EquipDetailView : UIView
         equipDetailVm = null;
         currentTabIndex = -1;
         isSwitchingTab = false;
+        isClosing = false;
     }
 
     public override void OnRelease()
