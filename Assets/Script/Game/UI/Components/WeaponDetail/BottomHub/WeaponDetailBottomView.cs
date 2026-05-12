@@ -22,6 +22,8 @@ public class WeaponDetailBottomView : MonoBehaviour
     TextMeshProUGUI enhanceGoldText;
     [SerializeField]
     TextMeshProUGUI promoteGoldText;
+    [SerializeField]
+    TextMeshProUGUI refineGoldText;
     
     [SerializeField]
     GameObject infoContent;
@@ -66,6 +68,8 @@ public class WeaponDetailBottomView : MonoBehaviour
 
         if (promoteGoldText)
             promoteGoldText.text = $"{value}";
+        if (refineGoldText)
+            refineGoldText.text = $"{value}";
     }
 
     public void Refresh()
