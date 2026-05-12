@@ -15,8 +15,6 @@ public class EnhancePanelView : MonoBehaviour
     [SerializeField]
     GameObject promotePanel;
     [SerializeField]
-    AnimatedPanel animatedPanelRoot;
-    [SerializeField]
     EnhanceLevelPreviewView enhanceLevelPreviewView;
     [SerializeField]
     PromoteLevelPreviewView promoteLevelPreviewView;
@@ -46,17 +44,6 @@ public class EnhancePanelView : MonoBehaviour
         BindEnhancePreview();
         BindPromotePreview();
         //todo：不一定要考虑武器切换
-        viewModel.weaponVM
-            .Where(w => w != null)
-            .Subscribe(weapon =>
-            {
-                weapon.needBreak.Subscribe(b =>
-                {
-                    SwitchPreviewMode(b).Forget();
-                }).AddTo(rootDisposable);
-
-            })
-            .AddTo(rootDisposable);
         rightBottomView.Bind(vm.rightBottomVM);
     }
 
@@ -85,45 +72,22 @@ public class EnhancePanelView : MonoBehaviour
 
         promoteLevelPreviewView.Bind(vm.promotePreviewVm);
     }
-    
-    UniTask SwitchPreviewMode(bool isPromote)
-    {
-        Debug.Log("切换预览模式，是否晋升："+isPromote);
-        return isPromote ? SwitchToPromoteMode() : SwitchToEnhanceMode();
-    }
-    
-    async UniTask SwitchToPromoteMode()
-    {
-        vm.RefreshPromoteMaterialPreview();
-        if (promoteMaterialPreviewView != null)
-            await promoteMaterialPreviewView.Bind(vm.promoteMaterialPreviewVm);
 
-        await HideContent();
-        SetPanelActive(enhancePanel, false);
-        SetPanelActive(promotePanel, true);
-        await ShowContent();
-    }
-    
-    async UniTask SwitchToEnhanceMode()
+    public void Refresh()
     {
-        await HideContent();
-        SetPanelActive(promotePanel, false);
-        SetPanelActive(enhancePanel, true);
-        await ShowContent();
-    }
+        if (vm == null || vm.weaponVM.Value == null)
+            return;
 
-    async UniTask HideContent()
-    {
-        if (animatedPanelRoot != null)
+        bool isPromote = vm.weaponVM.Value.needBreak.Value;
+        if (isPromote)
         {
-            await animatedPanelRoot.Hide();
+            vm.RefreshPromoteMaterialPreview();
+            if (promoteMaterialPreviewView != null)
+                promoteMaterialPreviewView.Bind(vm.promoteMaterialPreviewVm).Forget();
         }
-    }
 
-    async UniTask ShowContent()
-    {
-        if (animatedPanelRoot != null)
-            await animatedPanelRoot.Show();
+        SetPanelActive(enhancePanel, !isPromote);
+        SetPanelActive(promotePanel, isPromote);
     }
     
     void SetPanelActive(GameObject panel, bool active)

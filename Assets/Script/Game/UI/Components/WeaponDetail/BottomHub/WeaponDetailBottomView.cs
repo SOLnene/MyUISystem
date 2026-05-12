@@ -19,7 +19,9 @@ public class WeaponDetailBottomView : MonoBehaviour
     [SerializeField]
     Button breakBtn;
     [SerializeField]
-    TextMeshProUGUI goldText;
+    TextMeshProUGUI enhanceGoldText;
+    [SerializeField]
+    TextMeshProUGUI promoteGoldText;
     
     [SerializeField]
     GameObject infoContent;
@@ -30,7 +32,7 @@ public class WeaponDetailBottomView : MonoBehaviour
     [SerializeField]
     GameObject refineContent;
     [SerializeField]
-    AnimatedPanel contentMotion;
+    AnimatedPanel animatedRoot;
 
     WeaponDetailBottomViewModel vm;
     
@@ -42,16 +44,10 @@ public class WeaponDetailBottomView : MonoBehaviour
 
         vm.totalCostGold
             .Subscribe(value => {
-                if (goldText) goldText.text = $"{value}";
+                SetCostGold(value);
             })
             .AddTo(disposable);
 
-        vm.canBreakout.Subscribe(b =>
-        {
-            enhanceBtn.gameObject.SetActive(!b);
-            breakBtn.gameObject.SetActive(b);
-        }).AddTo(disposable);
-        
         // 按钮事件绑定（ReactiveCommand 绑定）
         if (storyBtn)
             storyBtn.onClick.AsObservable().Subscribe(_ => vm.onStoryClick.Execute()).AddTo(disposable);
@@ -63,28 +59,53 @@ public class WeaponDetailBottomView : MonoBehaviour
             breakBtn.onClick.AsObservable().Subscribe(_ => vm.onBreakoutClick.Execute()).AddTo(disposable);
     }
 
-    public void SetTabContent(int index)
+    void SetCostGold(int value)
     {
-        infoContent.SetActive(index==0);
-        enhanceContent.SetActive(index==1);
-        refineContent.SetActive(index==2);
+        if (enhanceGoldText)
+            enhanceGoldText.text = $"{value}";
+
+        if (promoteGoldText)
+            promoteGoldText.text = $"{value}";
+    }
+
+    public void Refresh()
+    {
+        ApplyContentVisible();
+    }
+
+    void ApplyContentVisible()
+    {
+        if (vm == null)
+            return;
+
+        int selectedTabIndex = vm.selectedTabIndex.Value;
+        bool canBreakout = vm.canBreakout.Value;
+
+        bool isInfo = selectedTabIndex == (int)WeaponDetailTab.Info;
+        bool isEnhance = selectedTabIndex == (int)WeaponDetailTab.Enhance;
+        bool isRefine = selectedTabIndex == (int)WeaponDetailTab.Refine;
+
+        infoContent.SetActive(isInfo);
+        enhanceContent.SetActive(isEnhance && !canBreakout);
+        promoteContent.SetActive(isEnhance && canBreakout);
+        refineContent.SetActive(isRefine);
     }
 
     public async UniTask HideContent()
     {
-        if (contentMotion != null)
-            await contentMotion.Hide();
+        if (animatedRoot != null)
+            await animatedRoot.Hide();
     }
 
     public async UniTask ShowContent()
     {
-        if (contentMotion != null)
-            await contentMotion.Show();
+        if (animatedRoot != null)
+            await animatedRoot.Show();
     }
 
     public void ShowImmediate()
     {
-        contentMotion?.Show(true).Forget();
+        animatedRoot?.Show(true).Forget();
     }
     
     private void OnDestroy()

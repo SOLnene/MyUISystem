@@ -139,34 +139,39 @@ public partial class EquipDetailView : UIView
             .AddTo(disposable);
     }
 
+    //todo:放这里是为了统一管理动画，但我不知道是否需要这样，毕竟我可以手动控制两个动画时常相同
     void BindTabFlow()
     {
         equipDetailVm.currentTabIndex
             .Skip(1)
-            .Subscribe(index => SwitchTab(index).Forget())
+            .Subscribe(_ => SwitchContent().Forget())
+            .AddTo(disposable);
+
+        equipDetailVm.bottomVM.canBreakout
+            .Skip(1)
+            .Subscribe(_ => SwitchContent().Forget())
             .AddTo(disposable);
     }
 
     void ApplyTabImmediate(int index)
     {
         currentTabIndex = index;
-        MiddleHub.ApplyTabImmediate(index);
-        bottomView.SetTabContent(index);
+        RefreshContent();
+        MiddleHub.ShowImmediate();
         bottomView.ShowImmediate();
     }
 
-    async UniTask SwitchTab(int nextIndex)
+    async UniTask SwitchContent()
     {
-        if (isSwitchingTab || nextIndex == currentTabIndex)
+        if (isSwitchingTab)
             return;
 
         isSwitchingTab = true;
         try
         {
             await HideTabContent();
-            ApplyTabContent(nextIndex);
+            RefreshContent();
             await ShowTabContent();
-            currentTabIndex = nextIndex;
         }
         finally
         {
@@ -181,12 +186,11 @@ public partial class EquipDetailView : UIView
             bottomView.HideContent());
     }
 
-    void ApplyTabContent(int nextIndex)
+    void RefreshContent()
     {
-        MiddleHub.SetPanelActive(currentTabIndex, false);
-        bottomView.SetTabContent(nextIndex);
-        MiddleHub.SetPanelActive(nextIndex, true);
-        MiddleHub.SetTabSelected(nextIndex);
+        currentTabIndex = equipDetailVm.currentTabIndex.Value;
+        MiddleHub.Refresh();
+        bottomView.Refresh();
     }
 
     async UniTask ShowTabContent()
