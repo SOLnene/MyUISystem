@@ -144,6 +144,11 @@ public class ItemSelectPanelView : MonoBehaviour
             }
         }).AddTo(disposable);
 
+        vm.requestTip.Subscribe(text =>
+        {
+            UIManager.Instance.Open(UIType.TipView, text);
+        }).AddTo(disposable);
+
         if (infoPanelView != null)
         {
             infoPanelView.gameObject.SetActive(showInfopanel);

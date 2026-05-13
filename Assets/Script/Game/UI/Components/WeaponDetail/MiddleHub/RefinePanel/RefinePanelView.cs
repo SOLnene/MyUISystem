@@ -18,7 +18,10 @@
         GameObject slotContent;
         [SerializeField]
         List<ItemSlotView> slotViews;
-        
+        [SerializeField]
+        GameObject materialArea;
+        [SerializeField]
+        GameObject maxRefineArea;
         RefinePanelViewModel vm;
 
         CompositeDisposable disposable = new CompositeDisposable();

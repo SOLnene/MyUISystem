@@ -12,6 +12,7 @@ public class ItemSelectPopupViewModel
     public readonly ReactiveCollection<ItemSlotViewModel> candidateSlots = new();
     //单选界面用
     public readonly ReactiveProperty<ItemSlotViewModel> selectedSlot = new();
+    public readonly Subject<string> requestTip = new();
     /// <summary>
     /// 最后选中的槽位，用于信息面板显示
     /// </summary>
@@ -78,7 +79,10 @@ public class ItemSelectPopupViewModel
                     if (!slotVM.isChecked.Value)
                     {
                         if (selectService.SelectedItems.Count >= materialSelectParams.maxCount)
+                        {
+                            requestTip.OnNext("选择材料已达上限");
                             return;
+                        }
 
                         if (selectService.TrySelect(slotVM.ItemViewModel.Model))
                         {

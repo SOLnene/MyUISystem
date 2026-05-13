@@ -92,6 +92,10 @@ public partial class ItemSelectPopupView : UIView
                 ResourceManager.Instance.Recycle(slotView.gameObject);
             }
         }).AddTo(disposable);
+        vm.requestTip.Subscribe(text =>
+        {
+            UIManager.Instance.Open(UIType.TipView, text);
+        }).AddTo(disposable);
         //infoPanelView.Bind(vm.infoPanelViewModel);
         //todo:这个应该由外部传入
         if (infoPanelView != null)

@@ -81,6 +81,9 @@ public class RefinePanelViewModel : IDisposable
 
     public void OnSlotClick(ItemSlotViewModel viewModel)
     {
+        if (GetAvailableRefineCount() <= 0)
+            return;
+
         int index = slotViewModels.IndexOf(viewModel);
         Debug.Log(index);
         MaterialSelectParams materialSelectParams = new MaterialSelectParams(index,new ItemFilter(ItemCategory.Equip,(int)ItemRarity.Max,equipItem.Value.Model.Id),
