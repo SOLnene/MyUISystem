@@ -29,7 +29,7 @@
   },
   {
     "uiType": "ItemSelectPopupView",
-    "assetPath": "Assets/AssetsPackage/UI/Prefab/ItemSelectPopupView.prefab",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/Component/ItemSelectPanel/ItemSelectPopupView.prefab",
     "uiAddress": "ui/popup/itemselectpopupview",
     "uiLayer": "TopLayer",
     "isWindow": true
@@ -68,5 +68,12 @@
     "uiAddress": "ui/view/characterdetailview",
     "uiLayer": "NormalLayer",
     "isWindow": false
+  },
+  {
+    "uiType": "TipView",
+    "assetPath": "Assets/AssetsPackage/UI/Prefab/TipView.prefab",
+    "uiAddress": "ui/popup/tipview",
+    "uiLayer": "TipLayer",
+    "isWindow": true
   }
 ]

@@ -126,6 +126,12 @@ public class UIViewHandle
 
         if (uiState == UIState.Opened || uiState == UIState.Opening)
         {
+            if (uiView != null && uiView.RefreshWhenAlreadyOpen)
+            {
+                uiView.OnOpen(data);
+                callback?.Invoke();
+            }
+
             return;
         }
         

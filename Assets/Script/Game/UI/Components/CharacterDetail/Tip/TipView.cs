@@ -13,6 +13,7 @@ public class TipView : UIView
     float stayDuration = 2f;
 
     int showVersion;
+    public override bool RefreshWhenAlreadyOpen => true;
 
     void Awake()
     {
@@ -22,6 +23,16 @@ public class TipView : UIView
         }
 
         animatedPanel?.HideImmediate();
+    }
+
+    public override void OnOpen(object data)
+    {
+        base.OnOpen(data);
+
+        if (data is string text)
+        {
+            Show(text);
+        }
     }
 
     public void SetText(string text)
@@ -68,6 +79,11 @@ public class TipView : UIView
         else
         {
             gameObject.SetActive(false);
+        }
+
+        if (version == showVersion)
+        {
+            UIManager.Instance.Close(Handle.uiType);
         }
     }
 }

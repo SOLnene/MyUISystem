@@ -52,6 +52,7 @@ public class UIConfigWindow : EditorWindow
     public GameObject uiPrefab;
 
     bool isWindow = true;
+    bool skipGenerateCode;
     UILayer layer = UILayer.NormalLayer;    
     /// <summary>
     /// uiName相应的script路径
@@ -163,7 +164,8 @@ public class UIConfigWindow : EditorWindow
                         var uiScriptPath = GetUIScriptPath(uiName);
                         if (string.IsNullOrEmpty(uiScriptPath))
                         {
-                            if (GUILayout.Button($"选择创建路径:{saveUIPath}"))
+                            skipGenerateCode = EditorGUILayout.Toggle("不生成代码", skipGenerateCode);
+                            if (!skipGenerateCode && GUILayout.Button($"选择创建路径:{saveUIPath}"))
                             {
                                 //得到脚本的绝对路径
                                 var newPath = EditorUtility.OpenFolderPanel("UI生成路径", saveUIPath, "");
@@ -171,7 +173,7 @@ public class UIConfigWindow : EditorWindow
                                 saveUIPath = newPath.Replace(Application.dataPath,"Assets");
                                 PlayerPrefs.SetString(nameof(saveUIPath),saveUIPath);
                             }
-                            if (uiPrefab != null)
+                            if (uiPrefab != null && !skipGenerateCode)
                             {
                                 EditorGUILayout.TextField("UI代码生成路径", $"{saveUIPath}/{uiName}.cs");
                             }
@@ -182,18 +184,23 @@ public class UIConfigWindow : EditorWindow
                             GUI.color = Color.green;
                             if (GUILayout.Button("创建UI"))
                             {
-                                //Regex.Replace(input, pattern, replacement)：使用正则表达式把文本中符合 pattern 的内容替换为 replacement
-                                //生成代码
-                                string uiScriptContent = Regex.Replace(File.ReadAllText(uiViewTemplatePath), "UIXXXView", uiName);
                                 string newPath = $"{saveUIPath}/{uiName}.cs";
                                 
-                                UIControlData uiControlData = uiPrefab.GetComponent<UIControlData>();
-                                if (uiControlData != null)
+                                if (!skipGenerateCode)
                                 {
-                                    uiControlData.CopyCodeToClipBoardPrivate();
+                                    //Regex.Replace(input, pattern, replacement)：使用正则表达式把文本中符合 pattern 的内容替换为 replacement
+                                    //生成代码
+                                    string uiScriptContent = Regex.Replace(File.ReadAllText(uiViewTemplatePath), "UIXXXView", uiName);
+
+                                    UIControlData uiControlData = uiPrefab.GetComponent<UIControlData>();
+                                    if (uiControlData != null)
+                                    {
+                                        uiControlData.CopyCodeToClipBoardPrivate();
+                                    }
+
+                                    File.WriteAllText(newPath,UpdateBindingCode(uiScriptContent, GUIUtility.systemCopyBuffer));
                                 }
-                                
-                                File.WriteAllText(newPath,UpdateBindingCode(uiScriptContent, GUIUtility.systemCopyBuffer));
+
                                 var address= SyncAddressable(uiPrefab,uiName,isWindow);
                                 //设置addressable路径
                                 

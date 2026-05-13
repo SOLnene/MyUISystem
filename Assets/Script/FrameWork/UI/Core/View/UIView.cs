@@ -22,6 +22,7 @@ public class UIView : MonoBehaviour,IBindableUI
     //根节点的Canvas
     Canvas rootCanvas;
     public UIViewHandle Handle => handle;
+    public virtual bool RefreshWhenAlreadyOpen => false;
 
     
     public virtual void OnInit(UIControlData uiControlData,UIViewHandle uiViewHandle)
@@ -46,7 +47,7 @@ public class UIView : MonoBehaviour,IBindableUI
         
     }
     
-    public virtual void OnOpen(object userData)
+    public virtual void OnOpen(object data)
     {
         SortOrder(transform,handle.order+1);
         
