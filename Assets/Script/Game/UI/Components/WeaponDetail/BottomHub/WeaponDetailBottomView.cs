@@ -19,6 +19,8 @@ public class WeaponDetailBottomView : MonoBehaviour
     [SerializeField]
     Button breakBtn;
     [SerializeField]
+    Button refineBtn;
+    [SerializeField]
     TextMeshProUGUI enhanceGoldText;
     [SerializeField]
     TextMeshProUGUI promoteGoldText;
@@ -59,6 +61,10 @@ public class WeaponDetailBottomView : MonoBehaviour
             enhanceBtn.onClick.AsObservable().Subscribe(_=>vm.onEnhanceClick.Execute()).AddTo(disposable);
         if (breakBtn)
             breakBtn.onClick.AsObservable().Subscribe(_ => vm.onBreakoutClick.Execute()).AddTo(disposable);
+        if (refineBtn == null && refineContent != null)
+            refineBtn = refineContent.GetComponentInChildren<Button>(true);
+        if (refineBtn)
+            refineBtn.onClick.AsObservable().Subscribe(_ => vm.onRefineClick.Execute()).AddTo(disposable);
     }
 
     void SetCostGold(int value)

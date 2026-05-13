@@ -85,8 +85,20 @@ public class EquipDetailViewModel: IDisposable
         {
             currentWeaponVM.Value.Breakout();
         }).AddTo(disposables);
+
+        bottomVM.onRefineClick.Subscribe(_ =>
+        {
+            if (refineVM.TryApplyRefine(GameEconomy.Instance.TrySpendGold))
+            {
+                requestCloseItemSelectPanel.OnNext(Unit.Default);
+            }
+        }).AddTo(disposables);
         
         enhanceVM.requestOpenItemSelectPanel
+            .Subscribe(requestOpenItemSelectPanel.OnNext)
+            .AddTo(disposables);
+
+        refineVM.requestOpenItemSelectPanel
             .Subscribe(requestOpenItemSelectPanel.OnNext)
             .AddTo(disposables);
     }
@@ -114,6 +126,7 @@ public class EquipDetailViewModel: IDisposable
         MiddleVM.Dispose();
         infoVm.Dispose();
         enhanceVM.Dispose();
+        refineVM.Dispose();
         bottomVM.Dispose();
     }
 }

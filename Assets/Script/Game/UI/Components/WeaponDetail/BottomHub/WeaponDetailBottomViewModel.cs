@@ -13,6 +13,7 @@ public class WeaponDetailBottomViewModel : IDisposable
     public readonly ReactiveCommand onQuickEquipClick = new();
     public readonly ReactiveCommand onEnhanceClick = new();
     public readonly ReactiveCommand onBreakoutClick = new();
+    public readonly ReactiveCommand onRefineClick = new();
     
     public readonly ReactiveProperty<bool> canBreakout = new(false);
     

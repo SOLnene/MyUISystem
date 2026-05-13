@@ -1,13 +1,15 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using UniRx;
 using UnityEngine;
 
-public class RefinePanelViewModel
+public class RefinePanelViewModel : IDisposable
 {
     public readonly ReactiveProperty<EquipItemViewModel> equipItem;
     public readonly ReactiveProperty<int> previewCost = new();
+    public readonly Subject<MaterialSelectParams> requestOpenItemSelectPanel = new();
     
     
     CompositeDisposable disposables = new CompositeDisposable();
@@ -83,7 +85,26 @@ public class RefinePanelViewModel
         Debug.Log(index);
         MaterialSelectParams materialSelectParams = new MaterialSelectParams(index,new ItemFilter(ItemCategory.Equip,(int)ItemRarity.Max,equipItem.Value.Model.Id),
             maxConsume,selectService);
-        UIManager.Instance.Open(UIType.ItemSelectPopupView, materialSelectParams);
+        requestOpenItemSelectPanel.OnNext(materialSelectParams);
+    }
+
+    public bool TryApplyRefine(Func<int, bool> trySpendGold)
+    {
+        if (equipItem.Value == null || selectService.SelectedItems.Count <= 0)
+            return false;
+
+        var model = equipItem.Value.Model;
+        if (model.RefinementLevel >= model.GetRefineCap())
+            return false;
+
+        int cost = previewCost.Value;
+        if (trySpendGold != null && !trySpendGold(cost))
+            return false;
+
+        equipItem.Value.Refine();
+        selectService.Clear();
+        previewCost.Value = 0;
+        return true;
     }
     
     private void AddToFirstEmptySlot(InventoryItem item)
@@ -137,5 +158,12 @@ public class RefinePanelViewModel
                 slotViewModels[i].ClearItem();
             }
         }
+    }
+
+    public void Dispose()
+    {
+        disposables.Dispose();
+        selectService.Dispose();
+        requestOpenItemSelectPanel.Dispose();
     }
 }
