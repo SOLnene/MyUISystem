@@ -84,13 +84,19 @@ public class UIViewHandle
             👉 运行时决定实际类型 = 可能是 UILoadingView，只是用基类引用来接。
              */
             uiView = (UIView)go.GetOrAddComponent(uiViewType);
-            uiView.transform.SetParentAndReset(uiLayerLogic.canvas.transform);
-            RectTransform rectTransform = uiView.transform as RectTransform;
-            
-            //TODO:黑边适配
-            rectTransform.SetAnchor(AnchorPresets.StretchAll);
-            rectTransform.anchoredPosition = Vector2.zero;
-            rectTransform.sizeDelta = Vector2.zero;
+            if (isWindow)
+            {
+                uiView.transform.SetParent(uiLayerLogic.canvas.transform, false);
+            }
+            else
+            {
+                uiView.transform.SetParentAndReset(uiLayerLogic.canvas.transform);
+
+                RectTransform rectTransform = uiView.transform as RectTransform;
+                rectTransform.SetAnchor(AnchorPresets.StretchAll);
+                rectTransform.anchoredPosition = Vector2.zero;
+                rectTransform.sizeDelta = Vector2.zero;
+            }
             
             uiView.OnInit(go.GetComponent<UIControlData>(),this);
             uiView.transform.SetAsLastSibling();

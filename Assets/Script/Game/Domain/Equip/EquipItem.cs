@@ -251,8 +251,9 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public int GetRefineCost(int currentLevel)
     {
-        int baseCost = 1;       // 等级1的基础花费
-        float exponent = 1.5f;    // 指数增长
+        int star = Mathf.Max(1, Stars);
+        int baseCost = 500 * star * star;
+        float exponent = 1.15f;
         return Mathf.RoundToInt(baseCost * Mathf.Pow(currentLevel, exponent));
     }
     

@@ -88,8 +88,12 @@ public class EquipDetailViewModel: IDisposable
 
         bottomVM.onRefineClick.Subscribe(_ =>
         {
-            if (refineVM.TryApplyRefine(GameEconomy.Instance.TrySpendGold))
+            if (!refineVM.CanApplyRefine())
+                return;
+
+            if (GameEconomy.Instance.TrySpendGold(refineVM.previewCost.Value))
             {
+                refineVM.ApplyRefine();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
             }
         }).AddTo(disposables);

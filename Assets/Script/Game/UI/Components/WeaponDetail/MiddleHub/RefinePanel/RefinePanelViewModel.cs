@@ -33,7 +33,7 @@ public class RefinePanelViewModel : IDisposable
         
         selectService.SelectedItems.ObserveCountChanged().Subscribe(_ =>
         {
-            previewCost.Value = equipItem.Value.Model.GetRefineCost(selectService.SelectedItems.Count);
+            previewCost.Value = GetSelectedRefineCost();
             
         }).AddTo(disposables);
         selectService.OnDelta.Subscribe(delta =>
@@ -62,7 +62,7 @@ public class RefinePanelViewModel : IDisposable
         foreach (var item in filteredItems)
         {
             // 已满则停止
-            if (addedCount >= maxConsume)
+            if (addedCount >= GetAvailableRefineCount())
                 break;
 
             // 跳过已选择的物品
@@ -84,27 +84,31 @@ public class RefinePanelViewModel : IDisposable
         int index = slotViewModels.IndexOf(viewModel);
         Debug.Log(index);
         MaterialSelectParams materialSelectParams = new MaterialSelectParams(index,new ItemFilter(ItemCategory.Equip,(int)ItemRarity.Max,equipItem.Value.Model.Id),
-            maxConsume,selectService);
+            GetAvailableRefineCount(),selectService);
         requestOpenItemSelectPanel.OnNext(materialSelectParams);
     }
 
-    public bool TryApplyRefine(Func<int, bool> trySpendGold)
+    //todo:别传方法
+    public bool CanApplyRefine()
     {
         if (equipItem.Value == null || selectService.SelectedItems.Count <= 0)
             return false;
 
         var model = equipItem.Value.Model;
-        if (model.RefinementLevel >= model.GetRefineCap())
-            return false;
+        return model.RefinementLevel < model.GetRefineCap();
+    }
 
-        int cost = previewCost.Value;
-        if (trySpendGold != null && !trySpendGold(cost))
-            return false;
+    public void ApplyRefine()
+    {
+        int refineCount = GetSelectedRefineCount();
 
-        equipItem.Value.Refine();
+        for (int i = 0; i < refineCount; i++)
+        {
+            equipItem.Value.Refine();
+        }
+
         selectService.Clear();
         previewCost.Value = 0;
-        return true;
     }
     
     private void AddToFirstEmptySlot(InventoryItem item)
@@ -117,6 +121,36 @@ public class RefinePanelViewModel : IDisposable
                 return;
             }
         }
+    }
+
+    int GetAvailableRefineCount()
+    {
+        if (equipItem.Value == null)
+            return 0;
+
+        var model = equipItem.Value.Model;
+        return Mathf.Max(0, model.GetRefineCap() - model.RefinementLevel);
+    }
+
+    int GetSelectedRefineCount()
+    {
+        return Mathf.Min(selectService.SelectedItems.Count, GetAvailableRefineCount());
+    }
+
+    int GetSelectedRefineCost()
+    {
+        if (equipItem.Value == null)
+            return 0;
+
+        var model = equipItem.Value.Model;
+        int cost = 0;
+
+        for (int i = 0; i < GetSelectedRefineCount(); i++)
+        {
+            cost += model.GetRefineCost(model.RefinementLevel + i);
+        }
+
+        return cost;
     }
 
     private void RemoveFromLastMatchedSlot(InventoryItem item)

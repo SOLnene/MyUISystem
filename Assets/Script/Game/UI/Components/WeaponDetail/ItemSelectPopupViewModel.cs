@@ -77,9 +77,14 @@ public class ItemSelectPopupViewModel
                     
                     if (!slotVM.isChecked.Value)
                     {
-                        selectService.TrySelect(slotVM.ItemViewModel.Model);
-                        //selectedSlots.Add(slotVM);
-                        slotVM.isChecked.Value = true;
+                        if (selectService.SelectedItems.Count >= materialSelectParams.maxCount)
+                            return;
+
+                        if (selectService.TrySelect(slotVM.ItemViewModel.Model))
+                        {
+                            //selectedSlots.Add(slotVM);
+                            slotVM.isChecked.Value = true;
+                        }
                     }
                 }).AddTo(disposable);
                 slotVM.onRemove.Subscribe(_ =>
