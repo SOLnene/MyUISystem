@@ -29,6 +29,8 @@ public class EquipDetailViewModel: IDisposable
     /// 转发右下角的请求关闭选择面板事件
     public readonly Subject<Unit> requestCloseItemSelectPanel = new();
     public readonly Subject<Unit> requestRefreshContentWithAnimation = new();
+    public readonly Subject<bool> requestPlayEnhanceResult = new();
+    public readonly Subject<Unit> requestPlayPromoteResult = new();
     public EquipDetailViewModel(ReactiveProperty<EquipItemViewModel> viewModel,InventoryRepository repo)
     {
         currentWeaponVM = viewModel;
@@ -70,7 +72,7 @@ public class EquipDetailViewModel: IDisposable
                 currentWeaponVM.Value.AddExp(enhanceVM.previewExp.Value);
                 enhanceVM.ClearSelectedMaterials();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
-                requestRefreshContentWithAnimation.OnNext(Unit.Default);
+                requestPlayEnhanceResult.OnNext(currentWeaponVM.Value.needBreak.Value);
             }
             else
             {
@@ -86,7 +88,7 @@ public class EquipDetailViewModel: IDisposable
         bottomVM.onBreakoutClick.Subscribe(_ =>
         {
             currentWeaponVM.Value.Breakout();
-            requestRefreshContentWithAnimation.OnNext(Unit.Default);
+            requestPlayPromoteResult.OnNext(Unit.Default);
         }).AddTo(disposables);
 
         bottomVM.onRefineClick.Subscribe(_ =>
@@ -96,9 +98,11 @@ public class EquipDetailViewModel: IDisposable
 
             if (GameEconomy.Instance.TrySpendGold(refineVM.previewCost.Value))
             {
+                bool wasCanRefine = !currentWeaponVM.Value.IsRefineMaxed();
                 refineVM.ApplyRefine();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
-                requestRefreshContentWithAnimation.OnNext(Unit.Default);
+                if (wasCanRefine != !currentWeaponVM.Value.IsRefineMaxed())
+                    requestRefreshContentWithAnimation.OnNext(Unit.Default);
             }
         }).AddTo(disposables);
         

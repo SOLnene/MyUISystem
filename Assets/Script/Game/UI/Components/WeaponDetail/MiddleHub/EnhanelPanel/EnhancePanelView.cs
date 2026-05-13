@@ -89,6 +89,16 @@ public class EnhancePanelView : MonoBehaviour
         SetPanelActive(enhancePanel, !isPromote);
         SetPanelActive(promotePanel, isPromote);
     }
+
+    public async UniTask PlayEnhanceResult()
+    {
+        await UniTask.Delay(300);
+    }
+
+    public async UniTask PlayPromoteResult()
+    {
+        await UniTask.Delay(500);
+    }
     
     void SetPanelActive(GameObject panel, bool active)
     {

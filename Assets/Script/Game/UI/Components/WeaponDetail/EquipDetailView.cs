@@ -50,6 +50,7 @@ public partial class EquipDetailView : UIView
     readonly CompositeDisposable disposable = new CompositeDisposable();
     int currentTabIndex = -1;
     bool isSwitchingTab;
+    bool isPlayingResultFlow;
     bool isClosing;
 
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
@@ -150,6 +151,14 @@ public partial class EquipDetailView : UIView
         equipDetailVm.requestRefreshContentWithAnimation
             .Subscribe(_ => SwitchContent().Forget())
             .AddTo(disposable);
+
+        equipDetailVm.requestPlayEnhanceResult
+            .Subscribe(needSwitchContent => PlayEnhanceResultFlow(needSwitchContent).Forget())
+            .AddTo(disposable);
+
+        equipDetailVm.requestPlayPromoteResult
+            .Subscribe(_ => PlayPromoteResultFlow().Forget())
+            .AddTo(disposable);
     }
 
     void ApplyTabImmediate(int index)
@@ -176,6 +185,45 @@ public partial class EquipDetailView : UIView
         {
             isSwitchingTab = false;
         }
+    }
+
+    async UniTask PlayEnhanceResultFlow(bool needSwitchContent)
+    {
+        if (isSwitchingTab || isPlayingResultFlow)
+            return;
+
+        isPlayingResultFlow = true;
+        try
+        {
+            if (enhancePanelView != null)
+                await enhancePanelView.PlayEnhanceResult();
+        }
+        finally
+        {
+            isPlayingResultFlow = false;
+        }
+
+        if (needSwitchContent)
+            await SwitchContent();
+    }
+
+    async UniTask PlayPromoteResultFlow()
+    {
+        if (isSwitchingTab || isPlayingResultFlow)
+            return;
+
+        isPlayingResultFlow = true;
+        try
+        {
+            if (enhancePanelView != null)
+                await enhancePanelView.PlayPromoteResult();
+        }
+        finally
+        {
+            isPlayingResultFlow = false;
+        }
+
+        await SwitchContent();
     }
 
     async UniTask HideTabContent()
@@ -262,6 +310,7 @@ public partial class EquipDetailView : UIView
         equipDetailVm = null;
         currentTabIndex = -1;
         isSwitchingTab = false;
+        isPlayingResultFlow = false;
         isClosing = false;
     }
 
