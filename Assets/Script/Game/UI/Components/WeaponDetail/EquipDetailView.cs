@@ -147,8 +147,7 @@ public partial class EquipDetailView : UIView
             .Subscribe(_ => SwitchContent().Forget())
             .AddTo(disposable);
 
-        equipDetailVm.bottomVM.canBreakout
-            .Skip(1)
+        equipDetailVm.requestRefreshContentWithAnimation
             .Subscribe(_ => SwitchContent().Forget())
             .AddTo(disposable);
     }

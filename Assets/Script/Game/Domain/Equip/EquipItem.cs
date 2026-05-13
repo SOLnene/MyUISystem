@@ -262,6 +262,11 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
         //默认为5
         return 5;
     }
+
+    public bool IsRefineMaxed()
+    {
+        return RefinementLevel >= GetRefineCap();
+    }
     
     public EquipPreview GetPreviewWithExp(int addedExp, bool promoting = false)
     {

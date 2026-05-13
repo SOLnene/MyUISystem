@@ -58,7 +58,25 @@
                     vm.OnSlotClick(slotVM);
                 }).AddTo(disposable);
             }
+
+            Refresh();
         }
 
+        public void Refresh()
+        {
+            bool isMax = vm != null &&
+                         vm.equipItem.Value != null &&
+                         vm.equipItem.Value.IsRefineMaxed();
+
+            if (materialArea != null)
+            {
+                materialArea.SetActive(!isMax);
+            }
+
+            if (maxRefineArea != null)
+            {
+                maxRefineArea.SetActive(isMax);
+            }
+        }
         
     }

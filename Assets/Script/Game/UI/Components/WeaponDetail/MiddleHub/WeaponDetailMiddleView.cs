@@ -19,6 +19,8 @@ public class WeaponDetailMiddleView : MonoBehaviour
     [SerializeField]
     GameObject refinePanel;
     [SerializeField]
+    RefinePanelView refinePanelView;
+    [SerializeField]
     AnimatedPanel animatedRoot;
 
     WeaponDetailMiddleViewModel vm;
@@ -36,6 +38,8 @@ public class WeaponDetailMiddleView : MonoBehaviour
 
         if (enhancePanelView == null && enhancePanel != null)
             enhancePanelView = enhancePanel.GetComponent<EnhancePanelView>();
+        if (refinePanelView == null && refinePanel != null)
+            refinePanelView = refinePanel.GetComponent<RefinePanelView>();
         
         disposable.Clear();
         BindTabItems();
@@ -103,6 +107,8 @@ public class WeaponDetailMiddleView : MonoBehaviour
 
         if (index == (int)WeaponDetailTab.Enhance && enhancePanelView != null)
             enhancePanelView.Refresh();
+        if (index == (int)WeaponDetailTab.Refine && refinePanelView != null)
+            refinePanelView.Refresh();
     }
 
     public void SetPanelActive(int index)

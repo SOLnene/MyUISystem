@@ -82,6 +82,11 @@ public class EquipItemViewModel: ItemViewModel
         Model.TryRefine();
         SyncFromModel();
     }
+
+    public bool IsRefineMaxed()
+    {
+        return Model.IsRefineMaxed();
+    }
     
     public EquipPreview GetPreviewWithExp(int addedExp, bool promoting = false)
     {

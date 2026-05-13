@@ -28,6 +28,7 @@ public class EquipDetailViewModel: IDisposable
     public readonly Subject<MaterialSelectParams> requestOpenItemSelectPanel = new();
     /// 转发右下角的请求关闭选择面板事件
     public readonly Subject<Unit> requestCloseItemSelectPanel = new();
+    public readonly Subject<Unit> requestRefreshContentWithAnimation = new();
     public EquipDetailViewModel(ReactiveProperty<EquipItemViewModel> viewModel,InventoryRepository repo)
     {
         currentWeaponVM = viewModel;
@@ -69,6 +70,7 @@ public class EquipDetailViewModel: IDisposable
                 currentWeaponVM.Value.AddExp(enhanceVM.previewExp.Value);
                 enhanceVM.ClearSelectedMaterials();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
+                requestRefreshContentWithAnimation.OnNext(Unit.Default);
             }
             else
             {
@@ -84,6 +86,7 @@ public class EquipDetailViewModel: IDisposable
         bottomVM.onBreakoutClick.Subscribe(_ =>
         {
             currentWeaponVM.Value.Breakout();
+            requestRefreshContentWithAnimation.OnNext(Unit.Default);
         }).AddTo(disposables);
 
         bottomVM.onRefineClick.Subscribe(_ =>
@@ -95,6 +98,7 @@ public class EquipDetailViewModel: IDisposable
             {
                 refineVM.ApplyRefine();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
+                requestRefreshContentWithAnimation.OnNext(Unit.Default);
             }
         }).AddTo(disposables);
         
