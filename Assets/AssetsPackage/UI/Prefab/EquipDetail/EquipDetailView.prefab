@@ -3447,6 +3447,9 @@ GameObject:
   m_Component:
   - component: {fileID: 6635369791954202310}
   - component: {fileID: 956830409035582190}
+  - component: {fileID: 1432868385489310042}
+  - component: {fileID: 4598901275678791681}
+  - component: {fileID: 1880422969135364130}
   m_Layer: 5
   m_Name: RefinePanel
   m_TagString: Untagged
@@ -3496,8 +3499,55 @@ MonoBehaviour:
   - {fileID: 250458318057103312}
   - {fileID: 4806477430044146415}
   - {fileID: 2674919396180407391}
-  materialArea: {fileID: 0}
-  maxRefineArea: {fileID: 0}
+  materialArea: {fileID: 5848841828041365195}
+  maxRefineArea: {fileID: 4807288397210375009}
+--- !u!114 &1432868385489310042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8320654516219515236}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82e8af1c72efe834bb395144422b2b42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  motionGroup: {fileID: 4598901275678791681}
+  motionRoot: {fileID: 6635369791954202310}
+  targetMove: {x: 0, y: 0}
+  originMove: {x: 0, y: 0}
+  moveDuration: 0.18
+  fadeDuration: 0.12
+  moveEase: 9
+  fadeEase: 1
+--- !u!225 &4598901275678791681
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8320654516219515236}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &1880422969135364130
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8320654516219515236}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5d20f43324ef5240b901dd4dd7c8ae3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  panelRoot: {fileID: 8320654516219515236}
+  motion: {fileID: 1432868385489310042}
+  inputGroup: {fileID: 4598901275678791681}
 --- !u!1 &8358603530164630441
 GameObject:
   m_ObjectHideFlags: 0
