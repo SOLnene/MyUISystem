@@ -25,12 +25,19 @@ namespace  Game.UI.Components.CharacterDetail
 
 		CompositeDisposable disposable = new CompositeDisposable();
 		EnhanceLevelPreviewViewModel Vm;
+		const float expAnimationDuration = 0.8f;
+		float currentExpProgress;
+		bool isPlayingExpAnimation;
+		int previewLevelUpCount;
 
 
 		public void Bind(EnhanceLevelPreviewViewModel viewModel)
 		{
 			disposable.Clear();
 			Vm = viewModel;
+			currentExpProgress = 0f;
+			isPlayingExpAnimation = false;
+			previewLevelUpCount = 0;
 			Vm.levelText.Subscribe(
 				value =>
 				{
@@ -54,13 +61,35 @@ namespace  Game.UI.Components.CharacterDetail
 					Debug.Log("levelup value" + value);
 				}).AddTo(disposable);
 			
-			Observable.CombineLatest(Vm.expProgress, Vm.previewProgress,
-					(current, preview) => (current, preview))
-				.Subscribe(x =>
+			Vm.levelUpCount.Subscribe(count =>
+			{
+				previewLevelUpCount = count;
+			}).AddTo(disposable);
+			
+			currentExpProgress = Vm.expProgress.Value;
+			levelBar.SetValue(currentExpProgress, Vm.previewProgress.Value);
+			
+			Vm.expProgress.Skip(1).Subscribe(current =>
+			{
+				if (Mathf.Approximately(currentExpProgress, current))
 				{
-					levelBar.SetValue(x.current, x.preview);
-				})
-				.AddTo(disposable);
+					return;
+				}
+
+				float from = currentExpProgress;
+				currentExpProgress = current;
+				PlayExpChange(from, current, previewLevelUpCount).Forget();
+			}).AddTo(disposable);
+			
+			Vm.previewProgress.Skip(1).Subscribe(preview =>
+			{
+				if (isPlayingExpAnimation)
+				{
+					return;
+				}
+
+				levelBar.SetValue(currentExpProgress, preview);
+			}).AddTo(disposable);
 			
 			// 控制等级提升 (+N) 显示/隐藏
 			Vm.isLevelChanged.Subscribe(isChanged =>
@@ -93,6 +122,20 @@ namespace  Game.UI.Components.CharacterDetail
 			else
 			{
 				gameObject.SetActive(false);
+			}
+		}
+		
+		async UniTask PlayExpChange(float from, float to, int fullSegmentCount)
+		{
+			isPlayingExpAnimation = true;
+			try
+			{
+				await levelBar.PlaySegmentedValue(from, to, fullSegmentCount, expAnimationDuration);
+			}
+			finally
+			{
+				isPlayingExpAnimation = false;
+				levelBar.SetValue(currentExpProgress, Vm.previewProgress.Value);
 			}
 		}
 		

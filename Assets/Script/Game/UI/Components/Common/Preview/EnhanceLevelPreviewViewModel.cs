@@ -11,6 +11,7 @@ public class EnhanceLevelPreviewViewModel
     public ReadOnlyReactiveProperty<float> expProgress;
 
     public ReadOnlyReactiveProperty<string> levelUpText;
+    public ReadOnlyReactiveProperty<int> levelUpCount;
     public ReadOnlyReactiveProperty<string> expPlusAmountText; 
     public ReadOnlyReactiveProperty<float> previewProgress;
 
@@ -27,15 +28,17 @@ public class EnhanceLevelPreviewViewModel
             .Select(l => $"Lv.{l}")
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
-        
+        //todo:先这样写，之后可能要改成发一个levelstruct而不是两个信号
         expText = model.LevelRP
             .CombineLatest(model.ExpRP,
                 (level, exp) =>
                 {
-                    int max = model.LevelSystem.GetExpRequired(level);
+                    int max = model.LevelSystem.GetExpRequired(model.LevelSystem.Level);
+                    exp = model.LevelSystem.CurrentExp;
                     Debug.Log($"currentlevel:{level}currentexp:{exp}");
                     return $"{exp}/{max}";
                 })
+            .DistinctUntilChanged()
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
         
@@ -43,9 +46,10 @@ public class EnhanceLevelPreviewViewModel
             .CombineLatest(model.ExpRP,
                 (level, exp) =>
                 {
-                    int max = model.LevelSystem.GetExpRequired(level);
-                    return (float)exp / max;
+                    int max = model.LevelSystem.GetExpRequired(model.LevelSystem.Level);
+                    return (float)model.LevelSystem.CurrentExp / max;
                 })
+            .DistinctUntilChanged()
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
         
@@ -59,8 +63,13 @@ public class EnhanceLevelPreviewViewModel
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
         
-        levelUpText = previewData
-            .Select(data => data.levelUpCount > 0 ? $"+{data.levelUpCount}" : "")
+        levelUpCount = previewData
+            .Select(data => data.levelUpCount)
+            .ToReadOnlyReactiveProperty()
+            .AddTo(disposable);
+        
+        levelUpText = levelUpCount
+            .Select(count => count > 0 ? $"+{count}" : "")
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
 
@@ -71,9 +80,10 @@ public class EnhanceLevelPreviewViewModel
                 previewExp,
                 (level, exp, added) =>
                 {
-                    int max = model.LevelSystem.GetExpRequired(level);
-                    return (float)(exp + added) / max;
+                    int max = model.LevelSystem.GetExpRequired(model.LevelSystem.Level);
+                    return (float)(model.LevelSystem.CurrentExp + added) / max;
                 })
+            .DistinctUntilChanged()
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
         
@@ -84,8 +94,8 @@ public class EnhanceLevelPreviewViewModel
             .AddTo(disposable);
 
         // 只关心预览：判断等级是否发生变化
-        isLevelChanged = previewData
-            .Select(preview => preview.levelUpCount > 0)
+        isLevelChanged = levelUpCount
+            .Select(count => count > 0)
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
     }

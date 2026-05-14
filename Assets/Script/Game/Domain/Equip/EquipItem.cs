@@ -227,7 +227,9 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
         if (!RankSystem.Promote())
             return false;
         
+        LevelSystem.ResetCurrentExp();
         rankRP.Value = Rank;
+        expRP.Value = CurrentExp;
         RefreshBaseStats();
         //OnRankChanged?.Invoke(Rank);
 

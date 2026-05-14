@@ -17,6 +17,12 @@ public class LevelSystem
         NextLevelExp = GetExpRequired();
     }
     
+    internal void ResetCurrentExp()
+    {
+        CurrentExp = 0;
+        NextLevelExp = GetExpRequired();
+    }
+    
     public ExpGainResult AddExp(int exp,int maxLevel)
     {
         if (RankMaxed())
