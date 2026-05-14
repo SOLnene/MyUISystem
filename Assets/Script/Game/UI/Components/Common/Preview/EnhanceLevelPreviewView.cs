@@ -22,7 +22,8 @@ namespace  Game.UI.Components.CharacterDetail
 		private ProgressBarView levelBar;
 		[SerializeField]
 		AnimatedPanel animatedPanel;
-
+		[SerializeField]
+		LevelResultFxView levelResultFxView;
 		CompositeDisposable disposable = new CompositeDisposable();
 		EnhanceLevelPreviewViewModel Vm;
 		const float expAnimationDuration = 0.8f;
