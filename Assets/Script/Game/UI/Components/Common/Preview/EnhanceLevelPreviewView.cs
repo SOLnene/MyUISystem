@@ -19,7 +19,7 @@ namespace  Game.UI.Components.CharacterDetail
 		[SerializeField]
 		private TextMeshProUGUI expText;
 		[SerializeField]
-		private BarBase levelBar;
+		private ProgressBarView levelBar;
 		[SerializeField]
 		AnimatedPanel animatedPanel;
 
