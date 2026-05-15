@@ -40,6 +40,9 @@ public partial class EquipDetailView : UIView
     UITransitionGroup pageTransition;
     [SerializeField]
     ItemSelectPanelView itemSelectPanelView;
+    [Header("输入锁")]
+    [SerializeField]
+    GameObject inputBlocker;
     //参考图
     [Header("参考图")]
     [SerializeField]
@@ -52,6 +55,7 @@ public partial class EquipDetailView : UIView
     bool isSwitchingTab;
     bool isPlayingResultFlow;
     bool isClosing;
+    int inputBlockCount;
 
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -62,6 +66,8 @@ public partial class EquipDetailView : UIView
     {
         base.OnOpen(data);
         isClosing = false;
+        inputBlockCount = 0;
+        SetInputBlocked(false);
         //todo:view中不允许创建vm，放到类似context的地方
         
         var param = data as EquipDetailOpenParams;
@@ -174,6 +180,7 @@ public partial class EquipDetailView : UIView
         if (isSwitchingTab)
             return;
 
+        LockInput();
         isSwitchingTab = true;
         try
         {
@@ -184,6 +191,7 @@ public partial class EquipDetailView : UIView
         finally
         {
             isSwitchingTab = false;
+            UnlockInput();
         }
     }
 
@@ -192,19 +200,21 @@ public partial class EquipDetailView : UIView
         if (isSwitchingTab || isPlayingResultFlow)
             return;
 
+        LockInput();
         isPlayingResultFlow = true;
         try
         {
             if (enhancePanelView != null)
                 await enhancePanelView.PlayEnhanceResult(result);
+
+            if (result.needSwitchContent)
+                await SwitchContent();
         }
         finally
         {
             isPlayingResultFlow = false;
+            UnlockInput();
         }
-
-        if (result.needSwitchContent)
-            await SwitchContent();
     }
 
     async UniTask PlayPromoteResultFlow()
@@ -212,18 +222,20 @@ public partial class EquipDetailView : UIView
         if (isSwitchingTab || isPlayingResultFlow)
             return;
 
+        LockInput();
         isPlayingResultFlow = true;
         try
         {
             if (enhancePanelView != null)
                 await enhancePanelView.PlayPromoteResult();
+
+            await SwitchContent();
         }
         finally
         {
             isPlayingResultFlow = false;
+            UnlockInput();
         }
-
-        await SwitchContent();
     }
 
     async UniTask HideTabContent()
@@ -245,6 +257,24 @@ public partial class EquipDetailView : UIView
         await UniTask.WhenAll(
             MiddleHub.ShowContent(),
             bottomView.ShowContent());
+    }
+    
+    void LockInput()
+    {
+        inputBlockCount++;
+        SetInputBlocked(true);
+    }
+
+    void UnlockInput()
+    {
+        inputBlockCount = Mathf.Max(0, inputBlockCount - 1);
+        SetInputBlocked(inputBlockCount > 0);
+    }
+
+    void SetInputBlocked(bool blocked)
+    {
+        if (inputBlocker != null)
+            inputBlocker.SetActive(blocked);
     }
     
     void OnWeaponChanged(EquipItemViewModel viewModel)
@@ -312,6 +342,8 @@ public partial class EquipDetailView : UIView
         isSwitchingTab = false;
         isPlayingResultFlow = false;
         isClosing = false;
+        inputBlockCount = 0;
+        SetInputBlocked(false);
     }
 
     public override void OnRelease()

@@ -193,6 +193,7 @@ MonoBehaviour:
   expText: {fileID: 19703250226920957}
   levelBar: {fileID: 482871963049175589}
   animatedPanel: {fileID: 3637744027013812923}
+  levelResultFxView: {fileID: 6159065355815841619}
 --- !u!114 &1173130677093867488
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -557,6 +558,8 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6010785063601515631}
+  - component: {fileID: 7199524421225361243}
+  - component: {fileID: 6159065355815841619}
   m_Layer: 5
   m_Name: ResultFxRoot
   m_TagString: Untagged
@@ -585,6 +588,37 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!225 &7199524421225361243
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3724608691935260533}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
+--- !u!114 &6159065355815841619
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3724608691935260533}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e9a7d54010a608c469fff0e94b10cf81, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  canvasGroup: {fileID: 7199524421225361243}
+  moveRoot: {fileID: 6010785063601515631}
+  levelText: {fileID: 1840945938779403532}
+  enterDuration: 0.18
+  holdOldDuration: 0.12
+  switchDuration: 0.16
+  exitDuration: 0.15
 --- !u!1 &4257868609625015643
 GameObject:
   m_ObjectHideFlags: 0
