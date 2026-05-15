@@ -126,6 +126,16 @@ namespace  Game.UI.Components.CharacterDetail
 			}
 		}
 		
+		public async UniTask PlayLevelResult(int oldLevel, int newLevel)
+		{
+			if (levelResultFxView == null || oldLevel == newLevel)
+			{
+				return;
+			}
+			
+			await levelResultFxView.Play(oldLevel, newLevel);
+		}
+		
 		async UniTask PlayExpChange(float from, float to, int fullSegmentCount)
 		{
 			isPlayingExpAnimation = true;

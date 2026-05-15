@@ -15,17 +15,30 @@ public class LevelResultFxView : MonoBehaviour
     [SerializeField] float exitDuration = 0.15f;
 
     Vector2 defaultPos;
+    bool hasDefaultPos;
 
     void Awake()
     {
         if (moveRoot != null)
+        {
             defaultPos = moveRoot.anchoredPosition;
+            hasDefaultPos = true;
+        }
 
         gameObject.SetActive(false);
     }
 
     public async UniTask Play(int oldLevel, int newLevel)
     {
+        if (canvasGroup == null || levelText == null)
+            return;
+
+        if (moveRoot != null && !hasDefaultPos)
+        {
+            defaultPos = moveRoot.anchoredPosition;
+            hasDefaultPos = true;
+        }
+
         gameObject.SetActive(true);
 
         canvasGroup.alpha = 0f;
@@ -34,13 +47,20 @@ public class LevelResultFxView : MonoBehaviour
 
         levelText.text = $"Lv.{oldLevel}";
 
-        await UniTask.WhenAll(
-            canvasGroup.DOFade(1f, enterDuration).AsyncWaitForCompletion().AsUniTask(),
-            moveRoot.DOAnchorPos(defaultPos, enterDuration)
-                .SetEase(Ease.OutCubic)
-                .AsyncWaitForCompletion()
-                .AsUniTask()
-            );
+        if (moveRoot != null)
+        {
+            await UniTask.WhenAll(
+                canvasGroup.DOFade(1f, enterDuration).AsyncWaitForCompletion().AsUniTask(),
+                moveRoot.DOAnchorPos(defaultPos, enterDuration)
+                    .SetEase(Ease.OutCubic)
+                    .AsyncWaitForCompletion()
+                    .AsUniTask()
+                );
+        }
+        else
+        {
+            await canvasGroup.DOFade(1f, enterDuration).AsyncWaitForCompletion().AsUniTask();
+        }
 
         await UniTask.Delay(System.TimeSpan.FromSeconds(holdOldDuration));
 

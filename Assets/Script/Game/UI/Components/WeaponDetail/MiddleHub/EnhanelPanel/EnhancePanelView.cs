@@ -90,9 +90,10 @@ public class EnhancePanelView : MonoBehaviour
         SetPanelActive(promotePanel, isPromote);
     }
 
-    public async UniTask PlayEnhanceResult()
+    public async UniTask PlayEnhanceResult(int oldLevel, int newLevel)
     {
-        await UniTask.Delay(300);
+        if (enhanceLevelPreviewView != null)
+            await enhanceLevelPreviewView.PlayLevelResult(oldLevel, newLevel);
     }
 
     public async UniTask PlayPromoteResult()

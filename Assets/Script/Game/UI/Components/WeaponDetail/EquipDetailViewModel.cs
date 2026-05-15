@@ -29,7 +29,7 @@ public class EquipDetailViewModel: IDisposable
     /// 转发右下角的请求关闭选择面板事件
     public readonly Subject<Unit> requestCloseItemSelectPanel = new();
     public readonly Subject<Unit> requestRefreshContentWithAnimation = new();
-    public readonly Subject<bool> requestPlayEnhanceResult = new();
+    public readonly Subject<EnhanceResultData> requestPlayEnhanceResult = new();
     public readonly Subject<Unit> requestPlayPromoteResult = new();
     public EquipDetailViewModel(ReactiveProperty<EquipItemViewModel> viewModel,InventoryRepository repo)
     {
@@ -69,10 +69,13 @@ public class EquipDetailViewModel: IDisposable
             }
             if (GameEconomy.Instance.TrySpendGold(enhanceVM.previewCost.Value)||true)
             {
+                int oldLevel = currentWeaponVM.Value.level.Value;
                 currentWeaponVM.Value.AddExp(enhanceVM.previewExp.Value);
+                int newLevel = currentWeaponVM.Value.level.Value;
+                bool needSwitchContent = currentWeaponVM.Value.needBreak.Value;
                 enhanceVM.ClearSelectedMaterials();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
-                requestPlayEnhanceResult.OnNext(currentWeaponVM.Value.needBreak.Value);
+                requestPlayEnhanceResult.OnNext(new EnhanceResultData(oldLevel, newLevel, needSwitchContent));
             }
             else
             {
@@ -146,6 +149,20 @@ public class EquipDetailViewModel: IDisposable
 /// <summary>
 /// 武器界面跳转参数
 /// </summary>
+public readonly struct EnhanceResultData
+{
+    public readonly int oldLevel;
+    public readonly int newLevel;
+    public readonly bool needSwitchContent;
+
+    public EnhanceResultData(int oldLevel, int newLevel, bool needSwitchContent)
+    {
+        this.oldLevel = oldLevel;
+        this.newLevel = newLevel;
+        this.needSwitchContent = needSwitchContent;
+    }
+}
+
 public class EquipDetailOpenParams
 {
     public EquipItemViewModel Weapon { get; }

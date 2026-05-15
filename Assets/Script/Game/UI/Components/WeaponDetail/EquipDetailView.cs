@@ -153,7 +153,7 @@ public partial class EquipDetailView : UIView
             .AddTo(disposable);
 
         equipDetailVm.requestPlayEnhanceResult
-            .Subscribe(needSwitchContent => PlayEnhanceResultFlow(needSwitchContent).Forget())
+            .Subscribe(result => PlayEnhanceResultFlow(result).Forget())
             .AddTo(disposable);
 
         equipDetailVm.requestPlayPromoteResult
@@ -187,7 +187,7 @@ public partial class EquipDetailView : UIView
         }
     }
 
-    async UniTask PlayEnhanceResultFlow(bool needSwitchContent)
+    async UniTask PlayEnhanceResultFlow(EnhanceResultData result)
     {
         if (isSwitchingTab || isPlayingResultFlow)
             return;
@@ -196,14 +196,14 @@ public partial class EquipDetailView : UIView
         try
         {
             if (enhancePanelView != null)
-                await enhancePanelView.PlayEnhanceResult();
+                await enhancePanelView.PlayEnhanceResult(result.oldLevel, result.newLevel);
         }
         finally
         {
             isPlayingResultFlow = false;
         }
 
-        if (needSwitchContent)
+        if (result.needSwitchContent)
             await SwitchContent();
     }
 
