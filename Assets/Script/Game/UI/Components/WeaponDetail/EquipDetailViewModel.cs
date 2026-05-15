@@ -77,7 +77,8 @@ public class EquipDetailViewModel: IDisposable
                 int newLevel = weapon.level.Value;
                 float newProgress = GetExpProgress(weapon);
                 bool needSwitchContent = weapon.needBreak.Value;
-                requestPlayEnhanceResult.OnNext(new EnhanceResultData(oldLevel, newLevel, oldProgress, newProgress, levelUpCount, needSwitchContent));
+                Color rarityColor = RarityConfig.GetColor(weapon.Model.ItemRarity);
+                requestPlayEnhanceResult.OnNext(new EnhanceResultData(oldLevel, newLevel, oldProgress, newProgress, levelUpCount, needSwitchContent, rarityColor));
                 enhanceVM.ClearSelectedMaterials();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
             }
@@ -173,8 +174,9 @@ public readonly struct EnhanceResultData
     public readonly float newProgress;
     public readonly int levelUpCount;
     public readonly bool needSwitchContent;
+    public readonly Color rarityColor;
 
-    public EnhanceResultData(int oldLevel, int newLevel, float oldProgress, float newProgress, int levelUpCount, bool needSwitchContent)
+    public EnhanceResultData(int oldLevel, int newLevel, float oldProgress, float newProgress, int levelUpCount, bool needSwitchContent, Color rarityColor)
     {
         this.oldLevel = oldLevel;
         this.newLevel = newLevel;
@@ -182,6 +184,7 @@ public readonly struct EnhanceResultData
         this.newProgress = newProgress;
         this.levelUpCount = levelUpCount;
         this.needSwitchContent = needSwitchContent;
+        this.rarityColor = rarityColor;
     }
 }
 

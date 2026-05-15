@@ -106,14 +106,14 @@ namespace  Game.UI.Components.CharacterDetail
 			}
 		}
 		
-		public async UniTask PlayLevelResult(int oldLevel, int newLevel)
+		public async UniTask PlayLevelResult(int oldLevel, int newLevel, Color rarityColor)
 		{
 			if (levelResultFxView == null || oldLevel == newLevel)
 			{
 				return;
 			}
 			
-			await levelResultFxView.Play(oldLevel, newLevel);
+			await levelResultFxView.Play(oldLevel, newLevel, rarityColor);
 		}
 		
 		public void Refresh()
@@ -143,7 +143,7 @@ namespace  Game.UI.Components.CharacterDetail
 					levelBar.SetValue(currentExpProgress, Vm.previewProgress.Value);
 				}
 
-				await PlayLevelResult(result.oldLevel, result.newLevel);
+				await PlayLevelResult(result.oldLevel, result.newLevel, result.rarityColor);
 			}
 			finally
 			{

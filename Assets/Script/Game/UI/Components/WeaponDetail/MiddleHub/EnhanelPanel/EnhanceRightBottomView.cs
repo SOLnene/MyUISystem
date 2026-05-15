@@ -19,8 +19,9 @@ public class EnhanceRightBottomView : MonoBehaviour
     Button quickAddButton;
     [Header("ItemSlots")]
     [SerializeField]
-    Transform slotParent;
-
+    Transform slotParent;  
+    [SerializeField]
+    
     EnhanceRightBottomViewModel vm;
     readonly List<ItemSlotView> slotsViews = new List<ItemSlotView>();
     const string materialSlotPrefabAddress = "ui/prefab/item_slot_material";
