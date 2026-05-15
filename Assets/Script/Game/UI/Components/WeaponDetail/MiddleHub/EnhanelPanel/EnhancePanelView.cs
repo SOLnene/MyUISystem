@@ -85,15 +85,19 @@ public class EnhancePanelView : MonoBehaviour
             if (promoteMaterialPreviewView != null)
                 promoteMaterialPreviewView.Bind(vm.promoteMaterialPreviewVm).Forget();
         }
+        else if (enhanceLevelPreviewView != null)
+        {
+            enhanceLevelPreviewView.Refresh();
+        }
 
         SetPanelActive(enhancePanel, !isPromote);
         SetPanelActive(promotePanel, isPromote);
     }
 
-    public async UniTask PlayEnhanceResult(int oldLevel, int newLevel)
+    public async UniTask PlayEnhanceResult(EnhanceResultData result)
     {
         if (enhanceLevelPreviewView != null)
-            await enhanceLevelPreviewView.PlayLevelResult(oldLevel, newLevel);
+            await enhanceLevelPreviewView.PlayEnhanceResult(result);
     }
 
     public async UniTask PlayPromoteResult()

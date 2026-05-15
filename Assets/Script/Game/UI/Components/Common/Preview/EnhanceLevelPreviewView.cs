@@ -29,7 +29,6 @@ namespace  Game.UI.Components.CharacterDetail
 		const float expAnimationDuration = 0.8f;
 		float currentExpProgress;
 		bool isPlayingExpAnimation;
-		int previewLevelUpCount;
 
 
 		public void Bind(EnhanceLevelPreviewViewModel viewModel)
@@ -38,7 +37,6 @@ namespace  Game.UI.Components.CharacterDetail
 			Vm = viewModel;
 			currentExpProgress = 0f;
 			isPlayingExpAnimation = false;
-			previewLevelUpCount = 0;
 			Vm.levelText.Subscribe(
 				value =>
 				{
@@ -61,26 +59,8 @@ namespace  Game.UI.Components.CharacterDetail
 					levelPlusText.text = value;
 					Debug.Log("levelup value" + value);
 				}).AddTo(disposable);
-			
-			Vm.levelUpCount.Subscribe(count =>
-			{
-				previewLevelUpCount = count;
-			}).AddTo(disposable);
-			
-			currentExpProgress = Vm.expProgress.Value;
-			levelBar.SetValue(currentExpProgress, Vm.previewProgress.Value);
-			
-			Vm.expProgress.Skip(1).Subscribe(current =>
-			{
-				if (Mathf.Approximately(currentExpProgress, current))
-				{
-					return;
-				}
-
-				float from = currentExpProgress;
-				currentExpProgress = current;
-				PlayExpChange(from, current, previewLevelUpCount).Forget();
-			}).AddTo(disposable);
+	
+			Refresh();
 			
 			Vm.previewProgress.Skip(1).Subscribe(preview =>
 			{
@@ -136,17 +116,38 @@ namespace  Game.UI.Components.CharacterDetail
 			await levelResultFxView.Play(oldLevel, newLevel);
 		}
 		
-		async UniTask PlayExpChange(float from, float to, int fullSegmentCount)
+		public void Refresh()
+		{
+			if (Vm == null || levelBar == null)
+			{
+				return;
+			}
+
+			currentExpProgress = Vm.expProgress.Value;
+			levelBar.SetValue(currentExpProgress, Vm.previewProgress.Value);
+		}
+		
+		public async UniTask PlayEnhanceResult(EnhanceResultData result)
 		{
 			isPlayingExpAnimation = true;
 			try
 			{
-				await levelBar.PlaySegmentedValue(from, to, fullSegmentCount, expAnimationDuration);
+				if (levelBar != null)
+				{
+					await levelBar.PlaySegmentedValue(result.oldProgress, result.newProgress, result.levelUpCount, expAnimationDuration);
+				}
+
+				currentExpProgress = result.newProgress;
+				if (levelBar != null)
+				{
+					levelBar.SetValue(currentExpProgress, Vm.previewProgress.Value);
+				}
+
+				await PlayLevelResult(result.oldLevel, result.newLevel);
 			}
 			finally
 			{
 				isPlayingExpAnimation = false;
-				levelBar.SetValue(currentExpProgress, Vm.previewProgress.Value);
 			}
 		}
 		

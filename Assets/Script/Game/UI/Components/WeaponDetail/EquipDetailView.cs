@@ -196,7 +196,7 @@ public partial class EquipDetailView : UIView
         try
         {
             if (enhancePanelView != null)
-                await enhancePanelView.PlayEnhanceResult(result.oldLevel, result.newLevel);
+                await enhancePanelView.PlayEnhanceResult(result);
         }
         finally
         {

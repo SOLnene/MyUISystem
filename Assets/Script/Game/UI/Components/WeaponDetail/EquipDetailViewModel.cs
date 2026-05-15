@@ -69,13 +69,17 @@ public class EquipDetailViewModel: IDisposable
             }
             if (GameEconomy.Instance.TrySpendGold(enhanceVM.previewCost.Value)||true)
             {
-                int oldLevel = currentWeaponVM.Value.level.Value;
-                currentWeaponVM.Value.AddExp(enhanceVM.previewExp.Value);
-                int newLevel = currentWeaponVM.Value.level.Value;
-                bool needSwitchContent = currentWeaponVM.Value.needBreak.Value;
+                var weapon = currentWeaponVM.Value;
+                int oldLevel = weapon.level.Value;
+                float oldProgress = GetExpProgress(weapon);
+                int levelUpCount = enhanceVM.enhanceLevelPreviewVm.levelUpCount.Value;
+                weapon.AddExp(enhanceVM.previewExp.Value);
+                int newLevel = weapon.level.Value;
+                float newProgress = GetExpProgress(weapon);
+                bool needSwitchContent = weapon.needBreak.Value;
+                requestPlayEnhanceResult.OnNext(new EnhanceResultData(oldLevel, newLevel, oldProgress, newProgress, levelUpCount, needSwitchContent));
                 enhanceVM.ClearSelectedMaterials();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
-                requestPlayEnhanceResult.OnNext(new EnhanceResultData(oldLevel, newLevel, needSwitchContent));
             }
             else
             {
@@ -144,6 +148,18 @@ public class EquipDetailViewModel: IDisposable
         refineVM.Dispose();
         bottomVM.Dispose();
     }
+    
+    static float GetExpProgress(EquipItemViewModel weapon)
+    {
+        if (weapon == null || weapon.Model == null || weapon.Model.LevelSystem == null)
+            return 0f;
+
+        int max = weapon.Model.LevelSystem.GetExpRequired(weapon.Model.LevelSystem.Level);
+        if (max <= 0)
+            return 0f;
+
+        return (float)weapon.Model.LevelSystem.CurrentExp / max;
+    }
 }
 
 /// <summary>
@@ -153,12 +169,18 @@ public readonly struct EnhanceResultData
 {
     public readonly int oldLevel;
     public readonly int newLevel;
+    public readonly float oldProgress;
+    public readonly float newProgress;
+    public readonly int levelUpCount;
     public readonly bool needSwitchContent;
 
-    public EnhanceResultData(int oldLevel, int newLevel, bool needSwitchContent)
+    public EnhanceResultData(int oldLevel, int newLevel, float oldProgress, float newProgress, int levelUpCount, bool needSwitchContent)
     {
         this.oldLevel = oldLevel;
         this.newLevel = newLevel;
+        this.oldProgress = oldProgress;
+        this.newProgress = newProgress;
+        this.levelUpCount = levelUpCount;
         this.needSwitchContent = needSwitchContent;
     }
 }
