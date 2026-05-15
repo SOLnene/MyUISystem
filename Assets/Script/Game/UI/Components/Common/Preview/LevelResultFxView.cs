@@ -2,13 +2,14 @@ using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class LevelResultFxView : MonoBehaviour
 {
     [SerializeField] CanvasGroup canvasGroup;
     [SerializeField] RectTransform moveRoot;
     [SerializeField] TextMeshProUGUI levelText;
-
+    [SerializeField] Image bgImage;
     [SerializeField] float enterDuration = 0.18f;
     [SerializeField] float holdOldDuration = 0.12f;
     [SerializeField] float switchDuration = 0.16f;
