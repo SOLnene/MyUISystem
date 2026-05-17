@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -25,6 +26,31 @@ public class EnhanceRightBottomView : MonoBehaviour
     EnhanceRightBottomViewModel vm;
     readonly List<ItemSlotView> slotsViews = new List<ItemSlotView>();
     const string materialSlotPrefabAddress = "ui/prefab/item_slot_material";
+    [SerializeField]
+    GameObject switchRoot;
+    [SerializeField]
+    CanvasGroup switchRootGroup;
+    [SerializeField]
+    CanvasGroup materialContentGroup;
+    [SerializeField]
+    RectTransform materialContentRoot;
+    [SerializeField]
+    CanvasGroup[] normalFadeGroups;
+    [SerializeField]
+    MaterialResultFxView materialFxView;
+    [SerializeField]
+    float processingAlpha = 0.35f;
+    [SerializeField]
+    float fadeDuration = 0.12f;
+    [SerializeField]
+    float materialEnterDuration = 0.18f;
+    [SerializeField]
+    float materialEnterOffsetY = 8f;
+    
+    Tween switchTween;
+    Sequence normalSequence;
+    Vector2 materialContentDefaultPos;
+    bool hasMaterialContentDefaultPos;
     
     
     public void Bind(EnhanceRightBottomViewModel viewModel)
@@ -119,5 +145,146 @@ public class EnhanceRightBottomView : MonoBehaviour
             slotView.Bind(slotVM);
             slotVM.onClick.Subscribe(_ => vm.OnSlotClick(slotVM)).AddTo(this);
         }
+    }
+
+    public void ShowProcessing()
+    {
+        CacheFxReferences();
+        KillFxTweens();
+        SetInteractable(false);
+
+        if (switchRoot != null)
+            switchRoot.SetActive(true);
+
+        if (switchRootGroup != null)
+            switchTween = switchRootGroup.DOFade(processingAlpha, fadeDuration).SetEase(Ease.OutQuad).SetUpdate(true);
+
+        if (materialFxView != null)
+            materialFxView.ShowLoading();
+    }
+
+    public void ShowMaxLevelText(string text)
+    {
+        CacheFxReferences();
+        KillFxTweens();
+        SetInteractable(false);
+
+        if (switchRootGroup != null)
+        {
+            switchTween = switchRootGroup
+                .DOFade(0f, fadeDuration)
+                .SetEase(Ease.InQuad)
+                .SetUpdate(true)
+                .OnComplete(() =>
+                {
+                    if (switchRoot != null)
+                        switchRoot.SetActive(false);
+                });
+        }
+        else if (switchRoot != null)
+        {
+            switchRoot.SetActive(false);
+        }
+
+        if (materialFxView != null)
+            materialFxView.ShowMaxText(text);
+    }
+
+    public void ShowNormal(bool playMaterialContentFx)
+    {
+        CacheFxReferences();
+        KillFxTweens();
+        SetInteractable(true);
+
+        if (materialFxView != null)
+            materialFxView.Hide();
+
+        if (switchRoot != null)
+            switchRoot.SetActive(true);
+
+        if (switchRootGroup != null)
+            switchRootGroup.alpha = 1f;
+
+        normalSequence = DOTween.Sequence().SetUpdate(true);
+        AppendNormalFadeGroups(normalSequence);
+
+        if (playMaterialContentFx && materialContentGroup != null)
+        {
+            materialContentGroup.alpha = 0f;
+
+            if (materialContentRoot != null)
+                materialContentRoot.anchoredPosition = materialContentDefaultPos + new Vector2(0f, -materialEnterOffsetY);
+
+            normalSequence.Join(materialContentGroup.DOFade(1f, materialEnterDuration).SetEase(Ease.OutQuad));
+
+            if (materialContentRoot != null)
+                normalSequence.Join(materialContentRoot.DOAnchorPos(materialContentDefaultPos, materialEnterDuration).SetEase(Ease.OutCubic));
+        }
+        else if (materialContentGroup != null)
+        {
+            materialContentGroup.alpha = 1f;
+        }
+    }
+
+    void CacheFxReferences()
+    {
+        if (switchRootGroup == null && switchRoot != null)
+            switchRootGroup = switchRoot.GetComponent<CanvasGroup>();
+
+        if (materialContentRoot != null && !hasMaterialContentDefaultPos)
+        {
+            materialContentDefaultPos = materialContentRoot.anchoredPosition;
+            hasMaterialContentDefaultPos = true;
+        }
+    }
+
+    void AppendNormalFadeGroups(Sequence sequence)
+    {
+        if (normalFadeGroups == null)
+            return;
+
+        foreach (var group in normalFadeGroups)
+        {
+            if (group == null)
+                continue;
+
+            group.alpha = 0f;
+            sequence.Join(group.DOFade(1f, fadeDuration).SetEase(Ease.OutQuad));
+        }
+    }
+
+    void SetInteractable(bool interactable)
+    {
+        if (switchRootGroup != null)
+        {
+            switchRootGroup.interactable = interactable;
+            switchRootGroup.blocksRaycasts = interactable;
+        }
+
+        if (filterDropdown != null)
+            filterDropdown.interactable = interactable;
+
+        if (quickAddButton != null)
+            quickAddButton.interactable = interactable;
+    }
+
+    void KillFxTweens()
+    {
+        if (switchTween != null)
+        {
+            switchTween.Kill();
+            switchTween = null;
+        }
+
+        if (normalSequence != null)
+        {
+            normalSequence.Kill();
+            normalSequence = null;
+        }
+    }
+
+    void OnDestroy()
+    {
+        KillFxTweens();
     }
 }
