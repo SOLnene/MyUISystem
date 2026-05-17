@@ -39,8 +39,6 @@ public class EnhanceRightBottomView : MonoBehaviour
     [SerializeField]
     MaterialResultFxView materialFxView;
     [SerializeField]
-    float processingAlpha = 0.35f;
-    [SerializeField]
     float fadeDuration = 0.12f;
     [SerializeField]
     float materialEnterDuration = 0.18f;
@@ -147,6 +145,7 @@ public class EnhanceRightBottomView : MonoBehaviour
         }
     }
 
+    //经验条动画完成前材料的动画
     public void ShowProcessing()
     {
         CacheFxReferences();
@@ -154,10 +153,10 @@ public class EnhanceRightBottomView : MonoBehaviour
         SetInteractable(false);
 
         if (switchRoot != null)
-            switchRoot.SetActive(true);
+            switchRoot.SetActive(false);
 
         if (switchRootGroup != null)
-            switchTween = switchRootGroup.DOFade(processingAlpha, fadeDuration).SetEase(Ease.OutQuad).SetUpdate(true);
+            switchRootGroup.alpha = 0f;
 
         if (materialFxView != null)
             materialFxView.ShowLoading();
@@ -170,21 +169,10 @@ public class EnhanceRightBottomView : MonoBehaviour
         SetInteractable(false);
 
         if (switchRootGroup != null)
-        {
-            switchTween = switchRootGroup
-                .DOFade(0f, fadeDuration)
-                .SetEase(Ease.InQuad)
-                .SetUpdate(true)
-                .OnComplete(() =>
-                {
-                    if (switchRoot != null)
-                        switchRoot.SetActive(false);
-                });
-        }
-        else if (switchRoot != null)
-        {
+            switchRootGroup.alpha = 0f;
+
+        if (switchRoot != null)
             switchRoot.SetActive(false);
-        }
 
         if (materialFxView != null)
             materialFxView.ShowMaxText(text);
@@ -202,8 +190,11 @@ public class EnhanceRightBottomView : MonoBehaviour
         if (switchRoot != null)
             switchRoot.SetActive(true);
 
-        if (switchRootGroup != null)
-            switchRootGroup.alpha = 1f;
+        if (materialContentGroup != null)
+        {
+            materialContentGroup.alpha = 0f;
+            switchTween = materialContentGroup.DOFade(1f, fadeDuration).SetEase(Ease.OutQuad).SetUpdate(true);
+        }
 
         normalSequence = DOTween.Sequence().SetUpdate(true);
         AppendNormalFadeGroups(normalSequence);

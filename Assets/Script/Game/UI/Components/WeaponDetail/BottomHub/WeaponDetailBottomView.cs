@@ -37,6 +37,8 @@ public class WeaponDetailBottomView : MonoBehaviour
     GameObject refineContent;
     [SerializeField]
     AnimatedPanel animatedRoot;
+    [SerializeField]
+    ButtonBackgroundFader buttonBackgroundFader;
 
     WeaponDetailBottomViewModel vm;
     
@@ -116,6 +118,16 @@ public class WeaponDetailBottomView : MonoBehaviour
     public void ShowImmediate()
     {
         animatedRoot?.Show(true).Forget();
+    }
+
+    public void HideButtonBackgroundsForProcessing()
+    {
+        buttonBackgroundFader?.Hide();
+    }
+
+    public void ShowButtonBackgroundsNormal()
+    {
+        buttonBackgroundFader?.Show();
     }
     
     private void OnDestroy()

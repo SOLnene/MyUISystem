@@ -864,6 +864,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1719960243508381822}
+  - {fileID: 3967826191154528583}
   m_Father: {fileID: 7344082944704471604}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -893,7 +894,6 @@ MonoBehaviour:
   materialContentRoot: {fileID: 949039644310295269}
   normalFadeGroups: []
   materialFxView: {fileID: 470326231771675728}
-  processingAlpha: 0.35
   fadeDuration: 0.12
   materialEnterDuration: 0.18
   materialEnterOffsetY: 8
@@ -1326,7 +1326,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 949039644310295269}
-  - {fileID: 3967826191154528583}
   m_Father: {fileID: 1719960243508381822}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -3016,19 +3015,19 @@ RectTransform:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3640844062569192272}
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1797011192614643726}
   - {fileID: 500644154181143215}
-  m_Father: {fileID: 3819460629076149798}
+  m_Father: {fileID: 3898884475190716387}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &470326231771675728
 MonoBehaviour:
@@ -4947,10 +4946,10 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 3967826191154528583}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0.5, y: 0.5}
-  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
-  m_SizeDelta: {x: 200, y: 50}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &4207783301557200447
 CanvasRenderer:
@@ -5014,8 +5013,8 @@ MonoBehaviour:
   m_fontSizeMin: 18
   m_fontSizeMax: 72
   m_fontStyle: 0
-  m_HorizontalAlignment: 1
-  m_VerticalAlignment: 256
+  m_HorizontalAlignment: 2
+  m_VerticalAlignment: 512
   m_textAlignment: 65535
   m_characterSpacing: 0
   m_wordSpacing: 0
@@ -6354,6 +6353,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3435465944559258515}
   - component: {fileID: 2141334124212703519}
+  - component: {fileID: 1526311007753316868}
   m_Layer: 5
   m_Name: BottomHub
   m_TagString: Untagged
@@ -6407,6 +6407,23 @@ MonoBehaviour:
   promoteContent: {fileID: 5330926696675727079}
   refineContent: {fileID: 4138461834954243967}
   animatedRoot: {fileID: 2677358551636826281}
+  buttonBackgroundFader: {fileID: 0}
+--- !u!114 &1526311007753316868
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8170793177498995847}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 77ced0171a2d3b54abbf93250792b52c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  backgrounds: []
+  fadeDuration: 0.12
+  staggerInterval: 0.02
+  useUnscaledTime: 1
 --- !u!1 &8176118782303035716
 GameObject:
   m_ObjectHideFlags: 0
