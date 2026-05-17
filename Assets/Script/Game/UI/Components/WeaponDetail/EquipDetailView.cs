@@ -202,16 +202,31 @@ public partial class EquipDetailView : UIView
 
         LockInput();
         isPlayingResultFlow = true;
+        bool rightBottomRestored = false;
         try
         {
             if (enhancePanelView != null)
-                await enhancePanelView.PlayEnhanceResult(result);
+            {
+                enhancePanelView.ShowEnhanceProcessing();
+                await enhancePanelView.PlayEnhanceExpProgress(result);
+
+                if (!result.needSwitchContent)
+                {
+                    enhancePanelView.ShowEnhanceNormal(true);
+                    rightBottomRestored = true;
+                }
+
+                await enhancePanelView.PlayEnhanceLevelResult(result);
+            }
 
             if (result.needSwitchContent)
                 await SwitchContent();
         }
         finally
         {
+            if (enhancePanelView != null && !rightBottomRestored)
+                enhancePanelView.ShowEnhanceNormal(false);
+
             isPlayingResultFlow = false;
             UnlockInput();
         }

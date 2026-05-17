@@ -94,10 +94,28 @@ public class EnhancePanelView : MonoBehaviour
         SetPanelActive(promotePanel, isPromote);
     }
 
-    public async UniTask PlayEnhanceResult(EnhanceResultData result)
+    public async UniTask PlayEnhanceExpProgress(EnhanceResultData result)
     {
         if (enhanceLevelPreviewView != null)
-            await enhanceLevelPreviewView.PlayEnhanceResult(result);
+            await enhanceLevelPreviewView.PlayExpProgress(result);
+    }
+
+    public async UniTask PlayEnhanceLevelResult(EnhanceResultData result)
+    {
+        if (enhanceLevelPreviewView != null)
+            await enhanceLevelPreviewView.PlayLevelResult(result);
+    }
+
+    public void ShowEnhanceProcessing()
+    {
+        if (rightBottomView != null)
+            rightBottomView.ShowProcessing();
+    }
+
+    public void ShowEnhanceNormal(bool playMaterialContentFx)
+    {
+        if (rightBottomView != null)
+            rightBottomView.ShowNormal(playMaterialContentFx);
     }
 
     public async UniTask PlayPromoteResult()

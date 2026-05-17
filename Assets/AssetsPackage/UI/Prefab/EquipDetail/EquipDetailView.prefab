@@ -887,6 +887,16 @@ MonoBehaviour:
   filterDropdown: {fileID: 3414745903512816121}
   quickAddButton: {fileID: 1216211581780201275}
   slotParent: {fileID: 1773463061628302625}
+  switchRoot: {fileID: 1515851786809654610}
+  switchRootGroup: {fileID: 1218689302494858678}
+  materialContentGroup: {fileID: 2780710542534906670}
+  materialContentRoot: {fileID: 949039644310295269}
+  normalFadeGroups: []
+  materialFxView: {fileID: 470326231771675728}
+  processingAlpha: 0.35
+  fadeDuration: 0.12
+  materialEnterDuration: 0.18
+  materialEnterOffsetY: 8
 --- !u!1 &921418988296398589
 GameObject:
   m_ObjectHideFlags: 0
@@ -1938,6 +1948,7 @@ GameObject:
   - component: {fileID: 5050154638991410137}
   - component: {fileID: 8462310393895565766}
   - component: {fileID: 2830347552813855776}
+  - component: {fileID: 2780710542534906670}
   m_Layer: 5
   m_Name: MaterialSelectContent
   m_TagString: Untagged
@@ -2033,6 +2044,18 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!225 &2780710542534906670
+CanvasGroup:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2511630354654126794}
+  m_Enabled: 1
+  m_Alpha: 1
+  m_Interactable: 1
+  m_BlocksRaycasts: 1
+  m_IgnoreParentGroups: 0
 --- !u!1 &2610797333393904594
 GameObject:
   m_ObjectHideFlags: 0

@@ -127,7 +127,7 @@ namespace  Game.UI.Components.CharacterDetail
 			levelBar.SetValue(currentExpProgress, Vm.previewProgress.Value);
 		}
 		
-		public async UniTask PlayEnhanceResult(EnhanceResultData result)
+		public async UniTask PlayExpProgress(EnhanceResultData result)
 		{
 			isPlayingExpAnimation = true;
 			try
@@ -142,13 +142,16 @@ namespace  Game.UI.Components.CharacterDetail
 				{
 					levelBar.SetValue(currentExpProgress, Vm.previewProgress.Value);
 				}
-
-				await PlayLevelResult(result.oldLevel, result.newLevel, result.rarityColor);
 			}
 			finally
 			{
 				isPlayingExpAnimation = false;
 			}
+		}
+		
+		public async UniTask PlayLevelResult(EnhanceResultData result)
+		{
+			await PlayLevelResult(result.oldLevel, result.newLevel, result.rarityColor);
 		}
 		
 		public void OnDestroy()
