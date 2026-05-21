@@ -655,7 +655,7 @@ RectTransform:
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
   m_AnchoredPosition: {x: -6, y: -64}
-  m_SizeDelta: {x: 100, y: 100}
+  m_SizeDelta: {x: 60, y: 60}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!222 &952909314196314908
 CanvasRenderer:
@@ -685,7 +685,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 21300000, guid: 39955692ded11aa409f33b06a4208f55, type: 3}
+  m_Sprite: {fileID: 21300000, guid: dc7f345ac1fd7094da2865fc23ad736f, type: 3}
   m_Type: 0
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -892,9 +892,10 @@ MonoBehaviour:
   switchRootGroup: {fileID: 1218689302494858678}
   materialContentGroup: {fileID: 2780710542534906670}
   materialContentRoot: {fileID: 949039644310295269}
-  normalFadeGroups: []
   materialFxView: {fileID: 470326231771675728}
+  interactionBackgrounds: []
   fadeDuration: 0.12
+  processingAlpha: 0.35
   materialEnterDuration: 0.18
   materialEnterOffsetY: 8
 --- !u!1 &921418988296398589

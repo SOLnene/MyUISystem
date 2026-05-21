@@ -35,17 +35,20 @@ public class EnhanceRightBottomView : MonoBehaviour
     [SerializeField]
     RectTransform materialContentRoot;
     [SerializeField]
-    CanvasGroup[] normalFadeGroups;
-    [SerializeField]
     MaterialResultFxView materialFxView;
+    [Header("交互背景")]
+    [SerializeField]
+    Image[] interactionBackgrounds;
     [SerializeField]
     float fadeDuration = 0.12f;
+    [SerializeField]
+    float processingAlpha = 0.35f;
     [SerializeField]
     float materialEnterDuration = 0.18f;
     [SerializeField]
     float materialEnterOffsetY = 8f;
     
-    Tween switchTween;
+    Sequence processingSequence;
     Sequence normalSequence;
     Vector2 materialContentDefaultPos;
     bool hasMaterialContentDefaultPos;
@@ -148,73 +151,57 @@ public class EnhanceRightBottomView : MonoBehaviour
     //经验条动画完成前材料的动画
     public void ShowProcessing()
     {
-        CacheFxReferences();
-        KillFxTweens();
-        SetInteractable(false);
+        PrepareFxState();
+        switchRoot.SetActive(true);
+        materialFxView.Hide();
 
-        if (switchRoot != null)
-            switchRoot.SetActive(false);
-
-        if (switchRootGroup != null)
-            switchRootGroup.alpha = 0f;
-
-        if (materialFxView != null)
-            materialFxView.ShowLoading();
+        processingSequence = DOTween.Sequence().SetUpdate(true);
+        processingSequence.Join(switchRootGroup.DOFade(processingAlpha, fadeDuration).SetEase(Ease.OutQuad));
+        processingSequence.Join(materialContentGroup.DOFade(0f, fadeDuration).SetEase(Ease.OutQuad));
+        processingSequence.OnComplete(materialFxView.ShowLoading);
     }
 
     public void ShowMaxLevelText(string text)
     {
-        CacheFxReferences();
-        KillFxTweens();
-        SetInteractable(false);
-
-        if (switchRootGroup != null)
-            switchRootGroup.alpha = 0f;
-
-        if (switchRoot != null)
-            switchRoot.SetActive(false);
-
-        if (materialFxView != null)
-            materialFxView.ShowMaxText(text);
+        PrepareFxState();
+        switchRootGroup.alpha = 0f;
+        switchRoot.SetActive(false);
+        materialFxView.ShowMaxText(text);
     }
 
     public void ShowNormal(bool playMaterialContentFx)
     {
+        PrepareFxState();
+        switchRoot.SetActive(true);
+        materialFxView.Hide();
+        //使用unscaletime
+        normalSequence = DOTween.Sequence().SetUpdate(true);
+        normalSequence.Join(switchRootGroup.DOFade(1f, fadeDuration).SetEase(Ease.OutQuad));
+        foreach (var img in interactionBackgrounds)
+        {
+            //normalSequence.Insert()
+        }
+        
+        if (playMaterialContentFx)
+            AppendMaterialContentEnter(normalSequence);
+        else
+            materialContentGroup.alpha = 1f;
+    }
+
+    void PrepareFxState()
+    {
         CacheFxReferences();
         KillFxTweens();
-        SetInteractable(true);
+    }
 
-        if (materialFxView != null)
-            materialFxView.Hide();
+    void AppendMaterialContentEnter(Sequence sequence)
+    {
+        materialContentGroup.alpha = 0f;
+        
+        materialContentRoot.anchoredPosition = materialContentDefaultPos + new Vector2(0f, materialEnterOffsetY);
 
-        if (switchRoot != null)
-            switchRoot.SetActive(true);
-
-        if (materialContentGroup != null)
-        {
-            materialContentGroup.alpha = 0f;
-            switchTween = materialContentGroup.DOFade(1f, fadeDuration).SetEase(Ease.OutQuad).SetUpdate(true);
-        }
-
-        normalSequence = DOTween.Sequence().SetUpdate(true);
-        AppendNormalFadeGroups(normalSequence);
-
-        if (playMaterialContentFx && materialContentGroup != null)
-        {
-            materialContentGroup.alpha = 0f;
-
-            if (materialContentRoot != null)
-                materialContentRoot.anchoredPosition = materialContentDefaultPos + new Vector2(0f, -materialEnterOffsetY);
-
-            normalSequence.Join(materialContentGroup.DOFade(1f, materialEnterDuration).SetEase(Ease.OutQuad));
-
-            if (materialContentRoot != null)
-                normalSequence.Join(materialContentRoot.DOAnchorPos(materialContentDefaultPos, materialEnterDuration).SetEase(Ease.OutCubic));
-        }
-        else if (materialContentGroup != null)
-        {
-            materialContentGroup.alpha = 1f;
-        }
+        sequence.Join(materialContentGroup.DOFade(1f, materialEnterDuration).SetEase(Ease.OutQuad));
+        sequence.Join(materialContentRoot.DOAnchorPos(materialContentDefaultPos, materialEnterDuration).SetEase(Ease.OutCubic));
     }
 
     void CacheFxReferences()
@@ -229,42 +216,12 @@ public class EnhanceRightBottomView : MonoBehaviour
         }
     }
 
-    void AppendNormalFadeGroups(Sequence sequence)
-    {
-        if (normalFadeGroups == null)
-            return;
-
-        foreach (var group in normalFadeGroups)
-        {
-            if (group == null)
-                continue;
-
-            group.alpha = 0f;
-            sequence.Join(group.DOFade(1f, fadeDuration).SetEase(Ease.OutQuad));
-        }
-    }
-
-    void SetInteractable(bool interactable)
-    {
-        if (switchRootGroup != null)
-        {
-            switchRootGroup.interactable = interactable;
-            switchRootGroup.blocksRaycasts = interactable;
-        }
-
-        if (filterDropdown != null)
-            filterDropdown.interactable = interactable;
-
-        if (quickAddButton != null)
-            quickAddButton.interactable = interactable;
-    }
-
     void KillFxTweens()
     {
-        if (switchTween != null)
+        if (processingSequence != null)
         {
-            switchTween.Kill();
-            switchTween = null;
+            processingSequence.Kill();
+            processingSequence = null;
         }
 
         if (normalSequence != null)

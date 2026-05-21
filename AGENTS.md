@@ -22,6 +22,7 @@
 - UI 优先遵循 UIConfig / UIType / UIView
 - 资源加载优先复用 ResourceManager
 - 优先小范围、可验证改动
+- 对 prefab 内必填的 `[SerializeField]` 依赖，不要在每次使用前反复 `null` 检测，也不要为了隐藏 `null` 检测而封装无业务语义的 helper；应直接使用，让漏绑尽早暴露。只有可选节点、兼容旧 prefab、动态加载对象、外部输入才做运行时 `null` 保护。
 - 如需使用外部 sprite，只允许从 `F:\ChormeDownload\resources-main\resources-main\resources\gi\Sprite` 读取；必须先导入到项目 `Assets/Art` 下按用途归类的目录并应用项目内资源引用，禁止直接引用外部绝对路径或运行时加载外部图片。
 - 新增资源默认优先放入现有的最贴近用途目录；除非我明确指定新目录或先确认过，否则不要为了单次需求新建资源文件夹。
 - Unity UI 的固定视觉节点应优先做在 prefab 内并通过序列化字段绑定；除非明确需要对象池、动态列表或运行时实例化，否则禁止为了静态 UI 效果在脚本中动态创建 UI 层级。
