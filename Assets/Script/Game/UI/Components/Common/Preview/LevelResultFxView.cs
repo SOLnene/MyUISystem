@@ -1,3 +1,4 @@
+using System;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using TMPro;
@@ -32,7 +33,7 @@ public class LevelResultFxView : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    public async UniTask Play(int oldLevel, int newLevel, Color rarityColor)
+    public async UniTask Play(int oldLevel, int newLevel, Color rarityColor, Action onNewLevelShown = null)
     {
         if (canvasGroup == null || levelText == null)
             return;
@@ -41,7 +42,7 @@ public class LevelResultFxView : MonoBehaviour
         Setup(oldLevel, rarityColor);
         await PlayEnter();
         await UniTask.Delay(System.TimeSpan.FromSeconds(holdOldDuration));
-        await SwitchLevelText(newLevel);
+        await SwitchLevelText(newLevel, onNewLevelShown);
         await UniTask.Delay(System.TimeSpan.FromSeconds(holdNewDuration));
         await PlayExit();
 
@@ -95,7 +96,7 @@ public class LevelResultFxView : MonoBehaviour
         );
     }
 
-    async UniTask SwitchLevelText(int newLevel)
+    async UniTask SwitchLevelText(int newLevel, Action onNewLevelShown)
     {
         await DOTween.To(() => levelText.alpha, value => levelText.alpha = value, 0f, oldFadeDuration)
             .AsyncWaitForCompletion()
@@ -104,6 +105,7 @@ public class LevelResultFxView : MonoBehaviour
         levelText.text = $"Lv.{newLevel}";
         levelText.alpha = 0f;
         levelText.rectTransform.localScale = Vector3.one * newLevelStartScale;
+        onNewLevelShown?.Invoke();
 
         await UniTask.WhenAll(
             DOTween.To(() => levelText.alpha, value => levelText.alpha = value, 1f, newEnterDuration * 0.65f)

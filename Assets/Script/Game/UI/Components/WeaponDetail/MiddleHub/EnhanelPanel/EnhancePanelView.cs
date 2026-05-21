@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
@@ -103,7 +104,13 @@ public class EnhancePanelView : MonoBehaviour
     public async UniTask PlayEnhanceLevelResult(EnhanceResultData result)
     {
         if (enhanceLevelPreviewView != null)
-            await enhanceLevelPreviewView.PlayLevelResult(result);
+        {
+            Action onNewLevelShown = result.needSwitchContent
+                ? () => ShowEnhanceMaxLevelText("已达到当前等级上限")
+                : null;
+
+            await enhanceLevelPreviewView.PlayLevelResult(result, onNewLevelShown);
+        }
     }
 
     public void ShowEnhanceProcessing()

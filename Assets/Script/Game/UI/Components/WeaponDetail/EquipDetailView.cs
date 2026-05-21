@@ -220,10 +220,7 @@ public partial class EquipDetailView : UIView
             }
 
             if (result.needSwitchContent)
-            {
-                enhancePanelView.ShowEnhanceMaxLevelText("已达到当前等级上限");
                 await SwitchContent();
-            }
         }
         finally
         {

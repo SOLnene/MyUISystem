@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
@@ -106,14 +107,14 @@ namespace  Game.UI.Components.CharacterDetail
 			}
 		}
 		
-		public async UniTask PlayLevelResult(int oldLevel, int newLevel, Color rarityColor)
+		public async UniTask PlayLevelResult(int oldLevel, int newLevel, Color rarityColor, Action onNewLevelShown = null)
 		{
 			if (levelResultFxView == null || oldLevel == newLevel)
 			{
 				return;
 			}
 			
-			await levelResultFxView.Play(oldLevel, newLevel, rarityColor);
+			await levelResultFxView.Play(oldLevel, newLevel, rarityColor, onNewLevelShown);
 		}
 		
 		public void Refresh()
@@ -149,9 +150,9 @@ namespace  Game.UI.Components.CharacterDetail
 			}
 		}
 		
-		public async UniTask PlayLevelResult(EnhanceResultData result)
+		public async UniTask PlayLevelResult(EnhanceResultData result, Action onNewLevelShown = null)
 		{
-			await PlayLevelResult(result.oldLevel, result.newLevel, result.rarityColor);
+			await PlayLevelResult(result.oldLevel, result.newLevel, result.rarityColor, onNewLevelShown);
 		}
 		
 		public void OnDestroy()
