@@ -118,6 +118,12 @@ public class EnhancePanelView : MonoBehaviour
             rightBottomView.ShowNormal(playMaterialContentFx);
     }
 
+    public void ShowEnhanceMaxLevelText(string text)
+    {
+        if (rightBottomView != null)
+            rightBottomView.ShowMaxLevelText(text);
+    }
+
     public async UniTask PlayPromoteResult()
     {
         await UniTask.Delay(500);

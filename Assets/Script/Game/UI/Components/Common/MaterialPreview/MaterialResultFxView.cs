@@ -1,5 +1,6 @@
 using DG.Tweening;
 using TMPro;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -7,6 +8,7 @@ public class MaterialResultFxView : MonoBehaviour
 {
     [SerializeField] Image rotateCircleImage;
     [SerializeField] TextMeshProUGUI resultText;
+    [SerializeField] AnimatedPanel resultTextPanel;
     [SerializeField] float rotateSpeed = 360f;
     [SerializeField] bool useUnscaledTime = true;
 
@@ -34,7 +36,7 @@ public class MaterialResultFxView : MonoBehaviour
         CacheReferences();
         gameObject.SetActive(true);
         SetCircleVisible(true);
-        SetTextVisible(false);
+        HideTextRoot();
         StartRotate();
     }
 
@@ -48,7 +50,7 @@ public class MaterialResultFxView : MonoBehaviour
         if (resultText != null)
         {
             resultText.text = text;
-            resultText.gameObject.SetActive(true);
+            ShowTextRoot();
         }
     }
 
@@ -56,7 +58,7 @@ public class MaterialResultFxView : MonoBehaviour
     {
         StopRotate();
         SetCircleVisible(false);
-        SetTextVisible(false);
+        HideTextRoot();
         gameObject.SetActive(false);
     }
 
@@ -99,5 +101,27 @@ public class MaterialResultFxView : MonoBehaviour
     {
         if (resultText != null)
             resultText.gameObject.SetActive(visible);
+    }
+
+    void ShowTextRoot()
+    {
+        if (resultTextPanel != null)
+        {
+            resultTextPanel.Show().Forget();
+            return;
+        }
+
+        SetTextVisible(true);
+    }
+
+    void HideTextRoot()
+    {
+        if (resultTextPanel != null)
+        {
+            resultTextPanel.HideImmediate();
+            return;
+        }
+
+        SetTextVisible(false);
     }
 }
