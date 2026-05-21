@@ -101,16 +101,10 @@ public class EnhancePanelView : MonoBehaviour
             await enhanceLevelPreviewView.PlayExpProgress(result);
     }
 
-    public async UniTask PlayEnhanceLevelResult(EnhanceResultData result)
+    public async UniTask PlayEnhanceLevelResult(EnhanceResultData result, Action onNewLevelShown = null)
     {
         if (enhanceLevelPreviewView != null)
-        {
-            Action onNewLevelShown = result.needSwitchContent
-                ? () => ShowEnhanceMaxLevelText("已达到当前等级上限")
-                : null;
-
             await enhanceLevelPreviewView.PlayLevelResult(result, onNewLevelShown);
-        }
     }
 
     public void ShowEnhanceProcessing()

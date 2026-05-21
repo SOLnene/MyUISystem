@@ -216,7 +216,11 @@ public partial class EquipDetailView : UIView
                     rightBottomRestored = true;
                 }
 
-                await enhancePanelView.PlayEnhanceLevelResult(result);
+                Action onNewLevelShown = result.needSwitchContent
+                    ? () => enhancePanelView.ShowEnhanceMaxLevelText("已达到当前等级上限")
+                    : null;
+
+                await enhancePanelView.PlayEnhanceLevelResult(result, onNewLevelShown);
             }
 
             if (result.needSwitchContent)
