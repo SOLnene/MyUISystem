@@ -22,7 +22,7 @@ public class EnhanceRightBottomView : MonoBehaviour
     [SerializeField]
     Transform slotParent;  
     [SerializeField]
-    
+
     EnhanceRightBottomViewModel vm;
     readonly List<ItemSlotView> slotsViews = new List<ItemSlotView>();
     const string materialSlotPrefabAddress = "ui/prefab/item_slot_material";
@@ -36,9 +36,12 @@ public class EnhanceRightBottomView : MonoBehaviour
     RectTransform materialContentRoot;
     [SerializeField]
     MaterialResultFxView materialFxView;
+
     [Header("交互背景")]
     [SerializeField]
-    Image[] interactionBackgrounds;
+    InteractionStateVisual[] interactionVisuals;
+    [SerializeField]
+    float interactionVisualDelayStep = 0.02f;
     [SerializeField]
     float fadeDuration = 0.12f;
     [SerializeField]
@@ -52,7 +55,6 @@ public class EnhanceRightBottomView : MonoBehaviour
     Sequence normalSequence;
     Vector2 materialContentDefaultPos;
     bool hasMaterialContentDefaultPos;
-    
     
     public void Bind(EnhanceRightBottomViewModel viewModel)
     {
@@ -158,6 +160,7 @@ public class EnhanceRightBottomView : MonoBehaviour
         processingSequence = DOTween.Sequence().SetUpdate(true);
         processingSequence.Join(switchRootGroup.DOFade(processingAlpha, fadeDuration).SetEase(Ease.OutQuad));
         processingSequence.Join(materialContentGroup.DOFade(0f, fadeDuration).SetEase(Ease.OutQuad));
+        AppendInteractionVisuals(processingSequence, InteractionStateVisual.State.Processing);
         processingSequence.OnComplete(materialFxView.ShowLoading);
     }
 
@@ -177,10 +180,7 @@ public class EnhanceRightBottomView : MonoBehaviour
         //使用unscaletime
         normalSequence = DOTween.Sequence().SetUpdate(true);
         normalSequence.Join(switchRootGroup.DOFade(1f, fadeDuration).SetEase(Ease.OutQuad));
-        foreach (var img in interactionBackgrounds)
-        {
-            //normalSequence.Insert()
-        }
+        AppendInteractionVisuals(normalSequence, InteractionStateVisual.State.Normal);
         
         if (playMaterialContentFx)
             AppendMaterialContentEnter(normalSequence);
@@ -214,6 +214,13 @@ public class EnhanceRightBottomView : MonoBehaviour
             materialContentDefaultPos = materialContentRoot.anchoredPosition;
             hasMaterialContentDefaultPos = true;
         }
+
+    }
+
+    void AppendInteractionVisuals(Sequence sequence, InteractionStateVisual.State state)
+    {
+        for (int i = 0; i < interactionVisuals.Length; i++)
+            interactionVisuals[i].AppendTo(sequence, state, i * interactionVisualDelayStep);
     }
 
     void KillFxTweens()
