@@ -207,6 +207,7 @@ public partial class EquipDetailView : UIView
         {
             if (enhancePanelView != null)
             {
+                bottomView.ShowEnhanceBottomProcessing();
                 enhancePanelView.ShowEnhanceProcessing();
                 await enhancePanelView.PlayEnhanceExpProgress(result);
 
@@ -217,8 +218,13 @@ public partial class EquipDetailView : UIView
                 }
 
                 Action onNewLevelShown = result.needSwitchContent
-                    ? () => enhancePanelView.ShowEnhanceMaxLevelText("已达到当前等级上限")
-                    : null;
+                    ? () =>
+                    {
+                        enhancePanelView.ShowEnhanceMaxLevelText("已达到当前等级上限");
+                        bottomView.ShowEnhanceBottomResult();
+                    } 
+                    : ()=>
+                        bottomView.ShowEnhanceBottomNormal();;
 
                 await enhancePanelView.PlayEnhanceLevelResult(result, onNewLevelShown);
             }
@@ -228,9 +234,6 @@ public partial class EquipDetailView : UIView
         }
         finally
         {
-            if (enhancePanelView != null && !rightBottomRestored)
-                enhancePanelView.ShowEnhanceNormal(false);
-
             isPlayingResultFlow = false;
             UnlockInput();
         }

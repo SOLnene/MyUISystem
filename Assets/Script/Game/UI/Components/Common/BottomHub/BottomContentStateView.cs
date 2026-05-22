@@ -14,14 +14,15 @@ public class BottomContentStateView : MonoBehaviour
     GraphicStateVisual[] stateVisuals;
     [SerializeField]
     GameObject[] resultHiddenObjects;
-
+    [SerializeField]
+    CanvasGroup content;
     Sequence sequence;
 
     public void SetState(State state)
     {
         sequence?.Kill();
         sequence = null;
-
+        content.gameObject.SetActive(true);
         switch (state)
         {
             case State.Normal:
@@ -30,12 +31,12 @@ public class BottomContentStateView : MonoBehaviour
                 AppendVisualState(GraphicStateVisual.State.Normal);
                 break;
             case State.Processing:
-                SetResultObjectsVisible(true);
+                SetResultObjectsVisible(false);
                 sequence = DOTween.Sequence().SetUpdate(true);
                 AppendVisualState(GraphicStateVisual.State.Processing);
                 break;
             case State.Result:
-                SetResultObjectsVisible(false);
+                content.gameObject.SetActive(false);
                 break;
         }
     }

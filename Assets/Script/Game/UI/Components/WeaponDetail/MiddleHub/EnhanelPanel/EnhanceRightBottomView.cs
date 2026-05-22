@@ -206,9 +206,6 @@ public class EnhanceRightBottomView : MonoBehaviour
 
     void CacheFxReferences()
     {
-        if (switchRootGroup == null && switchRoot != null)
-            switchRootGroup = switchRoot.GetComponent<CanvasGroup>();
-
         if (materialContentRoot != null && !hasMaterialContentDefaultPos)
         {
             materialContentDefaultPos = materialContentRoot.anchoredPosition;

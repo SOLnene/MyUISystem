@@ -86,8 +86,9 @@ public class EnhancePanelView : MonoBehaviour
             if (promoteMaterialPreviewView != null)
                 promoteMaterialPreviewView.Bind(vm.promoteMaterialPreviewVm).Forget();
         }
-        else if (enhanceLevelPreviewView != null)
+        else
         {
+            rightBottomView.ShowNormal(false);
             enhanceLevelPreviewView.Refresh();
         }
 
