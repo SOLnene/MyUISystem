@@ -2,7 +2,7 @@ using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class InteractionStateVisual : MonoBehaviour
+public class GraphicStateVisual : MonoBehaviour
 {
     public enum State
     {

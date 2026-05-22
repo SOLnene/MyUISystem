@@ -39,7 +39,7 @@ public class EnhanceRightBottomView : MonoBehaviour
 
     [Header("交互背景")]
     [SerializeField]
-    InteractionStateVisual[] interactionVisuals;
+    GraphicStateVisual[] interactionVisuals;
     [SerializeField]
     float interactionVisualDelayStep = 0.02f;
     [SerializeField]
@@ -160,7 +160,7 @@ public class EnhanceRightBottomView : MonoBehaviour
         processingSequence = DOTween.Sequence().SetUpdate(true);
         processingSequence.Join(switchRootGroup.DOFade(processingAlpha, fadeDuration).SetEase(Ease.OutQuad));
         processingSequence.Join(materialContentGroup.DOFade(0f, fadeDuration).SetEase(Ease.OutQuad));
-        AppendInteractionVisuals(processingSequence, InteractionStateVisual.State.Processing);
+        AppendInteractionVisuals(processingSequence, GraphicStateVisual.State.Processing);
         processingSequence.OnComplete(materialFxView.ShowLoading);
     }
 
@@ -180,7 +180,7 @@ public class EnhanceRightBottomView : MonoBehaviour
         //使用unscaletime
         normalSequence = DOTween.Sequence().SetUpdate(true);
         normalSequence.Join(switchRootGroup.DOFade(1f, fadeDuration).SetEase(Ease.OutQuad));
-        AppendInteractionVisuals(normalSequence, InteractionStateVisual.State.Normal);
+        AppendInteractionVisuals(normalSequence, GraphicStateVisual.State.Normal);
         
         if (playMaterialContentFx)
             AppendMaterialContentEnter(normalSequence);
@@ -217,7 +217,7 @@ public class EnhanceRightBottomView : MonoBehaviour
 
     }
 
-    void AppendInteractionVisuals(Sequence sequence, InteractionStateVisual.State state)
+    void AppendInteractionVisuals(Sequence sequence, GraphicStateVisual.State state)
     {
         for (int i = 0; i < interactionVisuals.Length; i++)
             interactionVisuals[i].AppendTo(sequence, state, i * interactionVisualDelayStep);
