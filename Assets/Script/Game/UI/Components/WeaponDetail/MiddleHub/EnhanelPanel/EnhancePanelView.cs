@@ -126,9 +126,10 @@ public class EnhancePanelView : MonoBehaviour
             rightBottomView.ShowMaxLevelText(text);
     }
 
-    public async UniTask PlayPromoteResult()
+    public async UniTask PlayPromoteResult(PromoteLevelResultData result, Action onNewStateShown = null)
     {
-        await UniTask.Delay(500);
+        if (promoteLevelPreviewView != null)
+            await promoteLevelPreviewView.PlayResult(result, onNewStateShown);
     }
     
     void SetPanelActive(GameObject panel, bool active)

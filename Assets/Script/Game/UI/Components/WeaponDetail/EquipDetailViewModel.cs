@@ -30,7 +30,7 @@ public class EquipDetailViewModel: IDisposable
     public readonly Subject<Unit> requestCloseItemSelectPanel = new();
     public readonly Subject<Unit> requestRefreshContentWithAnimation = new();
     public readonly Subject<EnhanceResultData> requestPlayEnhanceResult = new();
-    public readonly Subject<Unit> requestPlayPromoteResult = new();
+    public readonly Subject<PromoteLevelResultData> requestPlayPromoteResult = new();
     public EquipDetailViewModel(ReactiveProperty<EquipItemViewModel> viewModel,InventoryRepository repo)
     {
         currentWeaponVM = viewModel;
@@ -95,8 +95,20 @@ public class EquipDetailViewModel: IDisposable
         
         bottomVM.onBreakoutClick.Subscribe(_ =>
         {
-            currentWeaponVM.Value.Breakout();
-            requestPlayPromoteResult.OnNext(Unit.Default);
+            var weapon = currentWeaponVM.Value;
+            int oldRank = weapon.rank.Value;
+            int oldMaxLevel = weapon.Model.GetCurrentMaxLevel();
+            int currentLevel = weapon.level.Value;
+
+            weapon.Breakout();
+
+            int newRank = weapon.rank.Value;
+            if (newRank == oldRank)
+                return;
+
+            int newMaxLevel = weapon.Model.GetCurrentMaxLevel();
+            Color rarityColor = RarityConfig.GetColor(weapon.Model.ItemRarity);
+            requestPlayPromoteResult.OnNext(new PromoteLevelResultData(oldRank, newRank, currentLevel, oldMaxLevel, newMaxLevel, rarityColor));
         }).AddTo(disposables);
 
         bottomVM.onRefineClick.Subscribe(_ =>

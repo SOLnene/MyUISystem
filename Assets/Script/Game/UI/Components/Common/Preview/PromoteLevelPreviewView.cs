@@ -1,3 +1,4 @@
+using System;
 using Cysharp.Threading.Tasks;
 using TMPro;
 using UniRx;
@@ -16,6 +17,8 @@ public class PromoteLevelPreviewView : MonoBehaviour
     GameObject nextStarContent;
     [SerializeField]
     AnimatedPanel animatedPanel;
+    [SerializeField]
+    PromoteLevelResultFxView resultFxView;
 
     readonly CompositeDisposable disposable = new();
     PromoteLevelPreviewViewModel vm;
@@ -87,6 +90,12 @@ public class PromoteLevelPreviewView : MonoBehaviour
         }
     }
 
+    public async UniTask PlayResult(PromoteLevelResultData result, Action onNewStateShown = null)
+    {
+        if (resultFxView != null)
+            await resultFxView.Play(result, onNewStateShown);
+    }
+    
     void SetStars(GameObject root, int count)
     {
         if (root == null)
