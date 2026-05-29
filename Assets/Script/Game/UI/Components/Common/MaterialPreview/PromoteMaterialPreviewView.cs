@@ -5,6 +5,8 @@ public class PromoteMaterialPreviewView : MonoBehaviour
 {
     [SerializeField]
     Transform materialParent;
+    [SerializeField]
+    MaterialAreaFeedbackView feedbackView;
 
     public async UniTask Bind(PromoteMaterialPreviewViewModel vm)
     {
@@ -37,5 +39,20 @@ public class PromoteMaterialPreviewView : MonoBehaviour
         {
             Destroy(child.gameObject);
         }
+    }
+
+    public void ShowProcessing()
+    {
+        feedbackView.ShowProcessing();
+    }
+
+    public void ShowNormal(bool playMaterialEnter)
+    {
+        feedbackView.ShowNormal(playMaterialEnter);
+    }
+
+    public void ShowResultText(string text)
+    {
+        feedbackView.ShowResultText(text);
     }
 }

@@ -126,6 +126,24 @@ public class EnhancePanelView : MonoBehaviour
             rightBottomView.ShowMaxLevelText(text);
     }
 
+    public void ShowPromoteProcessing()
+    {
+        if (promoteMaterialPreviewView != null)
+            promoteMaterialPreviewView.ShowProcessing();
+    }
+
+    public void ShowPromoteNormal(bool playMaterialEnter)
+    {
+        if (promoteMaterialPreviewView != null)
+            promoteMaterialPreviewView.ShowNormal(playMaterialEnter);
+    }
+
+    public void ShowPromoteResultText(string text)
+    {
+        if (promoteMaterialPreviewView != null)
+            promoteMaterialPreviewView.ShowResultText(text);
+    }
+
     public async UniTask PlayPromoteResult(PromoteLevelResultData result, Action onNewStateShown = null)
     {
         if (promoteLevelPreviewView != null)

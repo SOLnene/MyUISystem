@@ -249,7 +249,18 @@ public partial class EquipDetailView : UIView
         try
         {
             if (enhancePanelView != null)
-                await enhancePanelView.PlayPromoteResult(result);
+            {
+                bottomView.ShowEnhanceBottomProcessing();
+                enhancePanelView.ShowPromoteProcessing();
+
+                Action onNewStateShown = () =>
+                {
+                    enhancePanelView.ShowPromoteResultText("突破成功");
+                    bottomView.ShowEnhanceBottomResult();
+                };
+
+                await enhancePanelView.PlayPromoteResult(result, onNewStateShown);
+            }
 
             await SwitchContent();
         }
