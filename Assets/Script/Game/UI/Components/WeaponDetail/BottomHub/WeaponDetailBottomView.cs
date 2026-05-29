@@ -39,6 +39,8 @@ public class WeaponDetailBottomView : MonoBehaviour
     AnimatedPanel animatedRoot;
     [SerializeField]
     BottomContentStateView enhanceContentState;
+    [SerializeField]
+    BottomContentStateView promoteContentState;
 
     WeaponDetailBottomViewModel vm;
     
@@ -102,6 +104,8 @@ public class WeaponDetailBottomView : MonoBehaviour
         if (isEnhance && !canBreakout)
             enhanceContentState.SetState(BottomContentStateView.State.Normal);
         promoteContent.SetActive(isEnhance && canBreakout);
+        if (isEnhance && canBreakout)
+            promoteContentState.SetState(BottomContentStateView.State.Normal);
         refineContent.SetActive(isRefine);
     }
 
@@ -135,6 +139,21 @@ public class WeaponDetailBottomView : MonoBehaviour
     public void ShowEnhanceBottomResult()
     {
         enhanceContentState.SetState(BottomContentStateView.State.Result);
+    }
+
+    public void ShowPromoteBottomNormal()
+    {
+        promoteContentState.SetState(BottomContentStateView.State.Normal);
+    }
+
+    public void ShowPromoteBottomProcessing()
+    {
+        promoteContentState.SetState(BottomContentStateView.State.Processing);
+    }
+
+    public void ShowPromoteBottomResult()
+    {
+        promoteContentState.SetState(BottomContentStateView.State.Result);
     }
 
     
