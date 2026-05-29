@@ -84,7 +84,10 @@ public class EnhancePanelView : MonoBehaviour
         {
             vm.RefreshPromoteMaterialPreview();
             if (promoteMaterialPreviewView != null)
+            {
+                promoteMaterialPreviewView.ShowNormal(false);
                 promoteMaterialPreviewView.Bind(vm.promoteMaterialPreviewVm).Forget();
+            }
         }
         else
         {

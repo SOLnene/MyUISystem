@@ -50,6 +50,10 @@ public class PromoteLevelResultFxView : MonoBehaviour
     Color activeStarColor = Color.white;
     [SerializeField]
     Color inactiveStarColor = new Color(1f, 1f, 1f, 0.45f);
+    [SerializeField]
+    ParticleSystem[] resultParticles;
+    [SerializeField]
+    float resultAccentDuration = 0.18f;
 
     Tween activeTween;
 
@@ -111,9 +115,6 @@ public class PromoteLevelResultFxView : MonoBehaviour
         await activeTween.AsyncWaitForCompletion().AsUniTask();
         activeTween = null;
 
-        onNewStateShown?.Invoke();
-        PlayNewStarPop(data);
-
         await UniTask.WhenAll(
             afterGroup.DOFade(1f, AfterEnterDuration * 0.75f)
                 .SetEase(Ease.OutQuad)
@@ -122,8 +123,12 @@ public class PromoteLevelResultFxView : MonoBehaviour
             afterRoot.DOScale(1f, AfterEnterDuration)
                 .SetEase(Ease.OutBack)
                 .AsyncWaitForCompletion()
-                .AsUniTask()
+                .AsUniTask(),
+            PlayNewStarPop(data)
         );
+
+        await PlayResultAccent();
+        onNewStateShown?.Invoke();
     }
 
     async UniTask PlayExit()
@@ -145,7 +150,7 @@ public class PromoteLevelResultFxView : MonoBehaviour
             stars[i].rectTransform.localScale = Vector3.one;
     }
 
-    void PlayNewStarPop(PromoteLevelResultData data)
+    async UniTask PlayNewStarPop(PromoteLevelResultData data)
     {
         int firstNewStar = Mathf.Clamp(data.oldRank, 0, afterStars.Length);
         int lastNewStar = Mathf.Clamp(data.newRank, 0, afterStars.Length);
@@ -161,6 +166,22 @@ public class PromoteLevelResultFxView : MonoBehaviour
                     star.DOScale(1f, NewStarPopDuration * 0.45f).SetEase(Ease.OutQuad);
                 });
         }
+
+        if (lastNewStar > firstNewStar)
+            await UniTask.Delay(TimeSpan.FromSeconds(NewStarPopDuration));
+    }
+
+    async UniTask PlayResultAccent()
+    {
+        if (resultParticles != null)
+        {
+            for (int i = 0; i < resultParticles.Length; i++)
+                if (resultParticles[i] != null)
+                    resultParticles[i].Play(true);
+        }
+
+        if (resultAccentDuration > 0f)
+            await UniTask.Delay(TimeSpan.FromSeconds(resultAccentDuration));
     }
 
     void OnDestroy()
