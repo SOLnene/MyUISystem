@@ -41,6 +41,8 @@ public class WeaponDetailBottomView : MonoBehaviour
     BottomContentStateView enhanceContentState;
     [SerializeField]
     BottomContentStateView promoteContentState;
+    [SerializeField]
+    BottomContentStateView refineContentState;
 
     WeaponDetailBottomViewModel vm;
     
@@ -107,6 +109,8 @@ public class WeaponDetailBottomView : MonoBehaviour
         if (isEnhance && canBreakout)
             promoteContentState.SetState(BottomContentStateView.State.Normal);
         refineContent.SetActive(isRefine);
+        if (isRefine)
+            refineContentState.SetState(BottomContentStateView.State.Normal);
     }
 
     public async UniTask HideContent()
@@ -154,6 +158,21 @@ public class WeaponDetailBottomView : MonoBehaviour
     public void ShowPromoteBottomResult()
     {
         promoteContentState.SetState(BottomContentStateView.State.Result);
+    }
+
+    public void ShowRefineBottomNormal()
+    {
+        refineContentState.SetState(BottomContentStateView.State.Normal);
+    }
+
+    public void ShowRefineBottomProcessing()
+    {
+        refineContentState.SetState(BottomContentStateView.State.Processing);
+    }
+
+    public void ShowRefineBottomResult()
+    {
+        refineContentState.SetState(BottomContentStateView.State.Result);
     }
 
     

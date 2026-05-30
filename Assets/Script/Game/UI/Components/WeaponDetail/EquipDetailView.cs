@@ -165,6 +165,10 @@ public partial class EquipDetailView : UIView
         equipDetailVm.requestPlayPromoteResult
             .Subscribe(result => PlayPromoteResultFlow(result).Forget())
             .AddTo(disposable);
+
+        equipDetailVm.requestPlayRefineResult
+            .Subscribe(result => PlayRefineResultFlow(result).Forget())
+            .AddTo(disposable);
     }
 
     void ApplyTabImmediate(int index)
@@ -263,6 +267,39 @@ public partial class EquipDetailView : UIView
             }
 
             await SwitchContent();
+        }
+        finally
+        {
+            isPlayingResultFlow = false;
+            UnlockInput();
+        }
+    }
+
+    async UniTask PlayRefineResultFlow(RefineResultData result)
+    {
+        if (isSwitchingTab || isPlayingResultFlow)
+            return;
+
+        LockInput();
+        isPlayingResultFlow = true;
+        try
+        {
+            if (refinePanelView != null)
+            {
+                bottomView.ShowRefineBottomProcessing();
+
+                Action onResultAccentComplete = () =>
+                {
+                    bottomView.ShowRefineBottomResult();
+                };
+
+                await refinePanelView.PlayRefineResult(result, onResultAccentComplete);
+            }
+
+            if (result.needRefreshContent)
+                await SwitchContent();
+            else
+                RefreshContent();
         }
         finally
         {

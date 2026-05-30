@@ -1,6 +1,8 @@
+    using System;
     using System.Collections;
     using System.Collections.Generic;
     using System.Linq;
+    using Cysharp.Threading.Tasks;
     using TMPro;
     using UniRx;
     using UnityEngine;
@@ -22,6 +24,10 @@
         GameObject materialArea;
         [SerializeField]
         GameObject maxRefineArea;
+        [SerializeField]
+        AnimatedPanel normalRootPanel;
+        [SerializeField]
+        RefineRankResultFxView refineRankResultFxView;
         RefinePanelViewModel vm;
 
         CompositeDisposable disposable = new CompositeDisposable();
@@ -64,6 +70,11 @@
 
         public void Refresh()
         {
+            if (refineRankResultFxView != null)
+                refineRankResultFxView.HideImmediate();
+
+            normalRootPanel.Show(true).Forget();
+
             bool isMax = vm != null &&
                          vm.equipItem.Value != null &&
                          vm.equipItem.Value.IsRefineMaxed();
@@ -76,6 +87,19 @@
             if (maxRefineArea != null)
             {
                 maxRefineArea.SetActive(isMax);
+            }
+        }
+
+        public async UniTask PlayRefineResult(RefineResultData result, Action onResultAccentComplete = null)
+        {
+            await normalRootPanel.Hide();
+            try
+            {
+                await refineRankResultFxView.Play(result.oldRefineLevel, result.newRefineLevel, onResultAccentComplete);
+            }
+            finally
+            {
+                await normalRootPanel.Show();
             }
         }
         

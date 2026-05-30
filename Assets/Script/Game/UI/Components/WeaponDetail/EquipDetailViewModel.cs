@@ -31,6 +31,7 @@ public class EquipDetailViewModel: IDisposable
     public readonly Subject<Unit> requestRefreshContentWithAnimation = new();
     public readonly Subject<EnhanceResultData> requestPlayEnhanceResult = new();
     public readonly Subject<PromoteLevelResultData> requestPlayPromoteResult = new();
+    public readonly Subject<RefineResultData> requestPlayRefineResult = new();
     public EquipDetailViewModel(ReactiveProperty<EquipItemViewModel> viewModel,InventoryRepository repo)
     {
         currentWeaponVM = viewModel;
@@ -118,11 +119,13 @@ public class EquipDetailViewModel: IDisposable
 
             if (GameEconomy.Instance.TrySpendGold(refineVM.previewCost.Value))
             {
-                bool wasCanRefine = !currentWeaponVM.Value.IsRefineMaxed();
+                var weapon = currentWeaponVM.Value;
+                int oldRefineLevel = weapon.refineLevel.Value;
+                bool wasCanRefine = !weapon.IsRefineMaxed();
                 refineVM.ApplyRefine();
+                int newRefineLevel = weapon.refineLevel.Value;
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
-                if (wasCanRefine != !currentWeaponVM.Value.IsRefineMaxed())
-                    requestRefreshContentWithAnimation.OnNext(Unit.Default);
+                requestPlayRefineResult.OnNext(new RefineResultData(oldRefineLevel, newRefineLevel, wasCanRefine != !weapon.IsRefineMaxed()));
             }
         }).AddTo(disposables);
         
@@ -197,6 +200,20 @@ public readonly struct EnhanceResultData
         this.levelUpCount = levelUpCount;
         this.needSwitchContent = needSwitchContent;
         this.rarityColor = rarityColor;
+    }
+}
+
+public readonly struct RefineResultData
+{
+    public readonly int oldRefineLevel;
+    public readonly int newRefineLevel;
+    public readonly bool needRefreshContent;
+
+    public RefineResultData(int oldRefineLevel, int newRefineLevel, bool needRefreshContent)
+    {
+        this.oldRefineLevel = oldRefineLevel;
+        this.newRefineLevel = newRefineLevel;
+        this.needRefreshContent = needRefreshContent;
     }
 }
 
