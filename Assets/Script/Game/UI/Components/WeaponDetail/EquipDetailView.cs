@@ -296,10 +296,7 @@ public partial class EquipDetailView : UIView
                 await refinePanelView.PlayRefineResult(result, onResultAccentComplete);
             }
 
-            if (result.needRefreshContent)
-                await SwitchContent();
-            else
-                RefreshContent();
+            RefreshContent();
         }
         finally
         {
