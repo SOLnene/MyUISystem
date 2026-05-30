@@ -35,7 +35,7 @@
         ItemSlotView slotPrefab;
         public void Bind(RefinePanelViewModel viewModel)
         {
-            //disposable.Dispose();
+            disposable.Clear();
             
             vm = viewModel;
             vm.equipItem.Value.refineLevel.Subscribe(level =>

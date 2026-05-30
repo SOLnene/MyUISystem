@@ -57,12 +57,10 @@ public class RefinePanelViewModel : IDisposable
         var filter = new ItemFilter(ItemCategory.Equip, (int)ItemRarity.Max,equipItem.Value.Model.Id);
         var filteredItems = allItems.Where(item => filter.Match(item));
     
-        int addedCount = 0;
-
         foreach (var item in filteredItems)
         {
             // 已满则停止
-            if (addedCount >= GetAvailableRefineCount())
+            if (HasReachedRefineMaterialLimit())
                 break;
 
             // 跳过已选择的物品
@@ -70,11 +68,7 @@ public class RefinePanelViewModel : IDisposable
                 continue;
 
             // 使用已有逻辑尝试选择（会自动触发 AddToFirstEmptySlot）
-            bool success = selectService.TrySelect(item);
-            if (success)
-            {
-                addedCount++;
-            }
+            selectService.TrySelect(item);
         }
         
     }
@@ -90,8 +84,7 @@ public class RefinePanelViewModel : IDisposable
             GetAvailableRefineCount(),selectService);
         requestOpenItemSelectPanel.OnNext(materialSelectParams);
     }
-
-    //todo:别传方法
+    
     public bool CanApplyRefine()
     {
         if (equipItem.Value == null || selectService.SelectedItems.Count <= 0)
@@ -133,6 +126,11 @@ public class RefinePanelViewModel : IDisposable
 
         var model = equipItem.Value.Model;
         return Mathf.Max(0, model.GetRefineCap() - model.RefinementLevel);
+    }
+
+    bool HasReachedRefineMaterialLimit()
+    {
+        return selectService.SelectedItems.Count >= GetAvailableRefineCount();
     }
 
     int GetSelectedRefineCount()
