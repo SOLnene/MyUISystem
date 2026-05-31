@@ -90,10 +90,27 @@
                 refineRankResultFxView.HideImmediate();
 
             perviewNormalRoot.Show(true).Forget();
-            materialResultFxView.Hide();
 
+            if (vm.equipItem.Value.IsRefineMaxed())
+                ShowRefineMaxIdle();
+            else
+                ShowRefineMaterialIdle();
+        }
+
+        void ShowRefineMaterialIdle()
+        {
+            KillMaterialSequence();
+            materialResultFxView.Hide();
             materialNormalRoot.SetActive(true);
             materialAreaGroup.alpha = 1f;
+        }
+
+        void ShowRefineMaxIdle()
+        {
+            KillMaterialSequence();
+            materialAreaGroup.alpha = 0f;
+            materialNormalRoot.SetActive(false);
+            materialResultFxView.ShowMaxTextImmediate("已达到当前精炼等级上限");
         }
 
         public async UniTask PlayRefineResult(RefineResultData result, Action onResultAccentComplete = null)

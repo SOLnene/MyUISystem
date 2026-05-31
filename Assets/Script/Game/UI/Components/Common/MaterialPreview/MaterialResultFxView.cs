@@ -48,6 +48,15 @@ public class MaterialResultFxView : MonoBehaviour
         resultTextPanel.Show().Forget();
     }
 
+    public void ShowMaxTextImmediate(string text)
+    {
+        StopRotate();
+        rotateCircleImage.gameObject.SetActive(false);
+        resultText.text = text;
+        content.SetActive(true);
+        resultTextPanel.Show(true).Forget();
+    }
+
     public void Hide()
     {
         StopRotate();
