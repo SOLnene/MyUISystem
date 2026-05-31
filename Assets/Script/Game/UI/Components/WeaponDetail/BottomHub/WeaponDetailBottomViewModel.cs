@@ -16,6 +16,7 @@ public class WeaponDetailBottomViewModel : IDisposable
     public readonly ReactiveCommand onRefineClick = new();
     
     public readonly ReactiveProperty<bool> canBreakout = new(false);
+    public readonly ReactiveProperty<bool> isRefineMaxed = new(false);
     
     public readonly ReactiveProperty<int> selectedTabIndex;
     

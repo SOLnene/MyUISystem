@@ -110,7 +110,12 @@ public class WeaponDetailBottomView : MonoBehaviour
             promoteContentState.SetState(BottomContentStateView.State.Normal);
         refineContent.SetActive(isRefine);
         if (isRefine)
-            refineContentState.SetState(BottomContentStateView.State.Normal);
+        {
+            var refineState = vm.isRefineMaxed.Value
+                ? BottomContentStateView.State.Result
+                : BottomContentStateView.State.Normal;
+            refineContentState.SetState(refineState);
+        }
     }
 
     public async UniTask HideContent()

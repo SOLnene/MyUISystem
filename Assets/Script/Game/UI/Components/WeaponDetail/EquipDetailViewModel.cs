@@ -49,7 +49,12 @@ public class EquipDetailViewModel: IDisposable
         
         currentWeaponVM
             .Where(viewModel => viewModel != null)
-            .Subscribe(viewModel => infoVm.Bind(viewModel))
+            .Subscribe(viewModel =>
+            {
+                infoVm.Bind(viewModel);
+                bottomVM.canBreakout.Value = viewModel.needBreak.Value;
+                bottomVM.isRefineMaxed.Value = viewModel.IsRefineMaxed();
+            })
             .AddTo(disposables);
         enhanceVM.previewCost.Subscribe(cost =>
         {
@@ -124,6 +129,7 @@ public class EquipDetailViewModel: IDisposable
                 bool wasCanRefine = !weapon.IsRefineMaxed();
                 refineVM.ApplyRefine();
                 int newRefineLevel = weapon.refineLevel.Value;
+                bottomVM.isRefineMaxed.Value = weapon.IsRefineMaxed();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
                 requestPlayRefineResult.OnNext(new RefineResultData(oldRefineLevel, newRefineLevel, wasCanRefine != !weapon.IsRefineMaxed()));
             }

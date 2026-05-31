@@ -16,12 +16,15 @@
         TextMeshProUGUI refineLevelText;
         [SerializeField]
         Button quickAddButton;
-        [FormerlySerializedAs("itemContent")]
         [SerializeField]
         GameObject slotContent;
         [SerializeField]
         List<ItemSlotView> slotViews;
-        [FormerlySerializedAs("materialArea")]
+        [SerializeField]
+        GameObject previewNormalRoot;
+        [SerializeField]
+        RefineRankResultFxView refineRankResultFxView;
+                
         [SerializeField]
         GameObject materialNormalRoot;
         [SerializeField]
@@ -30,11 +33,7 @@
         RectTransform materialAreaRoot;
         [SerializeField]
         MaterialResultFxView materialResultFxView;
-        [FormerlySerializedAs("normalRootPanel")]
-        [SerializeField]
-        AnimatedPanel perviewNormalRoot;
-        [SerializeField]
-        RefineRankResultFxView refineRankResultFxView;
+        
         [SerializeField]
         float materialFadeDuration = 0.12f;
         [SerializeField]
@@ -89,7 +88,7 @@
             if (refineRankResultFxView != null)
                 refineRankResultFxView.HideImmediate();
 
-            perviewNormalRoot.Show(true).Forget();
+            previewNormalRoot.SetActive(true);
 
             if (vm.equipItem.Value.IsRefineMaxed())
                 ShowRefineMaxIdle();
@@ -115,7 +114,7 @@
 
         public async UniTask PlayRefineResult(RefineResultData result, Action onResultAccentComplete = null)
         {
-            await perviewNormalRoot.Hide();
+            previewNormalRoot.SetActive(false);
             try
             {
                 await refineRankResultFxView.Play(result.oldRefineLevel, result.newRefineLevel, onResultAccentComplete);
@@ -123,7 +122,7 @@
             finally
             {
                 refineRankResultFxView.HideImmediate();
-                await perviewNormalRoot.Show();
+                previewNormalRoot.SetActive(true);
             }
         }
 
