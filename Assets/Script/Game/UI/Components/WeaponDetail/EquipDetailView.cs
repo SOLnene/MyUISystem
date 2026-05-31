@@ -287,16 +287,25 @@ public partial class EquipDetailView : UIView
             if (refinePanelView != null)
             {
                 bottomView.ShowRefineBottomProcessing();
+                refinePanelView.ShowRefineProcessing();
 
                 Action onResultAccentComplete = () =>
                 {
-                    bottomView.ShowRefineBottomResult();
+                    if (result.isMaxRefineLevel)
+                    {
+                        refinePanelView.ShowRefineMaxText("已达到当前精炼等级上限");
+                        bottomView.ShowRefineBottomResult();
+                    }
+                    else
+                    {
+                        refinePanelView.ShowRefineNormal(true);
+                        bottomView.ShowRefineBottomNormal();
+                    }
                 };
 
                 await refinePanelView.PlayRefineResult(result, onResultAccentComplete);
             }
 
-            RefreshContent();
         }
         finally
         {

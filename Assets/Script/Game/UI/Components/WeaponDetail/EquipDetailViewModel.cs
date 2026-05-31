@@ -207,13 +207,13 @@ public readonly struct RefineResultData
 {
     public readonly int oldRefineLevel;
     public readonly int newRefineLevel;
-    public readonly bool needRefreshContent;
+    public readonly bool isMaxRefineLevel;
 
-    public RefineResultData(int oldRefineLevel, int newRefineLevel, bool needRefreshContent)
+    public RefineResultData(int oldRefineLevel, int newRefineLevel, bool isMaxRefineLevel)
     {
         this.oldRefineLevel = oldRefineLevel;
         this.newRefineLevel = newRefineLevel;
-        this.needRefreshContent = needRefreshContent;
+        this.isMaxRefineLevel = isMaxRefineLevel;
     }
 }
 

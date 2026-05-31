@@ -43,6 +43,7 @@ public class MaterialResultFxView : MonoBehaviour
     {
         StopRotate();
         rotateCircleImage.gameObject.SetActive(false);
+        resultText.text = text;
         content.SetActive(true);
         resultTextPanel.Show().Forget();
     }

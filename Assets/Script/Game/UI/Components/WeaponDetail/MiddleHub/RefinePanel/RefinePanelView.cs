@@ -3,6 +3,7 @@
     using System.Collections.Generic;
     using System.Linq;
     using Cysharp.Threading.Tasks;
+    using DG.Tweening;
     using TMPro;
     using UniRx;
     using UnityEngine;
@@ -20,17 +21,32 @@
         GameObject slotContent;
         [SerializeField]
         List<ItemSlotView> slotViews;
+        [FormerlySerializedAs("materialArea")]
         [SerializeField]
-        GameObject materialArea;
+        GameObject materialNormalRoot;
         [SerializeField]
-        GameObject maxRefineArea;
+        CanvasGroup materialAreaGroup;
         [SerializeField]
-        AnimatedPanel normalRootPanel;
+        RectTransform materialAreaRoot;
+        [SerializeField]
+        MaterialResultFxView materialResultFxView;
+        [FormerlySerializedAs("normalRootPanel")]
+        [SerializeField]
+        AnimatedPanel perviewNormalRoot;
         [SerializeField]
         RefineRankResultFxView refineRankResultFxView;
+        [SerializeField]
+        float materialFadeDuration = 0.12f;
+        [SerializeField]
+        float materialEnterDuration = 0.18f;
+        [SerializeField]
+        float materialEnterOffsetY = 8f;
         RefinePanelViewModel vm;
 
         CompositeDisposable disposable = new CompositeDisposable();
+        Sequence materialSequence;
+        Vector2 materialDefaultPos;
+        bool hasMaterialDefaultPos;
 
         ItemSlotView slotPrefab;
         public void Bind(RefinePanelViewModel viewModel)
@@ -73,34 +89,96 @@
             if (refineRankResultFxView != null)
                 refineRankResultFxView.HideImmediate();
 
-            normalRootPanel.Show(true).Forget();
+            perviewNormalRoot.Show(true).Forget();
+            materialResultFxView.Hide();
 
-            bool isMax = vm != null &&
-                         vm.equipItem.Value != null &&
-                         vm.equipItem.Value.IsRefineMaxed();
-
-            if (materialArea != null)
-            {
-                materialArea.SetActive(!isMax);
-            }
-
-            if (maxRefineArea != null)
-            {
-                maxRefineArea.SetActive(isMax);
-            }
+            materialNormalRoot.SetActive(true);
+            materialAreaGroup.alpha = 1f;
         }
 
         public async UniTask PlayRefineResult(RefineResultData result, Action onResultAccentComplete = null)
         {
-            await normalRootPanel.Hide();
+            await perviewNormalRoot.Hide();
             try
             {
                 await refineRankResultFxView.Play(result.oldRefineLevel, result.newRefineLevel, onResultAccentComplete);
             }
             finally
             {
-                await normalRootPanel.Show();
+                refineRankResultFxView.HideImmediate();
+                await perviewNormalRoot.Show();
             }
+        }
+
+        public void ShowRefineProcessing()
+        {
+            PrepareMaterialFx();
+            materialNormalRoot.SetActive(true);
+            materialResultFxView.Hide();
+
+            materialSequence = DOTween.Sequence().SetUpdate(true);
+            materialSequence.Join(materialAreaGroup.DOFade(0f, materialFadeDuration).SetEase(Ease.OutQuad));
+            materialSequence.OnComplete(materialResultFxView.ShowLoading);
+        }
+
+        public void ShowRefineNormal(bool playMaterialEnter)
+        {
+            PrepareMaterialFx();
+            materialNormalRoot.SetActive(true);
+            materialResultFxView.Hide();
+
+            materialSequence = DOTween.Sequence().SetUpdate(true);
+
+            if (playMaterialEnter)
+                AppendMaterialEnter(materialSequence);
+            else
+                materialAreaGroup.alpha = 1f;
+        }
+
+        public void ShowRefineMaxText(string text)
+        {
+            PrepareMaterialFx();
+            materialAreaGroup.alpha = 0f;
+            materialNormalRoot.SetActive(false);
+            materialResultFxView.ShowMaxText(text);
+        }
+
+        void AppendMaterialEnter(Sequence sequence)
+        {
+            materialAreaGroup.alpha = 0f;
+            materialAreaRoot.anchoredPosition = materialDefaultPos + new Vector2(0f, materialEnterOffsetY);
+
+            sequence.Join(materialAreaGroup.DOFade(1f, materialEnterDuration).SetEase(Ease.OutQuad));
+            sequence.Join(materialAreaRoot.DOAnchorPos(materialDefaultPos, materialEnterDuration).SetEase(Ease.OutCubic));
+        }
+
+        void PrepareMaterialFx()
+        {
+            CacheMaterialDefaultPosition();
+            KillMaterialSequence();
+        }
+
+        void CacheMaterialDefaultPosition()
+        {
+            if (hasMaterialDefaultPos)
+                return;
+
+            materialDefaultPos = materialAreaRoot.anchoredPosition;
+            hasMaterialDefaultPos = true;
+        }
+
+        void KillMaterialSequence()
+        {
+            if (materialSequence == null)
+                return;
+
+            materialSequence.Kill();
+            materialSequence = null;
+        }
+
+        void OnDestroy()
+        {
+            KillMaterialSequence();
         }
         
     }
