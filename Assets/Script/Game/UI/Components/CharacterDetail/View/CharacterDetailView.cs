@@ -15,8 +15,6 @@ namespace Game.UI.Components.CharacterDetail
         [ControlBinding]
         private RectTransform contentLayer;
         [ControlBinding]
-        private RectTransform bottomLayer;
-        [ControlBinding]
         private TextMeshProUGUI charaText;
         [ControlBinding]
         private CharacterDetailContentView contentView;

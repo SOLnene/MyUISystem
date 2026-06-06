@@ -8,6 +8,12 @@ using SkierFramework;
 using UnityEngine;
 using UniTaskCompletionSource = Cysharp.Threading.Tasks.UniTaskCompletionSource;
 
+public enum SlideFadeMotionMode
+{
+    Manual,
+    Preset
+}
+
 public class SlideFadeMotion : UIMotionBase 
 {
 
@@ -15,6 +21,10 @@ public class SlideFadeMotion : UIMotionBase
     private CanvasGroup motionGroup;
     [SerializeField]
     private RectTransform motionRoot;
+    [SerializeField]
+    SlideFadeMotionMode mode = SlideFadeMotionMode.Manual;
+    [SerializeField]
+    SlideFadeMotionPreset preset;
     Vector2 originPos;
     [SerializeField]
     Vector2 targetMove;
@@ -69,25 +79,47 @@ public class SlideFadeMotion : UIMotionBase
 
     protected override UniTask PlayAnimation(bool isEnter,CancellationToken token)
     {
-        var fromPos = isEnter ? originPos + originMove : originPos + targetMove;
-        var toPos = isEnter ? originPos + targetMove : originPos + originMove;
+        if (mode == SlideFadeMotionMode.Preset && preset == null)
+        {
+            Debug.LogError("SlideFadeMotion is set to Preset mode, but preset is missing.", this);
+            return UniTask.CompletedTask;
+        }
+
+        var usePreset = mode == SlideFadeMotionMode.Preset;
+        var activeTargetMove = usePreset ? preset.TargetMove : targetMove;
+        var activeOriginMove = usePreset ? preset.OriginMove : originMove;
+        var activeMoveDuration = usePreset ? preset.MoveDuration : moveDuration;
+        var activeFadeDuration = usePreset ? preset.FadeDuration : fadeDuration;
+        var activeMoveEase = usePreset ? preset.MoveEase : moveEase;
+        var activeFadeEase = usePreset ? preset.FadeEase : fadeEase;
+        var fromPos = isEnter ? originPos + activeOriginMove : originPos + activeTargetMove;
+        var toPos = isEnter ? originPos + activeTargetMove : originPos + activeOriginMove;
         var fromAlpha = isEnter ? 0f : 1f;
         var toAlpha = isEnter ? 1f : 0f;
 
         seq?.Kill();
         seq = DOTween.Sequence()
-            .Join(motionRoot.DOAnchorPos(toPos, moveDuration)
+            .Join(motionRoot.DOAnchorPos(toPos, activeMoveDuration)
                 .From(fromPos)
-                .SetEase(moveEase))
-            .Join(motionGroup.DOFade(toAlpha, fadeDuration)
+                .SetEase(activeMoveEase))
+            .Join(motionGroup.DOFade(toAlpha, activeFadeDuration)
                     .From(fromAlpha)
-                    .SetEase(fadeEase));
+                    .SetEase(activeFadeEase));
         return seq.AsyncWaitForCompletion().AsUniTask().AttachExternalCancellation(token);
     }
     
     protected override void ApplyEndState(bool isEnter)
     {
-        motionRoot.anchoredPosition = isEnter ? originPos + targetMove : originPos + originMove;
+        if (mode == SlideFadeMotionMode.Preset && preset == null)
+        {
+            Debug.LogError("SlideFadeMotion is set to Preset mode, but preset is missing.", this);
+            return;
+        }
+
+        var usePreset = mode == SlideFadeMotionMode.Preset;
+        var activeTargetMove = usePreset ? preset.TargetMove : targetMove;
+        var activeOriginMove = usePreset ? preset.OriginMove : originMove;
+        motionRoot.anchoredPosition = isEnter ? originPos + activeTargetMove : originPos + activeOriginMove;
         motionGroup.alpha = isEnter ? 1 : 0;
     }
 }
