@@ -18,9 +18,9 @@ public class LevelResultFxView : MonoBehaviour
     [SerializeField] float holdNewDuration = 0.55f;
     [SerializeField] float exitDuration = 0.22f;
     [SerializeField] float newLevelStartScale = 1.35f;
-    [SerializeField] ParticleSystem[] resultParticles;
-    [SerializeField] float resultAccentDuration = 0.18f;
+    [SerializeField] Transform resultAccentFxRoot;
 
+    ResultAccentFxView resultAccentFxView;
     Vector2 defaultPos;
     bool hasDefaultPos;
 
@@ -42,8 +42,10 @@ public class LevelResultFxView : MonoBehaviour
 
         CacheDefaultPosition();
         Setup(oldLevel, rarityColor);
+        UniTask loadResultFxTask = EnsureResultFx();
         await PlayEnter();
         await UniTask.Delay(System.TimeSpan.FromSeconds(holdOldDuration));
+        await loadResultFxTask;
         await SwitchLevelText(newLevel, onNewLevelShown);
         await UniTask.Delay(System.TimeSpan.FromSeconds(holdNewDuration));
         await PlayExit();
@@ -108,6 +110,8 @@ public class LevelResultFxView : MonoBehaviour
         levelText.alpha = 0f;
         levelText.rectTransform.localScale = Vector3.one * newLevelStartScale;
 
+        PlayResultAccent();
+
         await UniTask.WhenAll(
             DOTween.To(() => levelText.alpha, value => levelText.alpha = value, 1f, newEnterDuration * 0.65f)
                 .AsyncWaitForCompletion()
@@ -119,21 +123,20 @@ public class LevelResultFxView : MonoBehaviour
                 .AsUniTask()
         );
 
-        await PlayResultAccent();
         onNewLevelShown?.Invoke();
     }
 
-    async UniTask PlayResultAccent()
+    void PlayResultAccent()
     {
-        if (resultParticles != null)
-        {
-            for (int i = 0; i < resultParticles.Length; i++)
-                if (resultParticles[i] != null)
-                    resultParticles[i].Play(true);
-        }
+        resultAccentFxView?.Play();
+    }
 
-        if (resultAccentDuration > 0f)
-            await UniTask.Delay(TimeSpan.FromSeconds(resultAccentDuration));
+    async UniTask EnsureResultFx()
+    {
+        if (resultAccentFxView != null)
+            return;
+
+        resultAccentFxView = await UIFxLoader.CreateLevelUpFxAsync(resultAccentFxRoot);
     }
 
     async UniTask PlayExit()

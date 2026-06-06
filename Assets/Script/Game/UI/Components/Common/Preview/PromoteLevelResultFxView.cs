@@ -51,10 +51,9 @@ public class PromoteLevelResultFxView : MonoBehaviour
     [SerializeField]
     Color inactiveStarColor = new Color(1f, 1f, 1f, 0.45f);
     [SerializeField]
-    ParticleSystem[] resultParticles;
-    [SerializeField]
-    float resultAccentDuration = 0.18f;
+    Transform resultAccentFxRoot;
 
+    ResultAccentFxView resultAccentFxView;
     Tween activeTween;
 
     const float HoldBeforeDuration = 0.14f;
@@ -76,7 +75,9 @@ public class PromoteLevelResultFxView : MonoBehaviour
     {
         KillActiveTween();
         Setup(data);
+        UniTask loadResultFxTask = EnsureResultFx();
         await UniTask.Delay(TimeSpan.FromSeconds(HoldBeforeDuration));
+        await loadResultFxTask;
         await SwitchToAfter(data, onNewStateShown);
         await UniTask.Delay(TimeSpan.FromSeconds(HoldAfterDuration));
         await PlayExit();
@@ -115,6 +116,8 @@ public class PromoteLevelResultFxView : MonoBehaviour
         await activeTween.AsyncWaitForCompletion().AsUniTask();
         activeTween = null;
 
+        PlayResultAccent();
+
         await UniTask.WhenAll(
             afterGroup.DOFade(1f, AfterEnterDuration * 0.75f)
                 .SetEase(Ease.OutQuad)
@@ -127,7 +130,6 @@ public class PromoteLevelResultFxView : MonoBehaviour
             PlayNewStarPop(data)
         );
 
-        await PlayResultAccent();
         onNewStateShown?.Invoke();
     }
 
@@ -171,17 +173,17 @@ public class PromoteLevelResultFxView : MonoBehaviour
             await UniTask.Delay(TimeSpan.FromSeconds(NewStarPopDuration));
     }
 
-    async UniTask PlayResultAccent()
+    void PlayResultAccent()
     {
-        if (resultParticles != null)
-        {
-            for (int i = 0; i < resultParticles.Length; i++)
-                if (resultParticles[i] != null)
-                    resultParticles[i].Play(true);
-        }
+        resultAccentFxView?.Play();
+    }
 
-        if (resultAccentDuration > 0f)
-            await UniTask.Delay(TimeSpan.FromSeconds(resultAccentDuration));
+    async UniTask EnsureResultFx()
+    {
+        if (resultAccentFxView != null)
+            return;
+
+        resultAccentFxView = await UIFxLoader.CreateLevelUpFxAsync(resultAccentFxRoot);
     }
 
     void OnDestroy()
