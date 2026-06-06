@@ -11,15 +11,11 @@ public class RefineRankResultFxView : MonoBehaviour
     [SerializeField]
     TextMeshProUGUI newRankText;
     [SerializeField]
-    ResultAccentFxView resultAccentFxView;
-    [SerializeField]
-    ParticleSystem[] resultParticles;
+    Transform resultAccentFxRoot;
     [SerializeField]
     float holdOldDuration = 0.12f;
     [SerializeField]
     float switchDuration = 0.22f;
-    [SerializeField]
-    float resultAccentDuration = 0.18f;
     [SerializeField]
     float exitDuration = 0.2f;
     [SerializeField]
@@ -35,6 +31,7 @@ public class RefineRankResultFxView : MonoBehaviour
     Vector2 newDefaultPos;
     bool hasDefaultPos;
     Sequence sequence;
+    ResultAccentFxView resultAccentFxView;
 
     void Awake()
     {
@@ -48,9 +45,11 @@ public class RefineRankResultFxView : MonoBehaviour
         KillSequence();
         Setup(oldRank, newRank);
 
+        UniTask loadResultFxTask = EnsureResultFx();
         await UniTask.Delay(TimeSpan.FromSeconds(holdOldDuration));
         await PlaySwitch();
-        await PlayResultAccent();
+        await loadResultFxTask;
+        PlayResultAccent();
         onResultAccentComplete?.Invoke();
         await PlayExit();
     }
@@ -98,19 +97,17 @@ public class RefineRankResultFxView : MonoBehaviour
         sequence = null;
     }
 
-    async UniTask PlayResultAccent()
+    void PlayResultAccent()
     {
         resultAccentFxView?.Play();
+    }
 
-        if (resultParticles != null)
-        {
-            for (int i = 0; i < resultParticles.Length; i++)
-                if (resultParticles[i] != null)
-                    resultParticles[i].Play(true);
-        }
+    async UniTask EnsureResultFx()
+    {
+        if (resultAccentFxView != null)
+            return;
 
-        if (resultAccentDuration > 0f)
-            await UniTask.Delay(TimeSpan.FromSeconds(resultAccentDuration));
+        resultAccentFxView = await UIFxLoader.CreateLevelUpFxAsync(resultAccentFxRoot);
     }
 
     async UniTask PlayExit()
