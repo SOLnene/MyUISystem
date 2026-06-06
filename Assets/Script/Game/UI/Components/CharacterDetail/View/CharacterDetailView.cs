@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using SkierFramework;
 using TMPro;
 using UniRx;
@@ -31,6 +32,16 @@ namespace Game.UI.Components.CharacterDetail
 
         [SerializeField]
         DetailTabItem[] tabItems;
+        [SerializeField]
+        AnimatedPanel topPanel;
+        [SerializeField]
+        AnimatedPanel tabPanel;
+        [SerializeField]
+        AnimatedPanel infoPanel;
+        [SerializeField]
+        CharacterEnhancePanel enhancePanelView;
+        [SerializeField]
+        CharacterPromoteView promotePanelView;
     
         
         private const float TOP_BAR_HEIGHT = 150f;   
@@ -49,6 +60,7 @@ namespace Game.UI.Components.CharacterDetail
         CharacterDetailViewModel vm;
 
         int currentIndex = -1;
+        bool isSwitchingTab;
         CompositeDisposable disposable = new CompositeDisposable();
         public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
         {
@@ -75,7 +87,7 @@ namespace Game.UI.Components.CharacterDetail
            
             enhancePanel.Bind(viewModel.enhanceViewmodel);
             promotePanel.Bind(viewModel.promoteViewmodel);
-            BackToDetailMainView();
+            BackToDetailMainViewImmediate();
             // 初始化时先决定显示哪个面板
             //RefreshUpgradeOrPromotePanel();
 
@@ -99,33 +111,101 @@ namespace Game.UI.Components.CharacterDetail
             //todo:切换角色初始化
             //todo:不写死
             SwitchTab(0, true);
+            ShowMainPanels(false).Forget();
             //todo:如果脸部动画很明显，需要给facepreset也做一个immediate方法
         }
     
         void RefreshUpgradeOrPromotePanel()
+        {
+            RefreshUpgradeOrPromotePanelAsync(false).Forget();
+        }
+
+        async UniTask RefreshUpgradeOrPromotePanelAsync(bool instant)
         {
             // 规则：小于当前 rank 最大等级 -> 升级；达到/超过 -> 突破
             int level = vm.model.LevelRP.Value;
             int maxLevel = vm.model.GetCurrentMaxLevel();
             bool showUpgrade = level < maxLevel;
 
-            enhancePanel.gameObject.SetActive(showUpgrade);
-            promotePanel.gameObject.SetActive(!showUpgrade);
+            if (showUpgrade)
+            {
+                promotePanel.gameObject.SetActive(false);
+                await enhancePanelView.ShowPanel(instant);
+            }
+            else
+            {
+                enhancePanel.gameObject.SetActive(false);
+                await promotePanelView.ShowPanel(instant);
+            }
         }
 
         void OpenUpgradeOrPromotePanel()
         {
-            contentView.gameObject.SetActive(false);
-            topBarLayer.gameObject.SetActive(false);
-            RefreshUpgradeOrPromotePanel();
+            OpenUpgradeOrPromotePanelAsync().Forget();
+        }
+
+        async UniTask OpenUpgradeOrPromotePanelAsync()
+        {
+            await HideMainPanels(false);
+            await RefreshUpgradeOrPromotePanelAsync(false);
         }
 
         void BackToDetailMainView()
         {
+            BackToDetailMainViewAsync(false).Forget();
+            Debug.Log("返回角色详情主界面");
+        }
+
+        void BackToDetailMainViewImmediate()
+        {
             contentView.gameObject.SetActive(true);
+            topBarLayer.gameObject.SetActive(true);
             enhancePanel.gameObject.SetActive(false);
             promotePanel.gameObject.SetActive(false);
-            Debug.Log("返回角色详情主界面");
+            topPanel.Show(true).Forget();
+            tabPanel.Show(true).Forget();
+            infoPanel.Show(true).Forget();
+        }
+
+        async UniTask BackToDetailMainViewAsync(bool instant)
+        {
+            await HideUpgradeOrPromotePanel(instant);
+            await ShowMainPanels(instant);
+        }
+
+        async UniTask ShowMainPanels(bool instant)
+        {
+            contentView.gameObject.SetActive(true);
+            topBarLayer.gameObject.SetActive(true);
+            await UniTask.WhenAll(
+                topPanel.Show(instant),
+                tabPanel.Show(instant),
+                infoPanel.Show(instant)
+            );
+        }
+
+        async UniTask HideMainPanels(bool instant)
+        {
+            await UniTask.WhenAll(
+                topPanel.Hide(instant),
+                tabPanel.Hide(instant),
+                infoPanel.Hide(instant)
+            );
+            contentView.gameObject.SetActive(false);
+            topBarLayer.gameObject.SetActive(false);
+        }
+
+        async UniTask HideUpgradeOrPromotePanel(bool instant)
+        {
+            if (enhancePanel.gameObject.activeSelf)
+            {
+                await enhancePanelView.HidePanel(instant);
+            }
+
+            if (promotePanel.gameObject.activeSelf)
+            {
+                await promotePanelView.HidePanel(instant);
+            }
         }
 
         void SetTabItems()
@@ -149,7 +229,7 @@ namespace Game.UI.Components.CharacterDetail
                 return;
             }
 
-            SwitchTab(index, false);
+            SwitchTabAsync(index, false).Forget();
         }
 
         bool CanSwitchTab(int index)
@@ -164,10 +244,20 @@ namespace Game.UI.Components.CharacterDetail
                 return false;
             }
 
+            if (isSwitchingTab)
+            {
+                return false;
+            }
+
             return ModelViewer.Instance == null || !ModelViewer.Instance.IsInTransition;
         }
 
         void SwitchTab(int index, bool instant)
+        {
+            SwitchTabAsync(index, instant).Forget();
+        }
+
+        async UniTask SwitchTabAsync(int index, bool instant)
         {
             if (currentIndex >= 0 && currentIndex < tabItems.Length)
             {
@@ -177,22 +267,30 @@ namespace Game.UI.Components.CharacterDetail
             currentIndex = index;
             tabItems[currentIndex].SetSelected(true, instant);
 
-            ApplyCurrentTab(instant);
+            isSwitchingTab = true;
+            try
+            {
+                await ApplyCurrentTab(instant);
+            }
+            finally
+            {
+                isSwitchingTab = false;
+            }
         }
 
-        void ApplyCurrentTab(bool instant)
+        async UniTask ApplyCurrentTab(bool instant)
         {
             if (ModelViewer.Instance != null)
             {
                 ModelViewer.Instance.SwitchPreview(currentIndex, instant);
             }
 
-            SwitchTabContentShell(currentIndex);
+            await SwitchTabContentShell(currentIndex, instant);
         }
 
-        void SwitchTabContentShell(int index)
+        async UniTask SwitchTabContentShell(int index, bool instant)
         {
-            contentView.ShowPage(index);
+            await contentView.ShowPage(index, instant);
         }
 
         public override void OnAddListener()

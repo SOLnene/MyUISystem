@@ -33,8 +33,10 @@ namespace Game.UI.Components.CharacterDetail
 
         [SerializeField]
         UITopBar topBar;
-
-
+        [SerializeField]
+        AnimatedPanel topPanel;
+        [SerializeField]
+        AnimatedPanel infoPanel;
 
         
 
@@ -99,6 +101,24 @@ namespace Game.UI.Components.CharacterDetail
                         CreateMaterialViews().Forget();
                     })
                 .AddTo(disposable);
+        }
+
+        public async UniTask ShowPanel(bool instant)
+        {
+            gameObject.SetActive(true);
+            await UniTask.WhenAll(
+                topPanel.Show(instant),
+                infoPanel.Show(instant)
+            );
+        }
+
+        public async UniTask HidePanel(bool instant)
+        {
+            await UniTask.WhenAll(
+                topPanel.Hide(instant),
+                infoPanel.Hide(instant)
+            );
+            gameObject.SetActive(false);
         }
 
         async UniTask CreateMaterialViews()

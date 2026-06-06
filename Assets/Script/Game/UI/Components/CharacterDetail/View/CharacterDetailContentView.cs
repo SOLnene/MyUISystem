@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using SkierFramework;
 using UnityEngine;
 namespace Game.UI.Components.CharacterDetail
@@ -17,9 +18,12 @@ namespace Game.UI.Components.CharacterDetail
 #endregion
         [SerializeField]
         CharacterDetailEquipPageView equipPageView;
+        [SerializeField]
+        AnimatedPanel pageAnimPanel;
         
         public CharacterDetailInfoPanelView InfoPanelView => infoPageView;
         CharacterDetailContentViewModel vm;
+        int currentPageIndex = -1;
     
         public override void Bind(CharacterDetailContentViewModel viewModel)
         {
@@ -29,10 +33,22 @@ namespace Game.UI.Components.CharacterDetail
             equipPageView.Bind(Vm.EquipPageViewModel);
         }
 
-        public void ShowPage(int index)
+        public async UniTask ShowPage(int index, bool instant)
         {
+            if (currentPageIndex == index)
+            {
+                return;
+            }
+
+            if (currentPageIndex >= 0)
+            {
+                await pageAnimPanel.Hide(instant);
+            }
+
             infoPageView.gameObject.SetActive(index == 0);
             equipPageView.gameObject.SetActive(index == 1);
+            currentPageIndex = index;
+            await pageAnimPanel.Show(instant);
         }
     }
 }
