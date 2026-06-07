@@ -16,6 +16,8 @@ public class MaterialAreaFeedbackView : MonoBehaviour
     [SerializeField]
     GraphicStateVisual[] stateVisuals;
     [SerializeField]
+    GameObject[] normalOnlyObjects;
+    [SerializeField]
     float stateVisualDelayStep = 0.02f;
     [SerializeField]
     float fadeDuration = 0.12f;
@@ -35,6 +37,7 @@ public class MaterialAreaFeedbackView : MonoBehaviour
         Prepare();
         normalRoot.SetActive(true);
         resultFxView.Hide();
+        SetNormalOnlyObjectsVisible(false);
 
         sequence = DOTween.Sequence().SetUpdate(true);
         sequence.Join(normalRootGroup.DOFade(processingAlpha, fadeDuration).SetEase(Ease.OutQuad));
@@ -48,6 +51,7 @@ public class MaterialAreaFeedbackView : MonoBehaviour
         Prepare();
         normalRoot.SetActive(true);
         resultFxView.Hide();
+        SetNormalOnlyObjectsVisible(true);
 
         sequence = DOTween.Sequence().SetUpdate(true);
         sequence.Join(normalRootGroup.DOFade(1f, fadeDuration).SetEase(Ease.OutQuad));
@@ -62,6 +66,7 @@ public class MaterialAreaFeedbackView : MonoBehaviour
     public void ShowResultText(string text)
     {
         Prepare();
+        SetNormalOnlyObjectsVisible(false);
         normalRootGroup.alpha = 0f;
         materialContentGroup.alpha = 0f;
         normalRoot.SetActive(false);
@@ -93,6 +98,12 @@ public class MaterialAreaFeedbackView : MonoBehaviour
     {
         for (int i = 0; i < stateVisuals.Length; i++)
             stateVisuals[i].AppendTo(targetSequence, state, i * stateVisualDelayStep);
+    }
+
+    void SetNormalOnlyObjectsVisible(bool visible)
+    {
+        for (int i = 0; i < normalOnlyObjects.Length; i++)
+            normalOnlyObjects[i].SetActive(visible);
     }
 
     void CacheMaterialDefaultPosition()

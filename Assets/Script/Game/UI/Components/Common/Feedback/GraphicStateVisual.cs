@@ -2,6 +2,7 @@ using DG.Tweening;
 using UnityEngine;
 using UnityEngine.UI;
 
+//按钮等组件，默认动画中一部分变透明，一部分变白
 public class GraphicStateVisual : MonoBehaviour
 {
     public enum State
@@ -10,9 +11,11 @@ public class GraphicStateVisual : MonoBehaviour
         Processing
     }
 
+    //动画过程中变暗的部分
     [SerializeField]
     Graphic[] backgrounds;
     [SerializeField]
+    //动画过程中变亮的部分
     Graphic[] foregrounds;
     [SerializeField]
     Color processingBackgroundColor = new Color(1f, 1f, 1f, 0);
