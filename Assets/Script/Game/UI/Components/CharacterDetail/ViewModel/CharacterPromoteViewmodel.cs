@@ -27,6 +27,7 @@ namespace Game.UI.Components.CharacterDetail
         public List<ItemSlotViewModel> itemSlotViewModels;
         
         public ReactiveCommand onPromote = new ReactiveCommand();
+        public readonly Subject<PromoteLevelResultData> requestPlayPromoteResult = new();
         public Action onBack;
         // 当前阶段（当前 Rank 的等级上限）与下一阶段（下一 Rank 的等级上限）下的基础属性预览
         public 
@@ -76,11 +77,6 @@ namespace Game.UI.Components.CharacterDetail
             itemSlotViewModels = new List<ItemSlotViewModel>();
             //现在只有一个rule，先写死
             CreateMaterialVMs(rank.Value);
-
-            rank.Subscribe(value =>
-            {
-                CreateMaterialVMs(value);
-            }).AddTo(disposable);
         }
 
         public void UpdatePreview(int exp,bool promoting)
@@ -117,15 +113,43 @@ namespace Game.UI.Components.CharacterDetail
                 itemSlotViewModels.Add(itemSlotVm);
             }
         }
+
+        public void RefreshMaterialVMs()
+        {
+            CreateMaterialVMs(model.RankRP.Value);
+        }
         
         public bool Promote()
         {
+            int oldRank = model.RankRP.Value;
+            int oldMaxLevel = model.GetCurrentMaxLevel();
+            int currentLevel = GetCurrentLevel();
             if (model.Promote())
             {
+                int newRank = model.RankRP.Value;
+                int newMaxLevel = model.GetCurrentMaxLevel();
+                Color rarityColor = GetRarityColor();
+                requestPlayPromoteResult.OnNext(new PromoteLevelResultData(oldRank, newRank, currentLevel, oldMaxLevel, newMaxLevel, rarityColor));
                 onPromote.Execute(Unit.Default);
                 return true;
             }
             return false;
+        }
+
+        int GetCurrentLevel()
+        {
+            var characterModel = model as CharacterModel;
+            return characterModel != null ? characterModel.LevelRP.Value : model.GetCurrentMaxLevel();
+        }
+
+        Color GetRarityColor()
+        {
+            var characterModel = model as CharacterModel;
+            if (characterModel == null)
+                return Color.white;
+
+            int rarity = Mathf.Clamp(characterModel.Definition.rarity - 1, 0, RarityConfig.Colors.Length - 1);
+            return RarityConfig.GetColor(rarity);
         }
         
         public void Dispose()

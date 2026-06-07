@@ -29,7 +29,10 @@ public class CharacterMaterialView : BindableUI<CharacterEnhanceViewmodel>
 		#pragma warning restore 0649
 #endregion
 
-	public override void Bind(object data)
+	[SerializeField]
+	MaterialAreaFeedbackView feedbackView;
+
+	public override void Bind(CharacterEnhanceViewmodel data)
 	{
 		base.Bind(data);
 		BindBooks();
@@ -75,5 +78,20 @@ public class CharacterMaterialView : BindableUI<CharacterEnhanceViewmodel>
 			.AddTo(this);
 		upgradeBtn.onClick.RemoveAllListeners();
 		upgradeBtn.onClick.AddListener((() => Vm.ConfirmEnhance()));
+	}
+
+	public void ShowProcessing()
+	{
+		feedbackView.ShowProcessing();
+	}
+
+	public void ShowNormal(bool playMaterialEnter)
+	{
+		feedbackView.ShowNormal(playMaterialEnter);
+	}
+
+	public void ShowResultText(string text)
+	{
+		feedbackView.ShowResultText(text);
 	}
 }

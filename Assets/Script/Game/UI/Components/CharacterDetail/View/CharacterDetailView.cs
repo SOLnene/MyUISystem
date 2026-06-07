@@ -1,3 +1,4 @@
+using System;
 using Cysharp.Threading.Tasks;
 using SkierFramework;
 using TMPro;
@@ -21,12 +22,7 @@ namespace Game.UI.Components.CharacterDetail
         private CharacterDetailContentView contentView;
         [ControlBinding]
         private Image final;
-        [ControlBinding]
-        private BindableUI enhancePanel;
-        [ControlBinding]
-        private BindableUI promotePanel;
         
-
 		#pragma warning restore 0649
 #endregion
 
@@ -61,6 +57,7 @@ namespace Game.UI.Components.CharacterDetail
 
         int currentIndex = -1;
         bool isSwitchingTab;
+        bool isPlayingResultFlow;
         CompositeDisposable disposable = new CompositeDisposable();
         public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
         {
@@ -85,23 +82,23 @@ namespace Game.UI.Components.CharacterDetail
             final.gameObject.SetActive(false);
             contentView.Bind(viewModel.contentViewModel);
            
-            enhancePanel.Bind(viewModel.enhanceViewmodel);
-            promotePanel.Bind(viewModel.promoteViewmodel);
+            enhancePanelView.Bind(viewModel.enhanceViewmodel);
+            promotePanelView.Bind(viewModel.promoteViewmodel);
             BackToDetailMainViewImmediate();
             // 初始化时先决定显示哪个面板
             //RefreshUpgradeOrPromotePanel();
 
             // 升级后/突破后重新判断一次
-            viewModel.enhanceViewmodel.onUpgrade
-                .Subscribe(_ => RefreshUpgradeOrPromotePanel())
+            viewModel.enhanceViewmodel.requestPlayEnhanceResult
+                .Subscribe(result => PlayEnhanceResultFlow(result).Forget())
                 .AddTo(disposable);
 
             viewModel.onBackToMain
                 .Subscribe(_ => BackToDetailMainView())
                 .AddTo(disposable);
 
-            viewModel.promoteViewmodel.onPromote
-                .Subscribe(_ => RefreshUpgradeOrPromotePanel())
+            viewModel.promoteViewmodel.requestPlayPromoteResult
+                .Subscribe(result => PlayPromoteResultFlow(result).Forget())
                 .AddTo(disposable);
 
             contentView.InfoPanelView.onUpgradeClick += OpenUpgradeOrPromotePanel;
@@ -129,12 +126,12 @@ namespace Game.UI.Components.CharacterDetail
 
             if (showUpgrade)
             {
-                promotePanel.gameObject.SetActive(false);
+                promotePanelView.gameObject.SetActive(false);
                 await enhancePanelView.ShowPanel(instant);
             }
             else
             {
-                enhancePanel.gameObject.SetActive(false);
+                enhancePanelView.gameObject.SetActive(false);
                 await promotePanelView.ShowPanel(instant);
             }
         }
@@ -160,8 +157,8 @@ namespace Game.UI.Components.CharacterDetail
         {
             contentView.gameObject.SetActive(true);
             topBarLayer.gameObject.SetActive(true);
-            enhancePanel.gameObject.SetActive(false);
-            promotePanel.gameObject.SetActive(false);
+            enhancePanelView.gameObject.SetActive(false);
+            promotePanelView.gameObject.SetActive(false);
             topPanel.Show(true).Forget();
             tabPanel.Show(true).Forget();
             infoPanel.Show(true).Forget();
@@ -197,14 +194,76 @@ namespace Game.UI.Components.CharacterDetail
 
         async UniTask HideUpgradeOrPromotePanel(bool instant)
         {
-            if (enhancePanel.gameObject.activeSelf)
+            if (enhancePanelView.gameObject.activeSelf)
             {
                 await enhancePanelView.HidePanel(instant);
             }
 
-            if (promotePanel.gameObject.activeSelf)
+            if (promotePanelView.gameObject.activeSelf)
             {
                 await promotePanelView.HidePanel(instant);
+            }
+        }
+
+        async UniTask PlayEnhanceResultFlow(EnhanceResultData result)
+        {
+            if (isSwitchingTab || isPlayingResultFlow)
+                return;
+
+            isPlayingResultFlow = true;
+            try
+            {
+                enhancePanelView.ShowEnhanceProcessing();
+                await enhancePanelView.PlayEnhanceExpProgress(result);
+
+                if (result.oldLevel == result.newLevel)
+                {
+                    if (result.needSwitchContent)
+                    {
+                        enhancePanelView.ShowEnhanceMaxLevelText("已达到当前等级上限");
+                        await RefreshUpgradeOrPromotePanelAsync(false);
+                    }
+                    else
+                    {
+                        enhancePanelView.ShowEnhanceNormal(true);
+                    }
+
+                    return;
+                }
+
+                Action onNewLevelShown = result.needSwitchContent
+                    ? () => enhancePanelView.ShowEnhanceMaxLevelText("已达到当前等级上限")
+                    : () => enhancePanelView.ShowEnhanceNormal(true);
+
+                await enhancePanelView.PlayEnhanceLevelResult(result, onNewLevelShown);
+
+                if (result.needSwitchContent)
+                    await RefreshUpgradeOrPromotePanelAsync(false);
+            }
+            finally
+            {
+                isPlayingResultFlow = false;
+            }
+        }
+
+        async UniTask PlayPromoteResultFlow(PromoteLevelResultData result)
+        {
+            if (isSwitchingTab || isPlayingResultFlow)
+                return;
+
+            isPlayingResultFlow = true;
+            try
+            {
+                promotePanelView.ShowPromoteProcessing();
+
+                Action onNewStateShown = () => promotePanelView.ShowPromoteResultText("突破成功");
+
+                await promotePanelView.PlayPromoteResult(result, onNewStateShown);
+                await RefreshUpgradeOrPromotePanelAsync(false);
+            }
+            finally
+            {
+                isPlayingResultFlow = false;
             }
         }
 
@@ -317,5 +376,4 @@ namespace Game.UI.Components.CharacterDetail
         }
     }
 }
-
 

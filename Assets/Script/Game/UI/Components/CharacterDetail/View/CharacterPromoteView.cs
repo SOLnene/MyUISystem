@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using Game.Domain.Character;
@@ -37,13 +38,15 @@ namespace Game.UI.Components.CharacterDetail
         AnimatedPanel topPanel;
         [SerializeField]
         AnimatedPanel infoPanel;
-
-        
+        [SerializeField]
+        MaterialAreaFeedbackView feedbackView;
+        [SerializeField]
+        PromoteLevelResultFxView resultFxView;
 
 
         readonly CompositeDisposable disposable = new CompositeDisposable();
 
-        public override void Bind(object viewmodel)
+        public override void Bind(CharacterPromoteViewmodel viewmodel)
         {
             base.Bind(viewmodel);
             disposable.Clear();
@@ -94,18 +97,14 @@ namespace Game.UI.Components.CharacterDetail
             
             promoteBtn.onClick.RemoveAllListeners();
             promoteBtn.onClick.AddListener(Promote);
-
-            Vm.rank.Subscribe(
-                    _ =>
-                    {
-                        CreateMaterialViews().Forget();
-                    })
-                .AddTo(disposable);
         }
 
         public async UniTask ShowPanel(bool instant)
         {
             gameObject.SetActive(true);
+            Vm.RefreshMaterialVMs();
+            CreateMaterialViews().Forget();
+            ShowPromoteNormal(false);
             await UniTask.WhenAll(
                 topPanel.Show(instant),
                 infoPanel.Show(instant)
@@ -119,6 +118,26 @@ namespace Game.UI.Components.CharacterDetail
                 infoPanel.Hide(instant)
             );
             gameObject.SetActive(false);
+        }
+
+        public void ShowPromoteProcessing()
+        {
+            feedbackView.ShowProcessing();
+        }
+
+        public void ShowPromoteNormal(bool playMaterialEnter)
+        {
+            feedbackView.ShowNormal(playMaterialEnter);
+        }
+
+        public void ShowPromoteResultText(string text)
+        {
+            feedbackView.ShowResultText(text);
+        }
+
+        public UniTask PlayPromoteResult(PromoteLevelResultData result, Action onNewStateShown = null)
+        {
+            return resultFxView.Play(result, onNewStateShown);
         }
 
         async UniTask CreateMaterialViews()

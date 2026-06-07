@@ -34,8 +34,8 @@ namespace Game.UI.Components.CharacterDetail
                 }).ToReadOnlyReactiveProperty()
                 .AddTo(disposable);
             
-            EntryBtnText = model.LevelRP
-                .Select(level => level < model.GetCurrentMaxLevel() ? "升级" : "突破")
+            EntryBtnText = model.ChangeRP
+                .Select(_ => model.LevelRP.Value < model.GetCurrentMaxLevel() ? "升级" : "突破")
                 .ToReadOnlyReactiveProperty()
                 .AddTo(disposable);
             

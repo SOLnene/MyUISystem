@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
 using SkierFramework;
@@ -13,13 +14,13 @@ namespace Game.UI.Components.CharacterDetail
 	    private EnhanceLevelPreviewView upgradePanel;
 	    [ControlBinding]
 	    private BindableUI[] statItems;
-	    [ControlBinding]
-	    private BindableUI materialPanel;
+	    
 
 		#pragma warning restore 0649
 #endregion
 
-
+        [SerializeField]
+        CharacterMaterialView materialPanel;
 	    [SerializeField]
 	    UITopBar topBar;
 	    [SerializeField]
@@ -27,7 +28,7 @@ namespace Game.UI.Components.CharacterDetail
 	    [SerializeField]
 	    AnimatedPanel infoPanel;
 	    
-        public override void Bind(object viewmodel)
+        public override void Bind(CharacterEnhanceViewmodel viewmodel)
         {
             base.Bind(viewmodel);
             topBar.Bind(Vm.modelName, new ReactiveProperty<int>(10000), Vm.onBack);
@@ -42,6 +43,7 @@ namespace Game.UI.Components.CharacterDetail
         public async UniTask ShowPanel(bool instant)
         {
             gameObject.SetActive(true);
+            ShowEnhanceNormal(false);
             await UniTask.WhenAll(
                 topPanel.Show(instant),
                 infoPanel.Show(instant)
@@ -55,6 +57,31 @@ namespace Game.UI.Components.CharacterDetail
                 infoPanel.Hide(instant)
             );
             gameObject.SetActive(false);
+        }
+
+        public UniTask PlayEnhanceExpProgress(EnhanceResultData result)
+        {
+            return upgradePanel.PlayExpProgress(result);
+        }
+
+        public UniTask PlayEnhanceLevelResult(EnhanceResultData result, Action onNewLevelShown = null)
+        {
+            return upgradePanel.PlayLevelResult(result, onNewLevelShown);
+        }
+
+        public void ShowEnhanceProcessing()
+        {
+            materialPanel.ShowProcessing();
+        }
+
+        public void ShowEnhanceNormal(bool playMaterialEnter)
+        {
+            materialPanel.ShowNormal(playMaterialEnter);
+        }
+
+        public void ShowEnhanceMaxLevelText(string text)
+        {
+            materialPanel.ShowResultText(text);
         }
     }
 }

@@ -25,6 +25,7 @@ namespace Game.UI.Components.CharacterDetail
         public ReactiveProperty<ExpBookType> selectedBook = new ReactiveProperty<ExpBookType>(ExpBookType.None);
 
         public ReactiveCommand onUpgrade = new ReactiveCommand();
+        public readonly Subject<EnhanceResultData> requestPlayEnhanceResult = new();
 
         public Action onBack;
         //名字
@@ -135,9 +136,36 @@ namespace Game.UI.Components.CharacterDetail
         public void ConfirmEnhance()
         {
             int exp = materialInput.GetTotalExp();
+            int oldLevel = model.LevelRP.Value;
+            float oldProgress = GetExpProgress();
+            int levelUpCount = previewVm.levelUpCount.Value;
             model.AddExp(exp);
+            int newLevel = model.LevelRP.Value;
+            float newProgress = GetExpProgress();
+            bool needSwitchContent = newLevel >= model.GetCurrentMaxLevel();
+            Color rarityColor = GetRarityColor();
             materialInput.Clear();
+            requestPlayEnhanceResult.OnNext(new EnhanceResultData(oldLevel, newLevel, oldProgress, newProgress, levelUpCount, needSwitchContent, rarityColor));
             onUpgrade.Execute(Unit.Default);
+        }
+
+        float GetExpProgress()
+        {
+            int max = model.LevelSystem.GetExpRequired(model.LevelSystem.Level);
+            if (max <= 0)
+                return 0f;
+
+            return (float)model.LevelSystem.CurrentExp / max;
+        }
+
+        Color GetRarityColor()
+        {
+            var characterModel = model as CharacterModel;
+            if (characterModel == null)
+                return Color.white;
+
+            int rarity = Mathf.Clamp(characterModel.Definition.rarity - 1, 0, RarityConfig.Colors.Length - 1);
+            return RarityConfig.GetColor(rarity);
         }
 
         public void CreateItemViewmodel(string key)
