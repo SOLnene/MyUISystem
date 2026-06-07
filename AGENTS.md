@@ -16,6 +16,7 @@
 3. 只允许最小 diff；禁止顺手重构、禁止修改无关代码。
 4. 如果会改动 public API、资源路径、UIType、Addressable key，必须先停止并确认。
 5. 除非我明确说“实现、修改、改代码、应用、接入、删除、提交”等执行性词语，否则先只提供分析、方案或代码片段，不直接修改文件。
+6. 读取含中文的代码或文本时，默认按 UTF-8 处理；如果 PowerShell 默认 `Get-Content` 显示乱码，必须先用 `Get-Content -Encoding UTF8`、`rg`、`Select-String` 或字节检查复核。只有复核后仍异常，或 patch 无法稳定命中，才按“疑似乱码/非 UTF-8”停止汇报；禁止仅凭 PowerShell 默认输出判断乱码，也不要为解决该问题要求批量添加 BOM。
 
 ## 项目约束
 - 这是 Unity C# 项目
