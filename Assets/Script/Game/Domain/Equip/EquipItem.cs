@@ -20,6 +20,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     readonly ReactiveProperty<int> levelRP;
     readonly ReactiveProperty<int> expRP;
     readonly ReactiveProperty<int> rankRP;
+    readonly ReactiveProperty<int> refineRP;
     
     public LevelSystem LevelSystem { get; private set; }
     public RankSystem RankSystem { get; private set; }
@@ -27,6 +28,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     public IReadOnlyReactiveProperty<int> LevelRP => levelRP;
     public IReadOnlyReactiveProperty<int> ExpRP => expRP;
     public IReadOnlyReactiveProperty<int> RankRP => rankRP;
+    public IReadOnlyReactiveProperty<int> RefineRP => refineRP;
     public IObservable<Unit> ChangeRP { get; }
     
     public new EquipDefinition EquipDefinition => base.ItemDefinition as EquipDefinition;
@@ -40,8 +42,8 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
         levelRP = new ReactiveProperty<int>(Level);
         expRP = new ReactiveProperty<int>(CurrentExp);
         rankRP = new ReactiveProperty<int>(Rank);
-        ChangeRP = Observable.CombineLatest(LevelRP, RankRP)
-            .Select(_ => Unit.Default);
+        refineRP = new ReactiveProperty<int>(RefinementLevel);
+        ChangeRP = Observable.CombineLatest(LevelRP, RankRP, RefineRP, (_, _, _) => Unit.Default);
         RefreshBaseStats();
     }
 
@@ -247,6 +249,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
         if(RefinementLevel>=GetRefineCap()) return false;
         RefinementLevel++;
         RefreshBaseStats();
+        refineRP.Value = RefinementLevel;
         return true;
     }
 

@@ -76,7 +76,7 @@ namespace Game.Domain.Character
         }
         
         /// <summary>
-        /// 获取增加经验后属性的预览数据（主要用于UI展示）
+        /// 获取增加经验后属性的预览数据（升级突破专用，不考虑其他增益）
         /// </summary>
         /// <param name="addedExp"></param>
         /// <returns></returns>
@@ -153,6 +153,12 @@ namespace Game.Domain.Character
         public void ChangeEquip(EquipItem equipItem)
         {
             CurrentEquipRP.Value = equipItem;
+            RefreshEquipStats(equipItem);
+        }
+
+        void RefreshEquipStats(EquipItem equipItem)
+        {
+            Stats.BonusAtk.Value = equipItem == null ? 0f : equipItem.GetAttack();
         }
     }
     
