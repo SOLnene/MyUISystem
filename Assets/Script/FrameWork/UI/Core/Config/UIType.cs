@@ -18,5 +18,6 @@ public enum UIType
 		GachaResultRevealView,
 		CharacterDetailView,
 		TipView,
+		MainMenuView,
 		Max,
 }

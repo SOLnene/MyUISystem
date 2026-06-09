@@ -32,6 +32,10 @@ public partial class HubRoot : UIView
         {
             UpdatePlayerStats();
         }
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            UIManager.Instance.Open(UIType.MainMenuView);
+        }
     }
 
     public void UpdatePlayerStats()

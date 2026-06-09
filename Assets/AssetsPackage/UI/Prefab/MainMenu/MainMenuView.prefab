@@ -137,6 +137,7 @@ GameObject:
   - component: {fileID: 3189626664326393238}
   - component: {fileID: 6607101063880651410}
   - component: {fileID: 8487717351800395424}
+  - component: {fileID: 7077769950636226019}
   m_Layer: 5
   m_Name: ButtonContent
   m_TagString: Untagged
@@ -158,11 +159,11 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 6963072651916507312}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0}
+  m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
-  m_Pivot: {x: 0.5, y: 0.5}
+  m_Pivot: {x: 0.5, y: 1}
 --- !u!114 &6607101063880651410
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -176,17 +177,17 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   m_Padding:
-    m_Left: 0
-    m_Right: 0
-    m_Top: 0
-    m_Bottom: 0
+    m_Left: 12
+    m_Right: 12
+    m_Top: 12
+    m_Bottom: 12
   m_ChildAlignment: 0
   m_StartCorner: 0
   m_StartAxis: 0
-  m_CellSize: {x: 100, y: 100}
-  m_Spacing: {x: 0, y: 0}
-  m_Constraint: 0
-  m_ConstraintCount: 2
+  m_CellSize: {x: 128, y: 140}
+  m_Spacing: {x: 16, y: 16}
+  m_Constraint: 1
+  m_ConstraintCount: 4
 --- !u!114 &8487717351800395424
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -201,6 +202,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_HorizontalFit: 0
   m_VerticalFit: 2
+--- !u!114 &7077769950636226019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 893747014345200081}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6ed4891a1df392946ae199df61e424ad, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  buttonContent: {fileID: 3189626664326393238}
 --- !u!1 &3491344197900957377
 GameObject:
   m_ObjectHideFlags: 0
@@ -667,6 +681,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5287594253320419454}
+  - component: {fileID: 3499248380383369624}
   m_Layer: 5
   m_Name: MainMenuView
   m_TagString: Untagged
@@ -694,6 +709,61 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &3499248380383369624
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8419197568134323318}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9bec08468c724524b83aa135c922cf31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  defaultSelect: {fileID: 0}
+  actionPanel: {fileID: 7077769950636226019}
+  defaultButtons:
+  - label: "\u89D2\u8272"
+    icon: {fileID: 21300000, guid: 5a109229b8480a24c80c60c902db88b0, type: 3}
+    interactable: 1
+    action: 1
+    redDotKey: 1
+  - label: "\u80CC\u5305"
+    icon: {fileID: 21300000, guid: 4709362029e7a6f44b4a84cf6ebf8f61, type: 3}
+    interactable: 1
+    action: 3
+    redDotKey: 3
+  - label: "\u4EFB\u52A1"
+    icon: {fileID: 21300000, guid: 4c5f853f46fec0343878cd028f0a5040, type: 3}
+    interactable: 1
+    action: 7
+    redDotKey: 7
+  - label: "\u5730\u56FE"
+    icon: {fileID: 21300000, guid: d62f261d85f874644a589e6a64ed597d, type: 3}
+    interactable: 1
+    action: 6
+    redDotKey: 6
+  - label: "\u961F\u4F0D"
+    icon: {fileID: 21300000, guid: 5b74629851a78b84c88aa123bb31c530, type: 3}
+    interactable: 1
+    action: 5
+    redDotKey: 5
+  - label: "\u7948\u613F"
+    icon: {fileID: 21300000, guid: a3a65de73f5b71841b2c750714de8c81, type: 3}
+    interactable: 1
+    action: 4
+    redDotKey: 4
+  - label: "\u6B66\u5668"
+    icon: {fileID: 21300000, guid: c53b2ed4a18118f479dd5ca118fbcc9e, type: 3}
+    interactable: 1
+    action: 2
+    redDotKey: 2
+  - label: "\u5546\u57CE"
+    icon: {fileID: 21300000, guid: c205b829db7593f4aa281fcbf9e33834, type: 3}
+    interactable: 1
+    action: 8
+    redDotKey: 8
 --- !u!1 &8982484881761005941
 GameObject:
   m_ObjectHideFlags: 0

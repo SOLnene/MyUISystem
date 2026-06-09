@@ -43,6 +43,7 @@ public class UIManager : SingletonMono<UIManager>
     //uicreate场景中使用，用于关闭场景中原本的ui
     [SerializeField]
     GameObject testCanvas;
+    //[SerializeField] private UIType defaultOpenUI = UIType.HubRoot;
 
     /// <summary>
     /// 预加载的itemslotview,先放这里
@@ -92,7 +93,7 @@ public class UIManager : SingletonMono<UIManager>
         var characterDefinition = GameDatabase.CharacterDatabase.Get("hutao");
         var characterModel = CharacterFactory.Create(characterDefinition, 1);
         var characterDetailVm = new CharacterDetailViewModel(characterModel);
-        UIManager.Instance.Open(UIType.CharacterDetailView, characterDetailVm);
+        Open(UIType.HubRoot);
     }
     
     void Init()
