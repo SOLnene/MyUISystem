@@ -50,7 +50,7 @@ namespace Game.UI.Editor
             rectTransform.pivot = new Vector2(0.5f, 0.5f);
             rectTransform.localScale = Vector3.one;
             rectTransform.localRotation = Quaternion.identity;
-            rectTransform.anchoredPosition = Vector2.zero;
+            rectTransform.anchoredPosition3D = Vector3.zero;
         }
 
         static void SetupCanvasGroup(CanvasGroup canvasGroup)

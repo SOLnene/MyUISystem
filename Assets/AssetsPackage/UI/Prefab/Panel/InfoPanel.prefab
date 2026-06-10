@@ -801,7 +801,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &6178496130266457453
 RectTransform:
   m_ObjectHideFlags: 0
@@ -951,6 +951,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   motionGroup: {fileID: 8621799863754665684}
   motionRoot: {fileID: 4738840684876528675}
+  mode: 0
+  preset: {fileID: 0}
   targetMove: {x: 0, y: 0}
   originMove: {x: 0, y: 0}
   moveDuration: 0.35
