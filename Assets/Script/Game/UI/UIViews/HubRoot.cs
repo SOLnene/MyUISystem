@@ -11,6 +11,8 @@ using Random = UnityEngine.Random;
 public partial class HubRoot : UIView
 {
     //UIControlData
+    private bool mainMenuOpen;
+    private MainMenuNavigator mainMenuNavigator;
     
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -20,6 +22,7 @@ public partial class HubRoot : UIView
     public override void OnOpen(object data)
     {
         base.OnOpen(data);
+        mainMenuNavigator ??= new MainMenuNavigator();
     }
 
     /// <summary>
@@ -34,8 +37,35 @@ public partial class HubRoot : UIView
         }
         if (Input.GetKeyDown(KeyCode.Escape))
         {
-            UIManager.Instance.Open(UIType.MainMenuView);
+            if (mainMenuOpen)
+            {
+                CloseMainMenu();
+            }
+            else
+            {
+                OpenMainMenu();
+            }
         }
+    }
+
+    private void OpenMainMenu()
+    {
+        mainMenuOpen = true;
+        UIManager.Instance.Open(UIType.MainMenuView, new MainMenuOpenParams(HandleMainMenuAction));
+    }
+
+    private void CloseMainMenu(Action callback = null)
+    {
+        UIManager.Instance.Close(UIType.MainMenuView, () =>
+        {
+            mainMenuOpen = false;
+            callback?.Invoke();
+        });
+    }
+
+    private void HandleMainMenuAction(MainMenuAction action)
+    {
+        CloseMainMenu(() => mainMenuNavigator.Open(action));
     }
 
     public void UpdatePlayerStats()

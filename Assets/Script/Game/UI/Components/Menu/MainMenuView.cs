@@ -52,8 +52,12 @@ public class MainMenuView : UIView
         viewModel = data as MainMenuViewModel;
         if (viewModel == null)
         {
+            var openParams = data as MainMenuOpenParams;
             ownedRedDotProvider ??= new MainMenuRedDotProvider();
-            viewModel = new MainMenuViewModel(defaultButtons, ownedRedDotProvider);
+            viewModel = new MainMenuViewModel(
+                openParams?.Buttons ?? defaultButtons,
+                openParams?.RedDotProvider ?? ownedRedDotProvider,
+                openParams?.OnActionRequested);
         }
 
         actionPanel.Bind(viewModel.Buttons, viewModel.RedDotProvider, viewModel.RequestAction);

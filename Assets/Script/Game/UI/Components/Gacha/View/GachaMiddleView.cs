@@ -9,7 +9,7 @@ using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class GachaMiddleView : BindableUI
+public class GachaMiddleView : BindableUI<GachaViewModel>
 {
     #region 控件绑定变量声明，自动生成请勿手改
     		#pragma warning disable 0649
@@ -26,8 +26,9 @@ public class GachaMiddleView : BindableUI
 
 	CompositeDisposable disposable = new CompositeDisposable();
 	int requestId = 0;
-	public void Bind(GachaViewModel vm)
+	public override void Bind(GachaViewModel vm)
 	{
+		base.Bind(vm);
 		disposable.Clear();
 
 		vm.CurrentPoolType
@@ -84,13 +85,13 @@ public class GachaMiddleView : BindableUI
 	
 	void OnDisable()
 	{
-		motionRoot.Cancel();
+		motionRoot?.Cancel();
 	}
 
 	void OnDestroy()
 	{
-		initCts.Cancel();
-		motionRoot.Cancel();
-		disposable.Dispose();
+		initCts?.Cancel();
+		motionRoot?.Cancel();
+		disposable?.Dispose();
 	}
 }
