@@ -19,5 +19,6 @@ public enum UIType
 		CharacterDetailView,
 		TipView,
 		MainMenuView,
+		BackpackView,
 		Max,
 }

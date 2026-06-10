@@ -10,6 +10,14 @@ using UnityEngine.Serialization;
 
 public class BackpackTopView : MonoBehaviour
 {
+    [Serializable]
+    class BackpackCategoryButtonConfig
+    {
+        public ItemCategory category;
+        public string displayName;
+        public Sprite icon;
+    }
+
     [Header("图片")]
     Image bgImage;
     
@@ -26,16 +34,8 @@ public class BackpackTopView : MonoBehaviour
     [SerializeField]
     Transform categoryBtnParent;
     
-    [Header("Config")]
-    [SerializeField]
-    CategoryButtonView categoryBtnPrefab;
-
-    [SerializeField]
-    GameObject coinGroup;
-    [SerializeField]
-    TextMeshProUGUI coinText;
-    
     List<CategoryButtonView> categoryBtns = new();
+    readonly CompositeDisposable bindDisposables = new();
 
     BackpackTopViewModel topVM;
 
@@ -45,8 +45,10 @@ public class BackpackTopView : MonoBehaviour
 
     // UI有映射表
     [SerializeField] 
-    List<CategoryConfig> categoryConfigs;
-
+    List<BackpackCategoryButtonConfig> categoryConfigs;
+    
+    [SerializeField]
+    CategoryButtonView categoryBtnPrefab;
     TopViewType topViewType;
     
     void Awake()
@@ -59,37 +61,32 @@ public class BackpackTopView : MonoBehaviour
 
     public void Bind(BackpackTopViewModel vm)
     {
+        bindDisposables.Clear();
         topVM = vm;
-        
+
         InitCategoryButtons(vm.Categories, vm.SelectedCategoryIndex.Value);
         
         vm.SelectedCategoryIndex.Subscribe(index =>
         {
             UpdateSelectedButton(index);
-        }).AddTo(this);
+        }).AddTo(bindDisposables);
     }
     
     public void InitCategoryButtons(List<ItemCategory> categories, int defaultIndex = 0)
     {
-        //TODO:优化
+        EnsureDefaultCategoryConfigs();
         foreach (Transform child in categoryBtnParent)
         {
             Destroy(child.gameObject);
         }
+
         categoryBtns.Clear();
         for(int i=0; i<categories.Count; i++)
         {
             var btn = Instantiate(categoryBtnPrefab, categoryBtnParent);
             int index = i;
             var config = categoryConfigs.FirstOrDefault(c => c.category == categories[i]);
-            if (config != null)
-            {
-                btn.Init(config.displayName, () => topVM.SetCategory(index));
-            }
-            else
-            {
-                btn.Init(categories[i].ToString(), () => topVM.SetCategory(index));
-            }
+            btn.Init(GetDisplayName(categories[i], config), config?.icon, () => topVM.SetCategory(index));
             categoryBtns.Add(btn);
         }
         
@@ -105,57 +102,39 @@ public class BackpackTopView : MonoBehaviour
 
         var selectedCategory = topVM.Categories[index];
         var config = categoryConfigs.FirstOrDefault(c => c.category == selectedCategory);
-        titleText.text = config != null ? config.displayName : selectedCategory.ToString();
-    }
-    
-    
-    #region 命令式操作（武器详情界面）
-    public void SetTitle(string title)
-    {
-        if (titleText != null)
-            titleText.text = title;
+        titleText.text = GetDisplayName(selectedCategory, config);
     }
 
-    public void SetBgImage(bool show)
+    string GetDisplayName(ItemCategory category, BackpackCategoryButtonConfig config)
     {
-        if (bgImage != null)
+        if (config != null && !string.IsNullOrEmpty(config.displayName))
         {
-            bgImage.gameObject.SetActive(show);
+            return config.displayName;
         }
+
+        return category.ToString();
     }
 
-    /*public void SetIcon(Sprite sprite)
+    void EnsureDefaultCategoryConfigs()
     {
-        if (iconImage != null)
-            iconImage.sprite = sprite;
-    }
+        if (categoryConfigs != null && categoryConfigs.Count > 0)
+        {
+            return;
+        }
 
-    public void SetBackButtonType(bool useArrow)
-    {
-        if (backArrowImage != null)
-            backArrowImage.gameObject.SetActive(useArrow);
-    }
-
-   
-
-    public void HideCoins()
-    {
-        if (coinIcon != null) coinIcon.gameObject.SetActive(false);
-        if (coinText != null) coinText.gameObject.SetActive(false);
-    }*/
-    public void SetCoins(int coins)
-    {
-        if (coinText != null)
-            coinText.text = coins.ToString();
-        if (coinGroup != null)
-            coinGroup.gameObject.SetActive(true);
+        categoryConfigs = new List<BackpackCategoryButtonConfig>
+        {
+            new BackpackCategoryButtonConfig { category = ItemCategory.Equip },
+            new BackpackCategoryButtonConfig { category = ItemCategory.Consumable },
+            new BackpackCategoryButtonConfig { category = ItemCategory.Material },
+            new BackpackCategoryButtonConfig { category = ItemCategory.QuestItem },
+            new BackpackCategoryButtonConfig { category = ItemCategory.ExpBook },
+            new BackpackCategoryButtonConfig { category = ItemCategory.All },
+        };
     }
     
-    public void HideCategoryButtons()
+    void OnDestroy()
     {
-        if (categoryBtnParent != null) categoryBtnParent.gameObject.SetActive(false);
-        //if (categoryCountText != null) categoryCountText.gameObject.SetActive(false);
+        bindDisposables.Dispose();
     }
-    
-    #endregion
 }

@@ -42,7 +42,7 @@ public class BackpackEntry : MonoBehaviour
         // 4. Back 按钮
         topView.OnBackClicked += () => Debug.Log("关闭背包");
         topView.OnBackClicked += OnBackClicked;
-        middleView.Bind(backpackVM.middleVM);
+        //middleView.Bind(backpackVM.middleVM);
         infoView.Bind(backpackVM.infoVM);
         bottomView.Bind(backpackVM);
         

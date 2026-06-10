@@ -22,17 +22,12 @@ public class BackpackMiddleViewModel
         
         vm.SlotsViewModels.ObserveAdd().Subscribe(_ => UpdateDisplayItems()).AddTo(disposables);
         vm.SlotsViewModels.ObserveRemove().Subscribe(_ => UpdateDisplayItems()).AddTo(disposables);
-
-        foreach (var slot in vm.SlotsViewModels)
-        {
-            slot.onClick.Subscribe(_ => OnSlotClicked(slot)).AddTo(disposables);
-        }
         UpdateDisplayItems();
     }
 
     public void SelectItem(ItemSlotViewModel slot)
     {
-        backpackVM.selectedSlot.Value = slot;
+        OnSlotClicked(slot);
     }
     
     public void FilterByCategory(ItemCategory category)

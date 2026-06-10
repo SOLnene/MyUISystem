@@ -69,7 +69,7 @@ internal class MainMenuNavigator
 
     private void OpenBackpack()
     {
-        Debug.LogWarning("Cannot open backpack: BackpackView is not registered in UIType/UIConfig yet.");
+        UIManager.Instance.Open(UIType.BackpackView);
     }
 
     private void ShowUnavailable(MainMenuAction action)
