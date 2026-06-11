@@ -153,7 +153,10 @@ public class PrefabPool
         
         ListPool<GameObject>.Release(pool);
         ListPool<GameObject>.Release(useList);
-        Pools.Remove(poolName);
+        if (!string.IsNullOrEmpty(poolName))
+        {
+            Pools.Remove(poolName);
+        }
 
         pool = null;
         useList = null;

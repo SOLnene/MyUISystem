@@ -11,28 +11,31 @@ public class BackpackItemGridView : MonoBehaviour
     Transform slotParent;
     [SerializeField]
     ItemSlotView slotPrefab;
-    
-    string slotPrefabAddress = "ui/prefab/item_slot_backpack";
+    [SerializeField]
+    float slotShowDelay = 0.03f;
 
     BackpackMiddleViewModel middleVM;
 
     readonly List<ItemSlotView> activeSlots = new();
     readonly CompositeDisposable bindDisposables = new();
-    CancellationTokenSource bindCts;
+    readonly CompositeDisposable slotDisposables = new();
+    CancellationTokenSource slotAnimationCts;
+    PrefabPool slotPool;
+
+    void Awake()
+    {
+        slotPool = PrefabPool.Create(slotPrefab.gameObject);
+    }
 
     public void Bind(BackpackMiddleViewModel vm)
     {
-        bindCts?.Cancel();
-        bindCts?.Dispose();
-        bindCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
-
         bindDisposables.Clear();
-        ClearSlots();
         middleVM = vm;
+        ResetDisplayedSlots();
 
         vm.displaySlots.ObserveAdd().Subscribe(add =>
         {
-            CreateSlotAsync(add.Value, bindCts.Token).Forget();
+            CreateSlot(add.Value, activeSlots.Count, slotAnimationCts.Token);
         }).AddTo(bindDisposables);
 
         vm.displaySlots.ObserveRemove().Subscribe(rem =>
@@ -40,74 +43,91 @@ public class BackpackItemGridView : MonoBehaviour
             var view = activeSlots.Find(v => v.vm == rem.Value);
             if (view != null)
             {
-                ResourceManager.Instance.Recycle(view.gameObject);
+                RecycleSlot(view);
                 activeSlots.Remove(view);
             }
         }).AddTo(bindDisposables);
 
         vm.displaySlots.ObserveReset().Subscribe(_ =>
         {
-            ClearSlots();
+            ResetDisplayedSlots();
             foreach (var slotVM in vm.displaySlots)
             {
-                CreateSlotAsync(slotVM, bindCts.Token).Forget();
+                CreateSlot(slotVM, activeSlots.Count, slotAnimationCts.Token);
             }
         }).AddTo(bindDisposables);
 
         foreach (var slotVM in vm.displaySlots)
         {
-            CreateSlotAsync(slotVM, bindCts.Token).Forget();
+            CreateSlot(slotVM, activeSlots.Count, slotAnimationCts.Token);
         }
     }
 
-    async UniTaskVoid CreateSlotAsync(ItemSlotViewModel slotVM, CancellationToken cancellationToken)
+    void CreateSlot(ItemSlotViewModel slotVM, int showIndex, CancellationToken cancellationToken)
     {
-        ItemSlotView slotView;
-        try
-        {
-            slotView = await ItemFactory.InstantiateItemSlot(slotVM, slotParent, slotPrefabAddress)
-                .AttachExternalCancellation(cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        if (slotView == null)
-        {
-            return;
-        }
-
-        if (cancellationToken.IsCancellationRequested || middleVM == null || !middleVM.displaySlots.Contains(slotVM))
-        {
-            ResourceManager.Instance.Recycle(slotView.gameObject);
-            return;
-        }
-
+        var slotView = slotPool.Get(slotParent).GetComponent<ItemSlotView>();
         slotView.Bind(slotVM);
+        slotView.HideImmediate();
         slotVM.onClick.Subscribe(_ =>
         {
             middleVM.SelectItem(slotVM);
-        }).AddTo(bindDisposables);
+        }).AddTo(slotDisposables);
         activeSlots.Add(slotView);
+        ShowSlotAsync(slotView, showIndex, cancellationToken).Forget();
+    }
+
+    async UniTaskVoid ShowSlotAsync(ItemSlotView slotView, int showIndex, CancellationToken cancellationToken)
+    {
+        try
+        {
+            if (showIndex > 0)
+            {
+                await UniTask.Delay(
+                    TimeSpan.FromSeconds(showIndex * slotShowDelay),
+                    cancellationToken: cancellationToken);
+            }
+
+            await slotView.Show().AttachExternalCancellation(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+        }
+    }
+
+    void ResetDisplayedSlots()
+    {
+        slotAnimationCts?.Cancel();
+        slotAnimationCts?.Dispose();
+        slotAnimationCts = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        ClearSlots();
     }
 
     void ClearSlots()
     {
+        slotDisposables.Clear();
         foreach (var slotView in activeSlots)
         {
             if (slotView != null)
             {
-                ResourceManager.Instance.Recycle(slotView.gameObject);
+                RecycleSlot(slotView);
             }
         }
         activeSlots.Clear();
     }
 
+    void RecycleSlot(ItemSlotView slotView)
+    {
+        slotView.ResetState();
+        slotPool.Recycle(slotView.gameObject);
+    }
+
     void OnDestroy()
     {
-        bindCts?.Cancel();
-        bindCts?.Dispose();
+        slotAnimationCts?.Cancel();
+        slotAnimationCts?.Dispose();
+        ClearSlots();
+        slotPool?.Destroy();
+        slotDisposables.Dispose();
         bindDisposables.Dispose();
     }
 }

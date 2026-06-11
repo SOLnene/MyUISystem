@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
@@ -31,6 +32,8 @@ public class ItemSlotView : UIThreeStateSelectable
     Image checkedImage;
     [SerializeField]
     Transform scaleRoot;
+    [SerializeField]
+    AnimatedPanel anim;
     
     [Space]
     [Header("按钮")]
@@ -62,12 +65,14 @@ public class ItemSlotView : UIThreeStateSelectable
 
     // 本地请求版本号，用来判定异步结果是否仍然有效
     int iconRequestVersion = 0;
+    CancellationTokenSource loadCts;
     
     CompositeDisposable disposable = new CompositeDisposable();
     
     //todo:只穿绑定方法，使格子可以复用
     public void Bind(ItemSlotViewModel vm)
     {
+        ResetState();
         this.vm = vm;
 
         if (vm == null)
@@ -75,6 +80,8 @@ public class ItemSlotView : UIThreeStateSelectable
             ClearView();
             return;
         }
+
+        loadCts = new CancellationTokenSource();
 
         // 初始化状态
         itemCountText.gameObject.SetActive(!vm.isEmpty.Value);
@@ -88,8 +95,10 @@ public class ItemSlotView : UIThreeStateSelectable
         if (vm.isEmpty.Value)
         {
             Debug.Log($"empty");
-            LoadIconAsync("Assets/AssetsPackage/UI/Sprite/TouchIcon/UI_TouchIcon_Plus.png", ++iconRequestVersion)
-                .AttachExternalCancellation(this.GetCancellationTokenOnDestroy())
+            LoadIconAsync(
+                    "Assets/AssetsPackage/UI/Sprite/TouchIcon/UI_TouchIcon_Plus.png",
+                    ++iconRequestVersion,
+                    loadCts.Token)
                 .Forget();
         }
         
@@ -107,7 +116,7 @@ public class ItemSlotView : UIThreeStateSelectable
             itemCountText.text = count;
         }).AddTo(disposable);
 
-        vm.color.Subscribe(color => colorImage.color = color).AddTo(this);
+        vm.color.Subscribe(color => colorImage.color = color).AddTo(disposable);
         
         vm.star.Subscribe(star =>
         {
@@ -118,8 +127,7 @@ public class ItemSlotView : UIThreeStateSelectable
             .Subscribe(path =>
             {
                 var reqVeison = ++iconRequestVersion;
-                    LoadIconAsync(path,reqVeison)
-                    .AttachExternalCancellation(this.GetCancellationTokenOnDestroy())
+                    LoadIconAsync(path, reqVeison, loadCts.Token)
                     .Forget();
             })
             .AddTo(disposable);
@@ -158,8 +166,44 @@ public class ItemSlotView : UIThreeStateSelectable
                 {
                     selectedValueText.text = value.ToString();
                 }
-            });
+            }).AddTo(disposable);
     }
+
+    public UniTask Show(bool instant = false)
+    {
+        return anim.Show(instant);
+    }
+
+    public UniTask<bool> Hide(bool instant = false)
+    {
+        return anim.Hide(instant);
+    }
+
+    public void HideImmediate()
+    {
+        anim.HideImmediate();
+    }
+
+    public void ResetState()
+    {
+        loadCts?.Cancel();
+        loadCts?.Dispose();
+        loadCts = null;
+
+        ++iconRequestVersion;
+        disposable.Clear();
+        itemBtn.onClick.RemoveAllListeners();
+        removeBtn.onClick.RemoveAllListeners();
+
+        selectTween?.Kill();
+        hoverTween?.Kill();
+        loopTween?.Kill();
+        selectTween = null;
+        hoverTween = null;
+        loopTween = null;
+        vm = null;
+    }
+
     private void ClearView()
     {
         itemNameText.text = "";
@@ -174,11 +218,20 @@ public class ItemSlotView : UIThreeStateSelectable
     }
     
     
-    async UniTask LoadIconAsync(string iconPath,int requestVersion)
+    async UniTask LoadIconAsync(string iconPath, int requestVersion, CancellationToken cancellationToken)
     {
         //Debug.Log($"[LoadIconAsync] 开始加载 {iconPath}, ver={requestVersion}");
 
-        var sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(iconPath);
+        Sprite sprite;
+        try
+        {
+            sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(iconPath)
+                .AttachExternalCancellation(cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
 
         if (sprite == null)
         {
@@ -207,8 +260,8 @@ public class ItemSlotView : UIThreeStateSelectable
             starParent.GetChild(i).gameObject.SetActive(i < level);
         }
     }
-
    
+
     #region 动画相关
     protected override void ApplyVisualState(VisualState state, bool instant, bool stateChanged)
     {
@@ -293,6 +346,12 @@ public class ItemSlotView : UIThreeStateSelectable
     void SetGlowAlpha(float alpha)
     {
         glowEffectImage.color = new Color(glowEffectImage.color.r, glowEffectImage.color.g, glowEffectImage.color.b, alpha);
+    }
+
+    void OnDestroy()
+    {
+        ResetState();
+        disposable.Dispose();
     }
       #endregion
 }
