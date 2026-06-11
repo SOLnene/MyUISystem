@@ -13,7 +13,9 @@ public class InfoPanelView : MonoBehaviour
     [SerializeField]
     TextMeshProUGUI nameText;
     [SerializeField]
-    TextMeshProUGUI descText;
+    TextMeshProUGUI categoryValue;
+    [SerializeField]
+    InfoPanelBottomView bottomView;
     [SerializeField]
     GameObject statArea;
     [SerializeField]
@@ -56,7 +58,8 @@ public class InfoPanelView : MonoBehaviour
 
         infoPanelVM = vm;
         vm.name.Subscribe(name => nameText.text = name).AddTo(disposable);
-        vm.desc.Subscribe(desc => descText.text = desc).AddTo(disposable);
+        vm.categoryValue.Subscribe(category => categoryValue.text = category).AddTo(disposable);
+        bottomView.Bind(vm);
         vm.showStatArea.Subscribe(show => statArea.SetActive(show)).AddTo(disposable);
         vm.mainStatLabel.Subscribe(label => mainStatLabelText.text = label).AddTo(disposable);
         vm.mainStatValue.Subscribe(value => mainStatValueText.text = value).AddTo(disposable);
@@ -134,7 +137,8 @@ public class InfoPanelView : MonoBehaviour
     public void Refresh(InventoryItem item)
     {
         nameText.text = item.ItemName;
-        descText.text = item.Desc;
+        categoryValue.text = ItemCategoryDisplayName.Get(item.Category);
+        bottomView.Display(item);
         ApplyStatArea(item);
         Color color = RarityConfig.GetColor(item.ItemRarity);
         //topBgImage.color = color;
@@ -145,7 +149,8 @@ public class InfoPanelView : MonoBehaviour
     private void UpdateDisplay(InventoryItem item)
     {
         nameText.text = item.ItemName;
-        descText.text = item.Desc;
+        categoryValue.text = ItemCategoryDisplayName.Get(item.Category);
+        bottomView.Display(item);
         ApplyStatArea(item);
         Color color = RarityConfig.GetColor(item.ItemRarity);
         //topBgImage.color = color;

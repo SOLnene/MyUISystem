@@ -6,6 +6,7 @@ using UniRx;
 public class InfoPanelViewModel: IDisposable
 {
     public readonly ReactiveProperty<string> name = new();
+    public readonly ReactiveProperty<string> categoryValue = new();
     public readonly ReactiveProperty<string> desc = new();
     public readonly ReactiveProperty<int> stars = new();
     public readonly ReactiveProperty<Color> color = new();
@@ -16,12 +17,15 @@ public class InfoPanelViewModel: IDisposable
     internal readonly ReactiveProperty<string> mainStatValue = new();
     internal readonly ReactiveProperty<string> subStatLabel = new();
     internal readonly ReactiveProperty<string> subStatValue = new();
+    internal readonly ReactiveProperty<ItemViewModel> currentItem = new();
     
     CompositeDisposable disposables = new();
     
     public void Bind(ItemViewModel vm)
     {
         disposables.Clear();
+        currentItem.Value = vm;
+        categoryValue.Value = ItemCategoryDisplayName.Get(vm.Model.Category);
         vm.name.Subscribe(x => name.Value = x).AddTo(disposables);
         vm.desc.Subscribe(x => desc.Value = x).AddTo(disposables);
         vm.iconPath.Subscribe(x => iconPath.Value = x).AddTo(disposables);

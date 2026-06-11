@@ -385,6 +385,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7715403083779475696}
   - component: {fileID: 4906669698197178967}
+  - component: {fileID: 7398756194285012364}
   m_Layer: 5
   m_Name: PromoteStarContainer
   m_TagString: Untagged
@@ -443,6 +444,27 @@ MonoBehaviour:
   m_ChildScaleWidth: 0
   m_ChildScaleHeight: 0
   m_ReverseArrangement: 0
+--- !u!114 &7398756194285012364
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8819181389577801289}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7a2f71e5c08b4be287b6d4be6bc99312, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  starIcons:
+  - {fileID: 3682729980406479698}
+  - {fileID: 2699370671445758414}
+  - {fileID: 6735282795128047340}
+  - {fileID: 5777108953330724765}
+  - {fileID: 4910893977177009499}
+  - {fileID: 1600401075411579308}
+  activeColor: {r: 1, g: 1, b: 1, a: 1}
+  inactiveColor: {r: 0.5019608, g: 0.5019608, b: 0.5019608, a: 1}
 --- !u!1 &9204313200245366743
 GameObject:
   m_ObjectHideFlags: 0
