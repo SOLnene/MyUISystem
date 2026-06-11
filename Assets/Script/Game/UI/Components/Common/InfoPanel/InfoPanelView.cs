@@ -15,7 +15,15 @@ public class InfoPanelView : MonoBehaviour
     [SerializeField]
     TextMeshProUGUI descText;
     [SerializeField]
-    TextMeshProUGUI displayMainText;
+    GameObject statArea;
+    [SerializeField]
+    TextMeshProUGUI mainStatLabelText;
+    [SerializeField]
+    TextMeshProUGUI mainStatValueText;
+    [SerializeField]
+    TextMeshProUGUI subStatLabelText;
+    [SerializeField]
+    TextMeshProUGUI subStatValueText;
     
     
     [Header("背景图")]
@@ -49,7 +57,11 @@ public class InfoPanelView : MonoBehaviour
         infoPanelVM = vm;
         vm.name.Subscribe(name => nameText.text = name).AddTo(disposable);
         vm.desc.Subscribe(desc => descText.text = desc).AddTo(disposable);
-        vm.displayMainText.Subscribe(mainText => displayMainText.text = mainText).AddTo(disposable);
+        vm.showStatArea.Subscribe(show => statArea.SetActive(show)).AddTo(disposable);
+        vm.mainStatLabel.Subscribe(label => mainStatLabelText.text = label).AddTo(disposable);
+        vm.mainStatValue.Subscribe(value => mainStatValueText.text = value).AddTo(disposable);
+        vm.subStatLabel.Subscribe(label => subStatLabelText.text = label).AddTo(disposable);
+        vm.subStatValue.Subscribe(value => subStatValueText.text = value).AddTo(disposable);
         vm.stars.Subscribe(SetStars).AddTo(disposable);
         vm.color.Subscribe(color =>
         {
@@ -123,7 +135,7 @@ public class InfoPanelView : MonoBehaviour
     {
         nameText.text = item.ItemName;
         descText.text = item.Desc;
-        displayMainText.text = item.GetDisplayMainText();
+        ApplyStatArea(item);
         Color color = RarityConfig.GetColor(item.ItemRarity);
         //topBgImage.color = color;
         middleBgImage.color = color;
@@ -134,11 +146,27 @@ public class InfoPanelView : MonoBehaviour
     {
         nameText.text = item.ItemName;
         descText.text = item.Desc;
-        displayMainText.text = item.GetDisplayMainText();
+        ApplyStatArea(item);
         Color color = RarityConfig.GetColor(item.ItemRarity);
         //topBgImage.color = color;
         middleBgImage.color = color;
         SetStars(item.Stars);
+    }
+
+    void ApplyStatArea(InventoryItem item)
+    {
+        bool showStats = item is EquipItem;
+        statArea.SetActive(showStats);
+        if (!showStats)
+        {
+            return;
+        }
+
+        var equipItem = (EquipItem)item;
+        mainStatLabelText.text = "基础攻击力";
+        mainStatValueText.text = equipItem.GetDisplayMainStatText();
+        subStatLabelText.text = "暴击伤害";
+        subStatValueText.text = equipItem.GetCriticalDamage().ToString("P1");
     }
 
     void SetStars(int stars)
