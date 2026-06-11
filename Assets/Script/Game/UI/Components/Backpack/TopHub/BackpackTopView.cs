@@ -6,6 +6,7 @@ using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using UniRx;
+using Cysharp.Threading.Tasks;
 using UnityEngine.Serialization;
 
 public class BackpackTopView : MonoBehaviour
@@ -49,7 +50,19 @@ public class BackpackTopView : MonoBehaviour
     
     [SerializeField]
     CategoryButtonView categoryBtnPrefab;
+    [SerializeField]
+    AnimatedPanel anim;
     TopViewType topViewType;
+
+    public UniTask Show()
+    {
+        return anim.Show();
+    }
+
+    public async UniTask Hide()
+    {
+        await anim.Hide();
+    }
     
     void Awake()
     {

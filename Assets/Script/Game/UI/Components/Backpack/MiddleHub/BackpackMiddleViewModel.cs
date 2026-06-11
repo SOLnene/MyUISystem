@@ -34,6 +34,10 @@ public class BackpackMiddleViewModel
     {
         currentCategory = category;
         UpdateDisplayItems();
+        if (displaySlots.Count > 0)
+        {
+            OnSlotClicked(displaySlots[0]);
+        }
     }
 
     void UpdateDisplayItems()

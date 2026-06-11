@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -17,7 +18,19 @@ public class BottomView : MonoBehaviour,IActionHubView
     Transform buttonContainer;
     [SerializeField]
     GameObject buttonPrefab;
+    [SerializeField]
+    AnimatedPanel anim;
     readonly List<Button> activeButtons = new List<Button>();
+
+    public UniTask Show()
+    {
+        return anim.Show();
+    }
+
+    public async UniTask Hide()
+    {
+        await anim.Hide();
+    }
     
     
     public void Bind(BackpackViewModel backpackViewModel)

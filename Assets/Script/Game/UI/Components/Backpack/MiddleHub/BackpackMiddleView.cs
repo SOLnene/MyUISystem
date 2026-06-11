@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 public class BackpackMiddleView : MonoBehaviour
@@ -6,6 +7,18 @@ public class BackpackMiddleView : MonoBehaviour
     BackpackItemGridView itemGridView;
     [SerializeField]
     InfoPanelView infoPanelView;
+    [SerializeField]
+    AnimatedPanel anim;
+
+    public UniTask Show()
+    {
+        return anim.Show();
+    }
+
+    public async UniTask Hide()
+    {
+        await anim.Hide();
+    }
 
     public void Bind(BackpackMiddleViewModel middleVM, InfoPanelViewModel infoVM)
     {
