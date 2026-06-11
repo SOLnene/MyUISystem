@@ -9,6 +9,8 @@ public class BackpackItemGridView : MonoBehaviour
 {
     [SerializeField]
     Transform slotParent;
+    [SerializeField]
+    ItemSlotView slotPrefab;
     
     string slotPrefabAddress = "ui/prefab/item_slot_backpack";
 
