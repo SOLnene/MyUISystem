@@ -17,7 +17,7 @@ public class GachaFlowController : IDisposable
 
         session.OnPreviewFinished
             .Take(1)
-            .Subscribe(_ => ShowResult(session))
+            .Subscribe(_ => HandleRevealFinished(session))
             .AddTo(sessionDisposables);
 
         session.OnSessionFinished
@@ -36,9 +36,15 @@ public class GachaFlowController : IDisposable
             );
     }
     
-    void ShowResult(GachaSessionViewModel session)
+    void HandleRevealFinished(GachaSessionViewModel session)
     {
         UIManager.Instance.Close(UIType.GachaResultDetailPopup);
+
+        if (session.Items.Count == 1)
+        {
+            session.FinishSession();
+            return;
+        }
 
         resultViewModel = new GachaResultViewModel(session.Items);
 
