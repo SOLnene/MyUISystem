@@ -22,7 +22,10 @@ public partial class GachaView : UIView
     Button closeBtn;
     [SerializeField]
     AnimatedPanel bottomHub;
+    [SerializeField]
+    GameObject inputBlocker;
     bool isClosing;
+    bool isInputLocked;
     //UIControlData
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -55,6 +58,8 @@ public partial class GachaView : UIView
         GachaTopHubViewModel topVm = new GachaTopHubViewModel(vm.CurrentPoolType);
         topHub.Bind(topVm).Forget();
         //middleView
+        middleHub.InputLockChanged -= SetInputLocked;
+        middleHub.InputLockChanged += SetInputLocked;
         middleHub.Bind(vm);
         
         Draw1Btn.onClick.RemoveAllListeners();
@@ -67,13 +72,35 @@ public partial class GachaView : UIView
 
     async UniTask ShowHubs()
     {
-        await UniTask.WhenAll(topHub.Show(), middleHub.Show(), bottomHub.Show());
+        SetInputLocked(true);
+        try
+        {
+            await UniTask.WhenAll(topHub.Show(), middleHub.Show(), bottomHub.Show());
+        }
+        finally
+        {
+            SetInputLocked(false);
+        }
     }
 
     async UniTask CloseWithAnimation()
     {
-        await UniTask.WhenAll(topHub.Hide(), middleHub.Hide(), bottomHub.Hide());
-        base.OnCancel();
+        SetInputLocked(true);
+        try
+        {
+            await UniTask.WhenAll(topHub.Hide(), middleHub.Hide(), bottomHub.Hide());
+            base.OnCancel();
+        }
+        finally
+        {
+            SetInputLocked(false);
+        }
+    }
+
+    void SetInputLocked(bool isLocked)
+    {
+        isInputLocked = isLocked;
+        inputBlocker.SetActive(isInputLocked);
     }
 
     public override void OnCancel()
@@ -106,6 +133,7 @@ public partial class GachaView : UIView
 
     public override void OnRelease()
     {
+        middleHub.InputLockChanged -= SetInputLocked;
         disposable.Dispose();
         flowController.Dispose();
         base.OnRelease();

@@ -27,6 +27,7 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 	CompositeDisposable disposable = new CompositeDisposable();
 	GachaViewModel viewModel;
 	GachaPoolType? displayedPoolType;
+	internal event Action<bool> InputLockChanged;
 
 	internal async UniTask Show()
 	{
@@ -64,8 +65,9 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 	async UniTask Init(GachaPoolType type)
 	{
 		initCts?.Cancel();
-		initCts = new CancellationTokenSource();
-		var token = initCts.Token;
+		var cts = new CancellationTokenSource();
+		initCts = cts;
+		var token = cts.Token;
 
 		if (!displayedPoolType.HasValue)
 		{
@@ -73,10 +75,21 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 			return;
 		}
 
-		await anim.Hide();
-		token.ThrowIfCancellationRequested();
-		SetPoolVisual(type);
-		await anim.Show();
+		InputLockChanged?.Invoke(true);
+		try
+		{
+			await anim.Hide();
+			token.ThrowIfCancellationRequested();
+			SetPoolVisual(type);
+			await anim.Show();
+		}
+		finally
+		{
+			if (initCts == cts)
+			{
+				InputLockChanged?.Invoke(false);
+			}
+		}
 	}
 
 	void SetPoolVisual(GachaPoolType type)
