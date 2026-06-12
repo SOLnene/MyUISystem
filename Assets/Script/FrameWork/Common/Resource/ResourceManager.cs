@@ -26,11 +26,6 @@ public class ResourceManager : Singleton<ResourceManager>
     /// </summary>
     Dictionary<string, AsyncOperationHandle> assetHandles = new Dictionary<string, AsyncOperationHandle>();
     /// <summary>
-    /// 维护加载canceltoken
-    /// </summary>
-    private Dictionary<string, CancellationTokenSource> loadingCTS = new Dictionary<string, CancellationTokenSource>();
-    
-    /// <summary>
     /// 常驻资源路径集合
     /// </summary>
     HashSet<string> residentAssets = new HashSet<string>();
@@ -155,10 +150,6 @@ public class ResourceManager : Singleton<ResourceManager>
         }
         else
         {
-            // 新建 CTS
-            var cts = new CancellationTokenSource();
-            loadingCTS[path] = cts;
-            
             loadingAssetsCount++;
             assetRefCounts[path] = 1;
 
@@ -169,11 +160,6 @@ public class ResourceManager : Singleton<ResourceManager>
             newHandle.Completed += result =>
             {
                 loadingAssetsCount--;
-                if (loadingCTS.TryGetValue(path, out var loadingCts))
-                {
-                    loadingCts.Dispose();
-                    loadingCTS.Remove(path);
-                }
 
                 if (result.Status != AsyncOperationStatus.Succeeded)
                 {
@@ -218,32 +204,6 @@ public class ResourceManager : Singleton<ResourceManager>
         }
     }
 
-    /// <summary>
-    /// 取消某条路径加载
-    /// </summary>
-    public void CancelLoad(string path)
-    {
-        if (loadingCTS.TryGetValue(path, out var cts))
-        {
-            cts.Cancel();
-            cts.Dispose();
-            loadingCTS.Remove(path);
-        }
-    }
-
-    /// <summary>
-    /// 取消所有正在加载的资源（如关闭页面）
-    /// </summary>
-    public void CancelAll()
-    {
-        foreach (var cts in loadingCTS.Values)
-        {
-            cts.Cancel();
-            cts.Dispose();
-        }
-        loadingCTS.Clear();
-    }
-    
     /// <summary>
     /// 兼容
     /// </summary>
