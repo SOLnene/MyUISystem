@@ -500,6 +500,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemGridView: {fileID: 6244591927593396447}
   infoPanelView: {fileID: 3202374988011665945}
+  virtualItemGridView: {fileID: 2693209287891629834}
   anim: {fileID: 1537763209078717335}
 --- !u!1 &3472695310164514155
 GameObject:
@@ -1409,6 +1410,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotParent: {fileID: 5734702194959712599}
   slotPrefab: {fileID: 7601814714860825140, guid: ceaff0b588559604593947a84353a8a0, type: 3}
+  slotShowDelay: 0.03
 --- !u!1 &7899554074599206089
 GameObject:
   m_ObjectHideFlags: 0
@@ -1421,6 +1423,7 @@ GameObject:
   - component: {fileID: 8675871093437761259}
   - component: {fileID: 7685399390030083905}
   - component: {fileID: 8647161758608717179}
+  - component: {fileID: 2693209287891629834}
   m_Layer: 5
   m_Name: Scroll View
   m_TagString: Untagged
@@ -1517,6 +1520,25 @@ MonoBehaviour:
   m_OnValueChanged:
     m_PersistentCalls:
       m_Calls: []
+--- !u!114 &2693209287891629834
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7899554074599206089}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7adfb2171d323cc47ae59811a77713ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  scrollRect: {fileID: 8647161758608717179}
+  viewport: {fileID: 1310235810822178452}
+  content: {fileID: 5734702194959712599}
+  gridLayout: {fileID: 8046548715945899261}
+  slotPrefab: {fileID: 7601814714860825140, guid: ceaff0b588559604593947a84353a8a0, type: 3}
+  bufferRows: 1
+  slotShowDelay: 0.03
 --- !u!1 &8310658120578113009
 GameObject:
   m_ObjectHideFlags: 0
@@ -1527,6 +1549,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5734702194959712599}
   - component: {fileID: 8046548715945899261}
+  - component: {fileID: 5186813700720161346}
   m_Layer: 5
   m_Name: Content
   m_TagString: Untagged
@@ -1550,8 +1573,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: 0.000061035156}
-  m_SizeDelta: {x: 0, y: 300}
+  m_AnchoredPosition: {x: 0, y: 0.000091552734}
+  m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 1}
 --- !u!114 &8046548715945899261
 MonoBehaviour:
@@ -1575,8 +1598,22 @@ MonoBehaviour:
   m_StartAxis: 0
   m_CellSize: {x: 120, y: 150}
   m_Spacing: {x: 20, y: 20}
-  m_Constraint: 0
-  m_ConstraintCount: 2
+  m_Constraint: 1
+  m_ConstraintCount: 4
+--- !u!114 &5186813700720161346
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8310658120578113009}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_HorizontalFit: 0
+  m_VerticalFit: 2
 --- !u!1 &8627940016542836281
 GameObject:
   m_ObjectHideFlags: 0
@@ -2189,7 +2226,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1309273679572736090, guid: 04fdeb5f3357c884c992966ef6c47165, type: 3}
       propertyPath: m_Size
-      value: 0.49089983
+      value: 0.4908999
       objectReference: {fileID: 0}
     - target: {fileID: 1309273679572736090, guid: 04fdeb5f3357c884c992966ef6c47165, type: 3}
       propertyPath: m_Value

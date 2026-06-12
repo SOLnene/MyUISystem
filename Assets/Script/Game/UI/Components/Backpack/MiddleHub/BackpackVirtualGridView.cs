@@ -25,12 +25,12 @@ public class BackpackVirtualGridView : MonoBehaviour
 
     readonly List<ItemSlotView> slots = new();
     readonly Dictionary<ItemSlotView, CompositeDisposable> slotClickSubscriptions = new();
+    readonly Dictionary<ItemSlotView, CancellationTokenSource> slotAnimationSources = new();
     readonly CompositeDisposable collectionSubscriptions = new();
 
     BackpackMiddleViewModel middleVM;
     PrefabPool slotPool;
     RectOffset basePadding;
-    CancellationTokenSource enterAnimationCts;
     int firstBoundRow;
     bool reloadScheduled;
     bool isRebuildingLayout;
@@ -68,7 +68,7 @@ public class BackpackVirtualGridView : MonoBehaviour
             .Subscribe(_ => ScheduleReload())
             .AddTo(collectionSubscriptions);
 
-        ReloadFromItems(true);
+        ScheduleReload();
     }
 
     void ScheduleReload()
@@ -99,18 +99,12 @@ public class BackpackVirtualGridView : MonoBehaviour
 
     void ReloadFromItems(bool playEnterAnimation)
     {
-        CancelEnterAnimations();
+        CancelAllSlotAnimations();
         EnsureSlotPool();
 
         scrollRect.StopMovement();
         content.anchoredPosition = new Vector2(content.anchoredPosition.x, 0f);
         firstBoundRow = 0;
-
-        if (playEnterAnimation)
-        {
-            enterAnimationCts = CancellationTokenSource.CreateLinkedTokenSource(
-                this.GetCancellationTokenOnDestroy());
-        }
 
         BindAllSlots(playEnterAnimation);
         UpdateVirtualPadding();
@@ -139,7 +133,6 @@ public class BackpackVirtualGridView : MonoBehaviour
             return;
         }
 
-        CancelEnterAnimations();
         MoveWindowToRow(CalculateTargetFirstBoundRow());
     }
 
@@ -161,7 +154,7 @@ public class BackpackVirtualGridView : MonoBehaviour
         if (Mathf.Abs(rowDelta) >= PoolRowCount)
         {
             firstBoundRow = targetFirstRow;
-            BindAllSlots(false);
+            BindAllSlots(true);
         }
         else if (rowDelta > 0)
         {
@@ -217,7 +210,7 @@ public class BackpackVirtualGridView : MonoBehaviour
     {
         for (int i = 0; i < rowSlots.Count; i++)
         {
-            BindSlot(rowSlots[i], firstDataIndex + i, 0, false);
+            BindSlot(rowSlots[i], firstDataIndex + i, i, true);
         }
     }
 
@@ -232,6 +225,7 @@ public class BackpackVirtualGridView : MonoBehaviour
 
     void BindSlot(ItemSlotView slot, int dataIndex, int displayOrder, bool playEnterAnimation)
     {
+        CancelSlotAnimation(slot);
         var subscriptions = slotClickSubscriptions[slot];
         subscriptions.Clear();
 
@@ -251,7 +245,10 @@ public class BackpackVirtualGridView : MonoBehaviour
         if (playEnterAnimation)
         {
             slot.HideImmediate();
-            ShowSlotAsync(slot, displayOrder, enterAnimationCts.Token).Forget();
+            var animationCts = CancellationTokenSource.CreateLinkedTokenSource(
+                this.GetCancellationTokenOnDestroy());
+            slotAnimationSources[slot] = animationCts;
+            ShowSlotAsync(slot, displayOrder, animationCts).Forget();
         }
         else
         {
@@ -262,7 +259,7 @@ public class BackpackVirtualGridView : MonoBehaviour
     async UniTaskVoid ShowSlotAsync(
         ItemSlotView slot,
         int displayOrder,
-        CancellationToken cancellationToken)
+        CancellationTokenSource animationCts)
     {
         try
         {
@@ -270,13 +267,22 @@ public class BackpackVirtualGridView : MonoBehaviour
             {
                 await UniTask.Delay(
                     TimeSpan.FromSeconds(displayOrder * slotShowDelay),
-                    cancellationToken: cancellationToken);
+                    cancellationToken: animationCts.Token);
             }
 
-            await slot.Show().AttachExternalCancellation(cancellationToken);
+            await slot.Show().AttachExternalCancellation(animationCts.Token);
         }
         catch (OperationCanceledException)
         {
+        }
+        finally
+        {
+            if (slotAnimationSources.TryGetValue(slot, out var currentCts) &&
+                ReferenceEquals(currentCts, animationCts))
+            {
+                slotAnimationSources.Remove(slot);
+                animationCts.Dispose();
+            }
         }
     }
 
@@ -301,17 +307,34 @@ public class BackpackVirtualGridView : MonoBehaviour
         isRebuildingLayout = false;
     }
 
-    void CancelEnterAnimations()
+    void CancelSlotAnimation(ItemSlotView slot)
     {
-        enterAnimationCts?.Cancel();
-        enterAnimationCts?.Dispose();
-        enterAnimationCts = null;
+        if (!slotAnimationSources.TryGetValue(slot, out var animationCts))
+        {
+            return;
+        }
+
+        slotAnimationSources.Remove(slot);
+        animationCts.Cancel();
+        animationCts.Dispose();
+    }
+
+    void CancelAllSlotAnimations()
+    {
+        var animationSources = new List<CancellationTokenSource>(slotAnimationSources.Values);
+        slotAnimationSources.Clear();
+
+        foreach (var animationCts in animationSources)
+        {
+            animationCts.Cancel();
+            animationCts.Dispose();
+        }
     }
 
     void OnDestroy()
     {
         scrollRect.onValueChanged.RemoveListener(OnScroll);
-        CancelEnterAnimations();
+        CancelAllSlotAnimations();
         collectionSubscriptions.Dispose();
 
         foreach (var slot in slots)

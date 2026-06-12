@@ -8,6 +8,8 @@ public class BackpackMiddleView : MonoBehaviour
     [SerializeField]
     InfoPanelView infoPanelView;
     [SerializeField]
+    BackpackVirtualGridView virtualItemGridView;
+    [SerializeField]
     AnimatedPanel anim;
 
     public UniTask Show()
@@ -22,7 +24,8 @@ public class BackpackMiddleView : MonoBehaviour
 
     public void Bind(BackpackMiddleViewModel middleVM, InfoPanelViewModel infoVM)
     {
-        itemGridView.Bind(middleVM);
+        //itemGridView.Bind(middleVM);
+        virtualItemGridView.Bind(middleVM);
         infoPanelView.Bind(infoVM);
     }
 }
