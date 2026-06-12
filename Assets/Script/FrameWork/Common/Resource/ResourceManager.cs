@@ -107,7 +107,7 @@ public class ResourceManager : Singleton<ResourceManager>
     /// <summary>
     /// 使用 UniTask 异步加载资源（无回调）
     /// </summary>
-    public async UniTask<T> LoadAssetAsync<T>(string path,CancellationTokenSource token = default, bool autoUnload = false) where T : class
+    public async UniTask<T> LoadAssetAsync<T>(string path, CancellationToken cancellationToken = default, bool autoUnload = false) where T : class
     {
         if (string.IsNullOrEmpty(path))
         {
@@ -120,12 +120,37 @@ public class ResourceManager : Singleton<ResourceManager>
         {
             if (handle.IsDone)
             {
+                // IsDone 只表示加载已经结束，失败的 Handle 同样会进入这里。
+                if (handle.Status != AsyncOperationStatus.Succeeded)
+                {
+                    // 失败 Handle 不能继续留在缓存中，否则后续请求会一直命中同一次失败结果。
+                    ReleaseFailedHandle(path, handle);
+                    return await LoadAssetAsync<T>(path, cancellationToken, autoUnload);
+                }
+
                 return handle.Result as T;
             }
             else
             {
                 // 等待完成或取消
-                return await handle.Task as T;
+                try
+                {
+                    // 这里只取消当前调用方的等待，不取消可能被其他调用方共享的 Addressables 加载。
+                    return await handle.Task
+                        .AsUniTask()
+                        .AttachExternalCancellation(cancellationToken) as T;
+                }
+                catch (OperationCanceledException)
+                {
+                    // 取消属于调用流程的一部分，继续抛给调用方决定如何处理，并保留原始异常堆栈。
+                    throw;
+                }
+                catch (Exception)
+                {
+                    // Handle 可能由旧的回调接口创建，因此这里也要保证失败缓存能够被清理。
+                    ReleaseFailedHandle(path, handle);
+                    return null;
+                }
             }
         }
         else
@@ -140,20 +165,56 @@ public class ResourceManager : Singleton<ResourceManager>
             var newHandle = Addressables.LoadAssetAsync<T>(path);
             assetHandles[path] = newHandle;
 
+            // 全局加载状态必须跟随底层 Handle，而不能跟随某一个可能提前取消等待的调用方。
+            newHandle.Completed += result =>
+            {
+                loadingAssetsCount--;
+                if (loadingCTS.TryGetValue(path, out var loadingCts))
+                {
+                    loadingCts.Dispose();
+                    loadingCTS.Remove(path);
+                }
+
+                if (result.Status != AsyncOperationStatus.Succeeded)
+                {
+                    Debug.LogError($"[ResourceManager.LoadAssetAsync] 加载失败: {path}");
+                    ReleaseFailedHandle(path, result);
+                }
+            };
+
             try
             {
-                var result = await newHandle.Task;
-                loadingAssetsCount--;
-                loadingCTS.Remove(path);
-                return result;
+                // 调用方取消后底层加载仍会继续，完成结果可供其他调用方或后续请求复用。
+                return await newHandle.Task
+                    .AsUniTask()
+                    .AttachExternalCancellation(cancellationToken);
             }
-            catch (Exception e)
+            catch (OperationCanceledException)
             {
-                loadingAssetsCount--;
-                loadingCTS.Remove(path);
-                Debug.LogError($"[ResourceManager.LoadAssetAsync] 加载失败: {path}\n{e}");
+                // throw; 会原样重新抛出当前异常，不会重置异常的调用堆栈。
+                throw;
+            }
+            catch (Exception)
+            {
                 return null;
             }
+        }
+    }
+
+    void ReleaseFailedHandle(string path, AsyncOperationHandle failedHandle)
+    {
+        // 旧请求的失败回调可能晚于新请求，只允许失败 Handle 清理它自己对应的缓存项。
+        if (!assetHandles.TryGetValue(path, out var cachedHandle) ||
+            !cachedHandle.Equals(failedHandle))
+        {
+            return;
+        }
+
+        assetHandles.Remove(path);
+        assetRefCounts.Remove(path);
+        if (failedHandle.IsValid())
+        {
+            Addressables.Release(failedHandle);
         }
     }
 
