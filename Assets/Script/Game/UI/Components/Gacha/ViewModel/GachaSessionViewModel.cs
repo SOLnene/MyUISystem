@@ -60,6 +60,11 @@ public class GachaSessionViewModel: IDisposable
 
     void EnterPreview()
     {
+        if (Phase.Value != GachaSessionPhase.Revealing)
+        {
+            return;
+        }
+
         Phase.Value = GachaSessionPhase.Preview;
         OnPreviewFinished.OnNext(Unit.Default);
     }

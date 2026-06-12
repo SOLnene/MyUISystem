@@ -22,14 +22,7 @@ public class GachaResultDetailViewModel
         NextCommand
             .Subscribe(_ =>
             {
-                if (sessionVM.HasNext.Value)
-                {
-                    sessionVM.Next();
-                }
-                else
-                {
-                    OpenResultPopup();
-                }
+                sessionVM.Next();
                 Debug.Log("执行 NextCommand，当前索引：" + sessionVM.CurrentIndex.Value);
             })
             .AddTo(disposable);
@@ -42,16 +35,6 @@ public class GachaResultDetailViewModel
             .AddTo(disposable);
     }
 
-    void OpenResultPopup()
-    {
-        /*UIManager.Instance.Open(UIType.GachaResultPopup,sessionVM);
-        sessionVM.OnSessionFinished.Subscribe(_ =>
-        {
-            UIManager.Instance.Close(UIType.GachaResultPopup); 
-        });*/
-        sessionVM.OnPreviewFinished.OnNext(Unit.Default);
-    }
-    
     public void Dispose()
     {
         disposable.Dispose();

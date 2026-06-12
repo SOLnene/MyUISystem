@@ -56,13 +56,28 @@ public partial class GachaResultPopup : UIView
             Debug.LogError("GachaResultPopup.Bind: items is null");
             return;
         }
+
+        if (viewModel.Items.Count > resultItem.Length)
+        {
+            Debug.LogError($"GachaResultPopup.Bind: item count {viewModel.Items.Count} exceeds slot count {resultItem.Length}");
+            return;
+        }
+
+        itemViews.Clear();
+        for (int i = 0; i < resultItem.Length; i++)
+        {
+            bool isActive = i < viewModel.Items.Count;
+            if (isActive)
+            {
+                resultItem[i].Bind(viewModel.Items[i], viewModel.OnEntryClicked);
+                itemViews.Add(resultItem[i]);
+            }
+
+            resultItem[i].gameObject.SetActive(isActive);
+        }
+
         itemContainer.ResetToIdle(itemViews);
         itemContainer.SetClick(viewModel.OnEntryClicked);
-        
-        for(int i=0;i<viewModel.Items.Count;i++)
-        {
-            resultItem[i].Bind(viewModel.Items[i],viewModel.OnEntryClicked);
-        }
        
         fullScreenButton.onClick.RemoveAllListeners();
         fullScreenButton.onClick.AddListener(() =>
