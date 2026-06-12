@@ -11,5 +11,5 @@ public class GachaPoolUIConfig : ScriptableObject
     public Sprite tabIcon;
 
     // 内容（可失败）
-    [FormerlySerializedAs("poolVisualKey")] public string poolVisualPath;
+    public Sprite poolVisual;
 }

@@ -25,7 +25,6 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 	AnimatedPanel anim;
 
 	CompositeDisposable disposable = new CompositeDisposable();
-	int requestId = 0;
 	GachaViewModel viewModel;
 	GachaPoolType? displayedPoolType;
 
@@ -33,7 +32,7 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 	{
 		if (!displayedPoolType.HasValue || displayedPoolType.Value != viewModel.CurrentPoolType.Value)
 		{
-			await SwitchVisualAsync(viewModel.CurrentPoolType.Value);
+			SetPoolVisual(viewModel.CurrentPoolType.Value);
 		}
 
 		await anim.Show();
@@ -62,10 +61,6 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 		//motionRoot.PlayEnter();
 	}
 
-	/// <summary>
-	/// 给一个最小时间，避免image没加载出来的卡顿
-	/// </summary>
-	/// <param name="type"></param>
 	async UniTask Init(GachaPoolType type)
 	{
 		initCts?.Cancel();
@@ -74,42 +69,29 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 
 		if (!displayedPoolType.HasValue)
 		{
-			await SwitchVisualAsync(type);
-			token.ThrowIfCancellationRequested();
+			SetPoolVisual(type);
 			return;
 		}
 
 		await anim.Hide();
 		token.ThrowIfCancellationRequested();
-
-		var loadTask = SwitchVisualAsync(type);
-		var delayTask = UniTask.Delay(TimeSpan.FromSeconds(0.25f), cancellationToken: token);
-		await UniTask.WhenAll(loadTask, delayTask);
-		token.ThrowIfCancellationRequested();
+		SetPoolVisual(type);
 		await anim.Show();
 	}
 
-	async UniTask SwitchVisualAsync(GachaPoolType type)
+	void SetPoolVisual(GachaPoolType type)
 	{
-		Debug.Log("SwitchVisualAsync " + type);
-		int id = ++requestId;
 		var config = GameDatabase.GachaPoolUIConfigDatabase.Get(type);
 		if (config == null) 
 		{
 			return;
 		}
-		var sprite =await ResourceManager.Instance.LoadAssetAsync<Sprite>(
-			config.poolVisualPath);
-		if (sprite == null)
+		if (config.poolVisual == null)
 		{
-			Debug.LogError($"加载失败: {config.poolVisualPath}");
+			Debug.LogError($"加载失败: {type}");
 			return;
 		}
-		if (id != requestId)
-		{
-			return;
-		}
-		equipIcon.sprite = sprite;
+		equipIcon.sprite = config.poolVisual;
 		displayedPoolType = type;
 	}
 	
