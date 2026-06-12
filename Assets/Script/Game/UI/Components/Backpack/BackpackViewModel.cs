@@ -66,8 +66,23 @@ public class  BackpackViewModel
     
     public void RemoveItem(InventoryItem inventoryItem)
     {
+        if (!itemToSlotVM.TryGetValue(inventoryItem, out var slotVM))
+        {
+            return;
+        }
+
+        bool wasSelected = selectedSlot.Value == slotVM;
         model.RemoveItem(inventoryItem);
-        SlotsViewModels.Remove(itemToSlotVM[inventoryItem]);
+        SlotsViewModels.Remove(slotVM);
+        itemToSlotVM.Remove(inventoryItem);
+        slotVM.Dispose();
+
+        if (wasSelected)
+        {
+            middleVM.SelectItem(middleVM.displaySlots.Count > 0
+                ? middleVM.displaySlots[0]
+                : null);
+        }
     }
 
     /// <summary>

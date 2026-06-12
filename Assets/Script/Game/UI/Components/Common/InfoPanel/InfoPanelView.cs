@@ -1,5 +1,7 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using TMPro;
 using UniRx;
@@ -47,12 +49,15 @@ public class InfoPanelView : MonoBehaviour
    InfoPanelViewModel infoPanelVM;
 
    CompositeDisposable disposable = new();
-   string currentIconPath;
+   CancellationTokenSource iconLoadCts;
+   int iconRequestVersion;
     public void Bind(InfoPanelViewModel vm)
     {
         disposable.Clear();
         if (vm == null)
         {
+            CancelIconLoad();
+            icon.sprite = null;
             return;
         }
 
@@ -71,11 +76,7 @@ public class InfoPanelView : MonoBehaviour
             //topBgImage.color = color;
             middleBgImage.color = color;
         }).AddTo(disposable);
-        vm.iconPath.Where(path => !string.IsNullOrEmpty(path)).Subscribe(iconPath =>
-        {
-            currentIconPath = iconPath;
-            LoadIconAsync(iconPath).Forget();
-        }).AddTo(disposable);
+        vm.iconPath.Subscribe(SetIcon).AddTo(disposable);
     }
 
     public void Show(ItemViewModel itemViewModel)
@@ -115,19 +116,61 @@ public class InfoPanelView : MonoBehaviour
         gameObject.SetActive(false);
     }
 
-    async UniTask LoadIconAsync(string iconPath)
+    void SetIcon(string iconPath)
     {
+        CancelIconLoad();
+        icon.sprite = null;
+
         if (string.IsNullOrEmpty(iconPath))
         {
             return;
         }
-        var sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(iconPath);
-        if (currentIconPath != iconPath)
-        {
-            return;
-        }
 
-        icon.sprite = sprite;
+        int requestVersion = iconRequestVersion;
+        var requestCts = CancellationTokenSource.CreateLinkedTokenSource(
+            this.GetCancellationTokenOnDestroy());
+        iconLoadCts = requestCts;
+        LoadIconAsync(iconPath, requestVersion, requestCts).Forget();
+    }
+
+    async UniTask LoadIconAsync(
+        string iconPath,
+        int requestVersion,
+        CancellationTokenSource requestCts)
+    {
+        try
+        {
+            var sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(
+                iconPath,
+                requestCts.Token);
+            if (requestVersion != iconRequestVersion ||
+                !ReferenceEquals(iconLoadCts, requestCts))
+            {
+                return;
+            }
+
+            icon.sprite = sprite;
+        }
+        catch (OperationCanceledException)
+        {
+        }
+        finally
+        {
+            if (ReferenceEquals(iconLoadCts, requestCts))
+            {
+                iconLoadCts = null;
+                requestCts.Dispose();
+            }
+        }
+    }
+
+    void CancelIconLoad()
+    {
+        iconRequestVersion++;
+        var requestCts = iconLoadCts;
+        iconLoadCts = null;
+        requestCts?.Cancel();
+        requestCts?.Dispose();
     }
     
     /// <summary>
@@ -192,6 +235,12 @@ public class InfoPanelView : MonoBehaviour
 
     void OnDestroy()
     {
+        CancelIconLoad();
         disposable.Dispose();
+    }
+
+    void OnDisable()
+    {
+        CancelIconLoad();
     }
 }
