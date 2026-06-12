@@ -18,6 +18,11 @@ public partial class GachaView : UIView
     GachaFlowController flowController;
     [SerializeField]
     GachaPoolUIConfigDatabase poolUIConfigDatabase;
+    [SerializeField]
+    Button closeBtn;
+    [SerializeField]
+    AnimatedPanel bottomHub;
+    bool isClosing;
     //UIControlData
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -29,10 +34,12 @@ public partial class GachaView : UIView
     public override void OnOpen(object data)
     {
         base.OnOpen(data);
+        isClosing = false;
         disposable.Clear();
         vm.OnSessionStarted
             .Subscribe(flowController.StartSession)
             .AddTo(disposable);
+        ShowHubs().Forget();
     }
 
     void Bind()
@@ -54,6 +61,30 @@ public partial class GachaView : UIView
         Draw10Btn.onClick.RemoveAllListeners();
         Draw1Btn.onClick.AddListener(() => vm.drawCommand.Execute(1));
         Draw10Btn.onClick.AddListener(() => vm.drawCommand.Execute(10));
+        closeBtn.onClick.RemoveAllListeners();
+        closeBtn.onClick.AddListener(OnCancel);
+    }
+
+    async UniTask ShowHubs()
+    {
+        await UniTask.WhenAll(topHub.Show(), middleHub.Show(), bottomHub.Show());
+    }
+
+    async UniTask CloseWithAnimation()
+    {
+        await UniTask.WhenAll(topHub.Hide(), middleHub.Hide(), bottomHub.Hide());
+        base.OnCancel();
+    }
+
+    public override void OnCancel()
+    {
+        if (isClosing)
+        {
+            return;
+        }
+
+        isClosing = true;
+        CloseWithAnimation().Forget();
     }
     
     public override void OnAddListener()

@@ -15,20 +15,40 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
     		#pragma warning disable 0649
     		[ControlBinding]
     		private Image equipIcon;
-    		[ControlBinding]
-    		private UIMotionBase motionRoot;
     
     		#pragma warning restore 0649
     #endregion
     
 
 	CancellationTokenSource initCts;
+	[SerializeField]
+	AnimatedPanel anim;
 
 	CompositeDisposable disposable = new CompositeDisposable();
 	int requestId = 0;
+	GachaViewModel viewModel;
+	GachaPoolType? displayedPoolType;
+
+	internal async UniTask Show()
+	{
+		if (!displayedPoolType.HasValue || displayedPoolType.Value != viewModel.CurrentPoolType.Value)
+		{
+			await SwitchVisualAsync(viewModel.CurrentPoolType.Value);
+		}
+
+		await anim.Show();
+	}
+
+	internal async UniTask Hide()
+	{
+		initCts?.Cancel();
+		await anim.Hide();
+	}
+
 	public override void Bind(GachaViewModel vm)
 	{
 		base.Bind(vm);
+		viewModel = vm;
 		disposable.Clear();
 
 		vm.CurrentPoolType
@@ -51,13 +71,22 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 		initCts?.Cancel();
 		initCts = new CancellationTokenSource();
 		var token = initCts.Token;
-		motionRoot.Cancel();
+
+		if (!displayedPoolType.HasValue)
+		{
+			await SwitchVisualAsync(type);
+			token.ThrowIfCancellationRequested();
+			return;
+		}
+
+		await anim.Hide();
+		token.ThrowIfCancellationRequested();
 
 		var loadTask = SwitchVisualAsync(type);
 		var delayTask = UniTask.Delay(TimeSpan.FromSeconds(0.25f), cancellationToken: token);
 		await UniTask.WhenAll(loadTask, delayTask);
 		token.ThrowIfCancellationRequested();
-		await motionRoot.PlayEnter();
+		await anim.Show();
 	}
 
 	async UniTask SwitchVisualAsync(GachaPoolType type)
@@ -81,17 +110,17 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 			return;
 		}
 		equipIcon.sprite = sprite;
+		displayedPoolType = type;
 	}
 	
 	void OnDisable()
 	{
-		motionRoot?.Cancel();
+		initCts?.Cancel();
 	}
 
 	void OnDestroy()
 	{
 		initCts?.Cancel();
-		motionRoot?.Cancel();
 		disposable?.Dispose();
 	}
 }

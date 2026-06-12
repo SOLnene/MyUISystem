@@ -20,6 +20,18 @@ public class GachaTopHubView : BindableUI
 	GameObject tabPrefab;
 	GachaTopHubViewModel vm;
 	readonly CompositeDisposable disposable = new CompositeDisposable();
+	[SerializeField]
+	AnimatedPanel anim;
+
+	internal UniTask Show()
+	{
+		return anim.Show();
+	}
+
+	internal async UniTask Hide()
+	{
+		await anim.Hide();
+	}
 	
 	
 	public async UniTask Bind(GachaTopHubViewModel viewModel)
