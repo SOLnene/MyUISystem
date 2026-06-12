@@ -35,6 +35,7 @@ public class GachaViewModel : IDisposable
     // - UI 防重入（按钮灰掉）
     // ⚠ 后续可能拆为 isBusy / canInput
     public ReactiveProperty<bool> isDrawing = new ReactiveProperty<bool>(false);
+    GachaSessionViewModel currentSession;
     
     public ReactiveProperty<GachaPoolType> CurrentPoolType { get; }
         = new ReactiveProperty<GachaPoolType>(GachaPoolType.Character);
@@ -53,7 +54,8 @@ public class GachaViewModel : IDisposable
         lastDrawnItems.ObserveCountChanged().Subscribe(_ => UpdateHasNext()).AddTo(disposable);
         
         drawCommand
-            .Where(_ => !isDrawing.Value)
+            .Where(_ => !isDrawing.Value &&
+                        (currentSession == null || currentSession.Phase.Value == GachaSessionPhase.Finished))
             .Subscribe(
                 count =>
                 {
@@ -79,14 +81,14 @@ public class GachaViewModel : IDisposable
             lastDrawnItems.Add(vm);
         }
         
+        currentSession?.Dispose();
+        currentSession = new GachaSessionViewModel(lastDrawnItems);
         isDrawing.Value = false;
-        
-        var sessionVM = new GachaSessionViewModel(lastDrawnItems);
         //开始展示流程
         //TODO：再包一层
         //UIManager.Instance.Open(UIType.GachaResultDetailPopup,sessionVM);
         //ShowNext();
-        OnSessionStarted.OnNext(sessionVM);
+        OnSessionStarted.OnNext(currentSession);
     }
 
     public void SwitchPool(GachaPoolType type)
@@ -122,6 +124,7 @@ public class GachaViewModel : IDisposable
     
     public void Dispose()
     {
+        currentSession?.Dispose();
         disposable.Dispose();
     }
 }

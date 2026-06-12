@@ -37,7 +37,6 @@ public class GachaResultDetailViewModel
             .Subscribe(_ =>
             {
                 sessionVM.SkipReveal();
-                OpenResultPopup();
                 Debug.Log("执行 SkipCommand，当前索引：" + sessionVM.CurrentIndex.Value);
             })
             .AddTo(disposable);

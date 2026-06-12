@@ -6,69 +6,55 @@ using UnityEngine;
 
 public class GachaFlowController : IDisposable
 {
+    readonly CompositeDisposable sessionDisposables = new CompositeDisposable();
+    GachaSessionViewModel currentSession;
+    GachaResultViewModel resultViewModel;
 
-    GachaViewModel Vm;
-    readonly CompositeDisposable disposable = new CompositeDisposable();
-
-    public GachaFlowController( )
+    public void StartSession(GachaSessionViewModel session)
     {
-        
-    }
-
-    public void StartGachaFlow()
-    {
-        UIManager.Instance.OpenWithView(UIType.GachaView,callback: view =>
-        {
-            var gachaView = view as GachaView;
-            Bind(gachaView.vm);
-        });
-    }
-    
-    public void Bind(GachaViewModel viewModel)
-    {
-        Vm = viewModel;
-        Vm.OnSessionStarted
-            .Subscribe(StartGachaSession)
-            .AddTo(disposable);
-    }
-    void StartGachaSession(GachaSessionViewModel session)
-    {
-        UIManager.Instance.Open(
-            UIType.GachaResultDetailPopup,
-            session
-            );
+        ClearSession();
+        currentSession = session;
 
         session.OnPreviewFinished
+            .Take(1)
             .Subscribe(_ => ShowResult(session))
-            .AddTo(disposable);
+            .AddTo(sessionDisposables);
 
         session.OnSessionFinished
+            .Take(1)
             .Subscribe(_ =>
             {
                 UIManager.Instance.Close(UIType.GachaResultPopup);
                 Debug.Log("抽卡会话结束");
+                ClearSession();
             })
-            .AddTo(disposable);
+            .AddTo(sessionDisposables);
+
+        UIManager.Instance.Open(
+            UIType.GachaResultDetailPopup,
+            session
+            );
     }
     
     void ShowResult(GachaSessionViewModel session)
     {
         UIManager.Instance.Close(UIType.GachaResultDetailPopup);
 
-        var resultVm = new GachaResultViewModel(session.Items);
+        resultViewModel = new GachaResultViewModel(session.Items);
 
-        resultVm.OnConfirm
+        resultViewModel.OnConfirm
+            .Take(1)
             .Subscribe(_ =>
             {
-                session.OnSessionFinished.OnNext(Unit.Default);
+                session.FinishSession();
             })
-            .AddTo(disposable);
+            .AddTo(sessionDisposables);
 
-        resultVm.OnEntryClicked
+        resultViewModel.OnEntryClicked
             .Subscribe(OpenEntryDetail)
-            .AddTo(disposable);
+            .AddTo(sessionDisposables);
 
-        UIManager.Instance.Open(UIType.GachaResultPopup, resultVm);
+        UIManager.Instance.Open(UIType.GachaResultPopup, resultViewModel);
     }
     
     public void OpenEntryDetail(GachaEntryViewModel viewModel)
@@ -91,9 +77,31 @@ public class GachaFlowController : IDisposable
     {
         return new EquipItemViewModel(new EquipItem(GameDatabase.ItemDatabase.GetItemByKey(entry.Name) as EquipDefinition));
     }
+
+    public void CancelSession()
+    {
+        UIManager.Instance.Close(UIType.GachaResultDetailPopup);
+        UIManager.Instance.Close(UIType.GachaResultPopup);
+        if (currentSession != null && currentSession.Phase.Value != GachaSessionPhase.Finished)
+        {
+            currentSession.FinishSession();
+            return;
+        }
+
+        ClearSession();
+    }
+
+    void ClearSession()
+    {
+        sessionDisposables.Clear();
+        currentSession = null;
+        resultViewModel?.Dispose();
+        resultViewModel = null;
+    }
     
     public void Dispose()
     {
-        disposable.Dispose();
+        ClearSession();
+        sessionDisposables.Dispose();
     }
 }

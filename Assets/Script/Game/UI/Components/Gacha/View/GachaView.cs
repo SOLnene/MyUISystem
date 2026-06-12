@@ -15,18 +15,24 @@ public partial class GachaView : UIView
 {
     public GachaViewModel vm;
     CompositeDisposable disposable;
+    GachaFlowController flowController;
     [SerializeField]
     GachaPoolUIConfigDatabase poolUIConfigDatabase;
     //UIControlData
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
         base.OnInit(uiControlData,handle);
+        flowController = new GachaFlowController();
         Bind();
     }
 
     public override void OnOpen(object data)
     {
         base.OnOpen(data);
+        disposable.Clear();
+        vm.OnSessionStarted
+            .Subscribe(flowController.StartSession)
+            .AddTo(disposable);
     }
 
     void Bind()
@@ -62,12 +68,15 @@ public partial class GachaView : UIView
 
     public override void OnClose()
     {
+        flowController.CancelSession();
+        disposable.Clear();
         base.OnClose();
     }
 
     public override void OnRelease()
     {
-        base.OnRelease();
         disposable.Dispose();
+        flowController.Dispose();
+        base.OnRelease();
     }
 }
