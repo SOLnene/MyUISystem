@@ -6,8 +6,6 @@ using UnityEngine;
 
 public class GachaTopHubViewModel : IDisposable
 {
-    public IReadOnlyReactiveProperty<GachaPoolUIConfig> CurrentPoolConfig => currentPoolConfig;
-    readonly ReactiveProperty<GachaPoolUIConfig> currentPoolConfig;
     public IReadOnlyList<GachaPoolTabViewModel> Tabs => tabs;
     readonly List<GachaPoolTabViewModel> tabs;
     public ReactiveCommand<GachaPoolUIConfig> SwitchPoolCommand { get; }
@@ -15,16 +13,14 @@ public class GachaTopHubViewModel : IDisposable
     readonly CompositeDisposable disposable = new CompositeDisposable();
     
     public GachaTopHubViewModel(
-        ReactiveProperty<GachaPoolUIConfig> poolConfig,
-        IReadOnlyList<GachaPoolUIConfig> configs)
+        IReadOnlyList<GachaPoolUIConfig> configs,
+        IReadOnlyReactiveProperty<GachaPoolUIConfig> currentPoolConfig,
+        Action<GachaPoolUIConfig> switchPool)
     {
-        currentPoolConfig = poolConfig;
         SwitchPoolCommand = new ReactiveCommand<GachaPoolUIConfig>().AddTo(disposable);
         SwitchPoolCommand
-            .Subscribe(config =>
-            {
-                poolConfig.Value = config;
-            }).AddTo(disposable);
+            .Subscribe(switchPool)
+            .AddTo(disposable);
                     
         
         tabs = new List<GachaPoolTabViewModel>();

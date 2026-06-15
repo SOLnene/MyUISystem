@@ -37,7 +37,9 @@ public class GachaViewModel : IDisposable
     public ReactiveProperty<bool> isDrawing = new ReactiveProperty<bool>(false);
     GachaSessionViewModel currentSession;
     
-    public ReactiveProperty<GachaPoolUIConfig> CurrentPoolConfig { get; }
+    public IReadOnlyList<GachaPoolUIConfig> PoolConfigs { get; }
+    public IReadOnlyReactiveProperty<GachaPoolUIConfig> CurrentPoolConfig => currentPoolConfig;
+    readonly ReactiveProperty<GachaPoolUIConfig> currentPoolConfig;
     
     public Subject<GachaSessionViewModel> OnSessionStarted { get; } = new Subject<GachaSessionViewModel>();
 
@@ -47,11 +49,12 @@ public class GachaViewModel : IDisposable
     public GachaViewModel(
         IGachaService service,
         IGachaVisualProvider provider,
-        GachaPoolUIConfig defaultPoolConfig)
+        GachaPoolUIConfigDatabase configDatabase)
     {
         gachaService = service;
         visualProvider = provider;
-        CurrentPoolConfig = new ReactiveProperty<GachaPoolUIConfig>(defaultPoolConfig);
+        PoolConfigs = configDatabase.Configs;
+        currentPoolConfig = new ReactiveProperty<GachaPoolUIConfig>(configDatabase.defaultConfig);
 
         //currentIndex.Subscribe(_ => UpdateHasNext()).AddTo(disposable);
         lastDrawnItems.ObserveCountChanged().Subscribe(_ => UpdateHasNext()).AddTo(disposable);
@@ -65,7 +68,7 @@ public class GachaViewModel : IDisposable
                     //启动异步
                     _ = DrawAsync(count);
                 }).AddTo(disposable);
-        CurrentPoolConfig.Subscribe(
+        currentPoolConfig.Subscribe(
             config =>Debug.Log($"切换卡池到 {config.gachaKey}"))
             .AddTo(disposable);
     }
@@ -75,7 +78,7 @@ public class GachaViewModel : IDisposable
         isDrawing.Value = true;
         lastDrawnItems.Clear();
 
-        var gachaKey = CurrentPoolConfig.Value.gachaKey; // 快照
+        var gachaKey = currentPoolConfig.Value.gachaKey; // 快照
         var result = gachaService.Draw(count,gachaKey);
 
         foreach (var e in result.Entries)
@@ -96,10 +99,10 @@ public class GachaViewModel : IDisposable
 
     public void SwitchPool(GachaPoolUIConfig config)
     {
-        if (CurrentPoolConfig.Value == config)
+        if (config == null || currentPoolConfig.Value == config)
             return;
 
-        CurrentPoolConfig.Value = config;
+        currentPoolConfig.Value = config;
         Debug.Log($"切换卡池：{config.gachaKey}");
     }
     

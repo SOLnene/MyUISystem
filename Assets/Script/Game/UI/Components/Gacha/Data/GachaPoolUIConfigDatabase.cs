@@ -5,6 +5,7 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Game/Database/Gacha Pool UI Config Database")]
 public class GachaPoolUIConfigDatabase : ScriptableObject
 {
+    public GachaPoolUIConfig defaultConfig;
     public List<GachaPoolUIConfig> configs = new();
     Dictionary<string, GachaPoolUIConfig> dict;
     public IReadOnlyList<GachaPoolUIConfig> Configs => configs;
