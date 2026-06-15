@@ -11,7 +11,6 @@ public class GachaDefinition : ScriptableObject
     
     //保底规则  
     public int pityCount = 90;
-    public int upPityCount = 180;
 }
 
 
