@@ -50,12 +50,15 @@ public partial class GachaView : UIView
         if (vm == null)
         {
             vm = new GachaViewModel(GameContext.Instance.GachaService,
-                GameContext.Instance.GachaVisualProvider);
+                GameContext.Instance.GachaVisualProvider,
+                poolUIConfigDatabase.Configs[0]);
         }
         disposable = new CompositeDisposable();
         
         //TopHub
-        GachaTopHubViewModel topVm = new GachaTopHubViewModel(vm.CurrentPoolType);
+        GachaTopHubViewModel topVm = new GachaTopHubViewModel(
+            vm.CurrentPoolConfig,
+            poolUIConfigDatabase.Configs);
         topHub.Bind(topVm).Forget();
         //middleView
         middleHub.InputLockChanged -= SetInputLocked;

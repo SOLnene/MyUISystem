@@ -6,13 +6,14 @@ using UnityEngine;
 
 public class GachaPoolTabViewModel : IDisposable
 {
-    public GachaPoolType PoolType { get;private set; }
+    public GachaPoolUIConfig Config { get; }
+    public Sprite Icon => Config.tabIcon;
     public ReactiveProperty<bool> IsSelected { get; }
 
     CompositeDisposable disposable = new CompositeDisposable();
-    public GachaPoolTabViewModel(GachaPoolType type)
+    public GachaPoolTabViewModel(GachaPoolUIConfig config)
     {
-        PoolType = type;
+        Config = config;
         IsSelected = new ReactiveProperty<bool>(false).AddTo(disposable);
     }
 

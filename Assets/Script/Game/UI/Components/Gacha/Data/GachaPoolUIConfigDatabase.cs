@@ -7,6 +7,8 @@ public class GachaPoolUIConfigDatabase : ScriptableObject
 {
     public List<GachaPoolUIConfig> configs;
 
+    public IReadOnlyList<GachaPoolUIConfig> Configs => configs;
+
     public GachaPoolUIConfig Get(GachaPoolType type)
         => configs.Find(c => c.poolType == type);
 }

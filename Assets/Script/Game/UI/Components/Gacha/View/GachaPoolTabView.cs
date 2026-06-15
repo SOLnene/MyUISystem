@@ -28,7 +28,7 @@ public class GachaPoolTabView : BindableUI
 
 	GachaPoolTabViewModel vm;
 	CompositeDisposable disposable = new CompositeDisposable();
-	public void Bind(GachaPoolTabViewModel viewModel,Action<GachaPoolType> onClick)
+	public void Bind(GachaPoolTabViewModel viewModel,Action<GachaPoolUIConfig> onClick)
 	{
 		vm = viewModel;
 		var isSelected = viewModel.IsSelected.Value;
@@ -39,10 +39,10 @@ public class GachaPoolTabView : BindableUI
 				UpdateSelected(b);
 			}).AddTo(disposable);
 
-		icon.sprite = GameDatabase.GachaPoolUIConfigDatabase.Get(viewModel.PoolType).tabIcon;
+		icon.sprite = viewModel.Icon;
         
 		btn.onClick.RemoveAllListeners();
-		btn.onClick.AddListener(()=>onClick.Invoke(vm.PoolType));
+		btn.onClick.AddListener(()=>onClick.Invoke(vm.Config));
 	}
 	
 	protected override void AfterBind()

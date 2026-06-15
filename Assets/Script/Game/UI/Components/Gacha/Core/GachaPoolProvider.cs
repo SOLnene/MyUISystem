@@ -4,7 +4,7 @@ using UnityEngine;
 
 public interface IGachaPoolProvider
 {
-    GachaDefinition GetPool(GachaPoolType type);
+    GachaDefinition GetPool(string gachaKey);
 }
 //负责“拿到这个池的定义”
 public class GachaPoolProvider : IGachaPoolProvider
@@ -18,14 +18,13 @@ public class GachaPoolProvider : IGachaPoolProvider
         this.schedule = schedule;
     }
 
-    public GachaDefinition GetPool(GachaPoolType type)
+    public GachaDefinition GetPool(string gachaKey)
     {
-        string key = schedule.GetActiveGachaKey(type);
-        if (key == null)
+        if (string.IsNullOrEmpty(gachaKey))
         {
-            Debug.LogError( $"No active gacha key for pool type {type}");
+            Debug.LogError("Gacha key is empty");
             return null;
         }
-        return database.GetPool(key);
+        return database.GetPool(gachaKey);
     }
 }

@@ -37,18 +37,21 @@ public class GachaViewModel : IDisposable
     public ReactiveProperty<bool> isDrawing = new ReactiveProperty<bool>(false);
     GachaSessionViewModel currentSession;
     
-    public ReactiveProperty<GachaPoolType> CurrentPoolType { get; }
-        = new ReactiveProperty<GachaPoolType>(GachaPoolType.Character);
+    public ReactiveProperty<GachaPoolUIConfig> CurrentPoolConfig { get; }
     
     public Subject<GachaSessionViewModel> OnSessionStarted { get; } = new Subject<GachaSessionViewModel>();
 
     readonly IGachaService gachaService;
     readonly IGachaVisualProvider visualProvider;
     
-    public GachaViewModel(IGachaService service,IGachaVisualProvider provider)
+    public GachaViewModel(
+        IGachaService service,
+        IGachaVisualProvider provider,
+        GachaPoolUIConfig defaultPoolConfig)
     {
         gachaService = service;
         visualProvider = provider;
+        CurrentPoolConfig = new ReactiveProperty<GachaPoolUIConfig>(defaultPoolConfig);
 
         //currentIndex.Subscribe(_ => UpdateHasNext()).AddTo(disposable);
         lastDrawnItems.ObserveCountChanged().Subscribe(_ => UpdateHasNext()).AddTo(disposable);
@@ -62,8 +65,8 @@ public class GachaViewModel : IDisposable
                     //启动异步
                     _ = DrawAsync(count);
                 }).AddTo(disposable);
-        CurrentPoolType.Subscribe(
-            type =>Debug.Log($"切换卡池到 {type}"))
+        CurrentPoolConfig.Subscribe(
+            config =>Debug.Log($"切换卡池到 {config.gachaKey}"))
             .AddTo(disposable);
     }
 
@@ -72,8 +75,8 @@ public class GachaViewModel : IDisposable
         isDrawing.Value = true;
         lastDrawnItems.Clear();
 
-        var poolType = CurrentPoolType.Value; // 快照
-        var result = gachaService.Draw(count,poolType);
+        var gachaKey = CurrentPoolConfig.Value.gachaKey; // 快照
+        var result = gachaService.Draw(count,gachaKey);
 
         foreach (var e in result.Entries)
         {
@@ -91,13 +94,13 @@ public class GachaViewModel : IDisposable
         OnSessionStarted.OnNext(currentSession);
     }
 
-    public void SwitchPool(GachaPoolType type)
+    public void SwitchPool(GachaPoolUIConfig config)
     {
-        if (CurrentPoolType.Value == type)
+        if (CurrentPoolConfig.Value == config)
             return;
 
-        CurrentPoolType.Value = type;
-        Debug.Log($"切换卡池：{type}");
+        CurrentPoolConfig.Value = config;
+        Debug.Log($"切换卡池：{config.gachaKey}");
     }
     
     public void ShowNext()

@@ -6,33 +6,35 @@ using UnityEngine;
 
 public class GachaTopHubViewModel : IDisposable
 {
-    public IReadOnlyReactiveProperty<GachaPoolType> CurrentPoolType => currentPoolType;
-    readonly ReactiveProperty<GachaPoolType> currentPoolType;
+    public IReadOnlyReactiveProperty<GachaPoolUIConfig> CurrentPoolConfig => currentPoolConfig;
+    readonly ReactiveProperty<GachaPoolUIConfig> currentPoolConfig;
     public IReadOnlyList<GachaPoolTabViewModel> Tabs => tabs;
     readonly List<GachaPoolTabViewModel> tabs;
-    public ReactiveCommand<GachaPoolType> SwitchPoolCommand { get; }
+    public ReactiveCommand<GachaPoolUIConfig> SwitchPoolCommand { get; }
 
     readonly CompositeDisposable disposable = new CompositeDisposable();
     
-    public GachaTopHubViewModel(ReactiveProperty<GachaPoolType> poolType)
+    public GachaTopHubViewModel(
+        ReactiveProperty<GachaPoolUIConfig> poolConfig,
+        IReadOnlyList<GachaPoolUIConfig> configs)
     {
-        currentPoolType = poolType;
-        SwitchPoolCommand = new ReactiveCommand<GachaPoolType>().AddTo(disposable);
+        currentPoolConfig = poolConfig;
+        SwitchPoolCommand = new ReactiveCommand<GachaPoolUIConfig>().AddTo(disposable);
         SwitchPoolCommand
-            .Subscribe(type =>
+            .Subscribe(config =>
             {
-                poolType.Value = type;
+                poolConfig.Value = config;
             }).AddTo(disposable);
                     
         
         tabs = new List<GachaPoolTabViewModel>();
-        foreach (GachaPoolType type in System.Enum.GetValues(typeof(GachaPoolType)))
+        foreach (var config in configs)
         {
-            var tab = new GachaPoolTabViewModel(type);
+            var tab = new GachaPoolTabViewModel(config);
             tabs.Add(tab);
 
-            currentPoolType
-                .Select(cur => cur == type)
+            currentPoolConfig
+                .Select(cur => cur == config)
                 .Subscribe(tab.SetSelected)
                 .AddTo(disposable);
         }

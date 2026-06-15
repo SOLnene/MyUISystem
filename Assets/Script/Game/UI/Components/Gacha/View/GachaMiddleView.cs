@@ -26,14 +26,14 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 
 	CompositeDisposable disposable = new CompositeDisposable();
 	GachaViewModel viewModel;
-	GachaPoolType? displayedPoolType;
+	GachaPoolUIConfig displayedPoolConfig;
 	internal event Action<bool> InputLockChanged;
 
 	internal async UniTask Show()
 	{
-		if (!displayedPoolType.HasValue || displayedPoolType.Value != viewModel.CurrentPoolType.Value)
+		if (displayedPoolConfig != viewModel.CurrentPoolConfig.Value)
 		{
-			SetPoolVisual(viewModel.CurrentPoolType.Value);
+			SetPoolVisual(viewModel.CurrentPoolConfig.Value);
 		}
 
 		await anim.Show();
@@ -51,27 +51,27 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 		viewModel = vm;
 		disposable.Clear();
 
-		vm.CurrentPoolType
+		vm.CurrentPoolConfig
 			.DistinctUntilChanged()
-			.Subscribe(type =>
+			.Subscribe(config =>
 			{
-				Debug.Log($"PoolType 变化: {type}，触发 Init");
-				Init(type).Forget();
+				Debug.Log($"PoolType 变化: {config}，触发 Init");
+				Init(config).Forget();
 			}).AddTo(disposable);
 
 		//motionRoot.PlayEnter();
 	}
 
-	async UniTask Init(GachaPoolType type)
+	async UniTask Init(GachaPoolUIConfig config)
 	{
 		initCts?.Cancel();
 		var cts = new CancellationTokenSource();
 		initCts = cts;
 		var token = cts.Token;
 
-		if (!displayedPoolType.HasValue)
+		if (displayedPoolConfig == null)
 		{
-			SetPoolVisual(type);
+			SetPoolVisual(config);
 			return;
 		}
 
@@ -80,7 +80,7 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 		{
 			await anim.Hide();
 			token.ThrowIfCancellationRequested();
-			SetPoolVisual(type);
+			SetPoolVisual(config);
 			await anim.Show();
 		}
 		finally
@@ -92,20 +92,19 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 		}
 	}
 
-	void SetPoolVisual(GachaPoolType type)
+	void SetPoolVisual(GachaPoolUIConfig config)
 	{
-		var config = GameDatabase.GachaPoolUIConfigDatabase.Get(type);
 		if (config == null) 
 		{
 			return;
 		}
-		if (config.poolVisual == null)
+		if (config.primaryRateUpIcon == null)
 		{
-			Debug.LogError($"加载失败: {type}");
+			Debug.LogError($"加载失败: {config.gachaKey}");
 			return;
 		}
-		equipIcon.sprite = config.poolVisual;
-		displayedPoolType = type;
+		equipIcon.sprite = config.primaryRateUpIcon;
+		displayedPoolConfig = config;
 	}
 	
 	void OnDisable()

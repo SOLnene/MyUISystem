@@ -4,7 +4,7 @@ using UnityEngine;
 
 public interface IGachaService
 {
-    GachaResult Draw(int count,GachaPoolType type);
+    GachaResult Draw(int count,string gachaKey);
 }
 
 public class GachaService: IGachaService
@@ -20,12 +20,12 @@ public class GachaService: IGachaService
 
     }
     
-    public GachaResult Draw(int count,GachaPoolType type)
+    public GachaResult Draw(int count,string gachaKey)
     {
-        var pool = poolProvider.GetPool(type);
+        var pool = poolProvider.GetPool(gachaKey);
         if (pool == null || pool.entries.Count == 0)
         {
-            Debug.LogWarning($"No pool found for type {type}");
+            Debug.LogWarning($"No pool found for key {gachaKey}");
             return new GachaResult(new List<GachaEntry>());
         }
         
