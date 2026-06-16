@@ -170,8 +170,13 @@ public partial class GachaResultRevealView : BindableUI
 
             detailRevealSeq.Join(
                 stars[index]
-                    .DOColor(starBaseColor * 0.8f, 0.15f)
-                    .From(Color.white)
+                    .DOColor(Color.white, 0.075f)
+                    .From(starBaseColor)
+                );
+
+            detailRevealSeq.Append(
+                stars[index]
+                    .DOColor(starBaseColor, 0.075f)
                 );
 
             detailRevealSeq.AppendInterval(0.05f);
