@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Cysharp.Threading.Tasks;
 using UniRx;
 using UnityEngine;
 /*
@@ -31,7 +30,7 @@ public class GachaViewModel : IDisposable
     public ReactiveCollection<GachaEntryViewModel> lastDrawnItems = new ReactiveCollection<GachaEntryViewModel>();
     // 是否正在抽卡
     // isDrawing:
-    // - 流程互斥（防止并行 DrawAsync）
+    // - 流程互斥（防止并行 Draw）
     // - UI 防重入（按钮灰掉）
     // ⚠ 后续可能拆为 isBusy / canInput
     public ReactiveProperty<bool> isDrawing = new ReactiveProperty<bool>(false);
@@ -65,15 +64,14 @@ public class GachaViewModel : IDisposable
             .Subscribe(
                 count =>
                 {
-                    //启动异步
-                    _ = DrawAsync(count);
+                    Draw(count);
                 }).AddTo(disposable);
         currentPoolConfig.Subscribe(
             config =>Debug.Log($"切换卡池到 {config.gachaKey}"))
             .AddTo(disposable);
     }
 
-    async UniTask DrawAsync(int count)
+    void Draw(int count)
     {
         isDrawing.Value = true;
         lastDrawnItems.Clear();
@@ -83,6 +81,12 @@ public class GachaViewModel : IDisposable
 
         foreach (var e in result.Entries)
         {
+            if (e.entryType == GachaEntryType.Character)
+            {
+                var definition = GameDatabase.CharacterDatabase.Get(e.entryKey);
+                GameContext.Instance.CharacterRepository.Add(definition);
+            }
+
             var vm = new GachaEntryViewModel(e,visualProvider);
             lastDrawnItems.Add(vm);
         }
