@@ -4,25 +4,24 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using SkierFramework;
+using TMPro;
 using UniRx;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
 public class GachaMiddleView : BindableUI<GachaViewModel>
 {
-    #region 控件绑定变量声明，自动生成请勿手改
-    		#pragma warning disable 0649
-    		[ControlBinding]
-    		private Image equipIcon;
-    
-    		#pragma warning restore 0649
-    #endregion
-    
-
 	CancellationTokenSource initCts;
 	[SerializeField]
 	AnimatedPanel anim;
+	[SerializeField]
+	Image Bg;
+	[SerializeField]
+	Image MainIcon;
+	[SerializeField]
+	Image SubIcon;
+	[SerializeField]
+	TMP_Text NameText;
 
 	CompositeDisposable disposable = new CompositeDisposable();
 	GachaViewModel viewModel;
@@ -98,12 +97,15 @@ public class GachaMiddleView : BindableUI<GachaViewModel>
 		{
 			return;
 		}
-		if (config.primaryRateUpIcon == null)
+		if (config.poolBackground == null || config.primaryRateUpIcon == null || config.secondaryRateUpIcon == null)
 		{
 			Debug.LogError($"加载失败: {config.gachaKey}");
 			return;
 		}
-		equipIcon.sprite = config.primaryRateUpIcon;
+		Bg.sprite = config.poolBackground;
+		MainIcon.sprite = config.primaryRateUpIcon;
+		SubIcon.sprite = config.secondaryRateUpIcon;
+		NameText.text = config.primaryRateUpName;
 		displayedPoolConfig = config;
 	}
 	
