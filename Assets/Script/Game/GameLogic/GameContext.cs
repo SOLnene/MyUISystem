@@ -9,6 +9,7 @@ public class GameContext: Singleton<GameContext>
     public BackpackViewModel BackpackVM { get; private set; }
 
     public InventoryRepository InventoryRepository { get; private set; }
+    public CharacterRepository CharacterRepository { get; private set; }
     //全项目只有一个实现
     public GachaService GachaService { get; private set; }
     //可能有多个不同的实现
@@ -21,6 +22,7 @@ public class GameContext: Singleton<GameContext>
         //todo:改为使用 Installer + DI 容器注入
         BackpackVM = new BackpackViewModel(model);
         InventoryRepository = new InventoryRepository(model, BackpackVM);
+        CharacterRepository = new CharacterRepository();
 
         LocalGachaSchedule gachaSchedule = new LocalGachaSchedule();
         GachaPoolProvider poolProvider = new GachaPoolProvider(GameDatabase.GachaPoolDatabase, gachaSchedule);
