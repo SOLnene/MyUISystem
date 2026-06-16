@@ -81,7 +81,7 @@ public class GachaFlowController : IDisposable
     
     EquipItemViewModel ConvertToEquip(GachaEntryViewModel entry)
     {
-        return new EquipItemViewModel(new EquipItem(GameDatabase.ItemDatabase.GetItemByKey(entry.Name) as EquipDefinition));
+        return new EquipItemViewModel(new EquipItem(GameDatabase.ItemDatabase.GetItemByKey(entry.EntryKey) as EquipDefinition));
     }
 
     public void CancelSession()
