@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Game.Domain.Character;
+using Game.UI.Components.CharacterDetail;
 using UniRx;
 using UnityEngine;
 
@@ -68,6 +70,10 @@ public class GachaFlowController : IDisposable
         if (viewModel.EntryType == GachaEntryType.Character)
         {
             Debug.Log("Clicked character: " + viewModel.Name);
+            var characterVm = ConvertToCharacter(viewModel);
+            UIManager.Instance.Open(UIType.CharacterDetailView, characterVm);
+            UIManager.Instance.Close(UIType.GachaView);
+            UIManager.Instance.Close(UIType.GachaResultPopup);
         }
         if (viewModel.EntryType == GachaEntryType.Equip)
         {
@@ -82,6 +88,13 @@ public class GachaFlowController : IDisposable
     EquipItemViewModel ConvertToEquip(GachaEntryViewModel entry)
     {
         return new EquipItemViewModel(new EquipItem(GameDatabase.ItemDatabase.GetItemByKey(entry.EntryKey) as EquipDefinition));
+    }
+
+    CharacterDetailViewModel ConvertToCharacter(GachaEntryViewModel entry)
+    {
+        CharacterDefinition definition = GameDatabase.CharacterDatabase.Get(entry.EntryKey);
+        CharacterModel model = CharacterFactory.Create(definition, 1);
+        return new CharacterDetailViewModel(model);
     }
 
     public void CancelSession()
