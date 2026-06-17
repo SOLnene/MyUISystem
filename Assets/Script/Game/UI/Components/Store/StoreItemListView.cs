@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 public class StoreItemListView : MonoBehaviour
 {
@@ -7,16 +8,8 @@ public class StoreItemListView : MonoBehaviour
     Transform contentRoot;
     [SerializeField]
     StoreItemView itemPrefab;
-    [SerializeField]
-    Sprite fakeItemIcon;
-    [SerializeField]
-    Sprite fakeCostIcon;
-    [SerializeField]
-    Color blueBgColor = new Color32(122, 178, 202, 255);
-    [SerializeField]
-    Color purpleBgColor = new Color32(172, 124, 202, 255);
-    [SerializeField]
-    Color orangeBgColor = new Color32(210, 154, 74, 255);
+    [SerializeField, FormerlySerializedAs("fakeCostIcon")]
+    Sprite costIcon;
     [SerializeField]
     Color bottomColor = new Color32(94, 111, 132, 255);
     [SerializeField]
@@ -24,10 +17,9 @@ public class StoreItemListView : MonoBehaviour
 
     readonly List<StoreItemView> itemViews = new();
 
-    public void LoadFakeItems()
-    {
-        Bind(CreateFakeItems());
-    }
+    public Sprite CostIcon => costIcon;
+    public Color BottomColor => bottomColor;
+    public Color FrameColor => frameColor;
 
     public void Bind(IReadOnlyList<StoreItemViewData> items)
     {
@@ -43,50 +35,6 @@ public class StoreItemListView : MonoBehaviour
                 itemViews[i].Bind(items[i], OnItemClicked);
             }
         }
-    }
-
-    List<StoreItemViewData> CreateFakeItems()
-    {
-        return new List<StoreItemViewData>
-        {
-            new StoreItemViewData(
-                "100001",
-                "冒险家的经验x3",
-                fakeItemIcon,
-                fakeCostIcon,
-                8,
-                blueBgColor,
-                bottomColor,
-                frameColor,
-                remainCount: 100,
-                hasRemainCount: true),
-            new StoreItemViewData(
-                "100002",
-                "纠缠之缘",
-                fakeItemIcon,
-                fakeCostIcon,
-                75,
-                purpleBgColor,
-                bottomColor,
-                frameColor,
-                beforeValue: 125,
-                remainCount: 5,
-                discountPercent: 40,
-                hasBeforeValue: true,
-                hasRemainCount: true,
-                hasDiscount: true),
-            new StoreItemViewData(
-                "100003",
-                "相遇之缘",
-                fakeItemIcon,
-                fakeCostIcon,
-                5,
-                orangeBgColor,
-                bottomColor,
-                frameColor,
-                remainCount: 10,
-                hasRemainCount: true)
-        };
     }
 
     void EnsureItemCount(int count)

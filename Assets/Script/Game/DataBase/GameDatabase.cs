@@ -15,6 +15,7 @@ public static class GameDatabase
     static GachaPoolUIConfigDatabase gachaPoolUIConfigDatabase;
     static CharacterDatabase characterDatabase;
     static PromoteDatabase promoteDatabase;
+    static StoreDatabase storeDatabase;
     
     public static ItemDatabase ItemDatabase => itemDatabase;
     public static CharacterVisualDatabase CharaVisualDatabase => charaVisualDatabase;
@@ -24,6 +25,7 @@ public static class GameDatabase
     public static CharacterDatabase CharacterDatabase => characterDatabase;
     
     public static PromoteDatabase PromoteDatabase => promoteDatabase;
+    public static StoreDatabase StoreDatabase => storeDatabase;
     public static async UniTask Init()
     {
         if (itemDatabase != null)
@@ -37,6 +39,7 @@ public static class GameDatabase
         gachaPoolUIConfigDatabase = await ResourceManager.Instance.LoadAssetAsync<GachaPoolUIConfigDatabase>("gachapooluiconfigdatabase");
         characterDatabase = await ResourceManager.Instance.LoadAssetAsync<CharacterDatabase>("characterdatabase");
         promoteDatabase = await ResourceManager.Instance.LoadAssetAsync<PromoteDatabase>("promotedatabase");
+        storeDatabase = await ResourceManager.Instance.LoadAssetAsync<StoreDatabase>("storeitemdatabase");
     }
 
    
