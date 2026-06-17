@@ -10,14 +10,11 @@ public readonly struct StoreItemViewData
     public readonly string Id;
     public readonly string Name;
     public readonly string IconPath;
-    public readonly Sprite CostIcon;
     public readonly int CostValue;
     public readonly int BeforeValue;
     public readonly int RemainCount;
     public readonly int DiscountPercent;
-    public readonly Color BgColor;
-    public readonly Color BottomColor;
-    public readonly Color FrameColor;
+    public readonly Color BackgroundColor;
     public readonly bool HasBeforeValue;
     public readonly bool HasRemainCount;
     public readonly bool HasDiscount;
@@ -27,11 +24,8 @@ public readonly struct StoreItemViewData
         string id,
         string name,
         string iconPath,
-        Sprite costIcon,
         int costValue,
-        Color bgColor,
-        Color bottomColor,
-        Color frameColor,
+        Color backgroundColor,
         int beforeValue = 0,
         int remainCount = 0,
         int discountPercent = 0,
@@ -43,14 +37,11 @@ public readonly struct StoreItemViewData
         Id = id;
         Name = name;
         IconPath = iconPath;
-        CostIcon = costIcon;
         CostValue = costValue;
         BeforeValue = beforeValue;
         RemainCount = remainCount;
         DiscountPercent = discountPercent;
-        BgColor = bgColor;
-        BottomColor = bottomColor;
-        FrameColor = frameColor;
+        BackgroundColor = backgroundColor;
         HasBeforeValue = hasBeforeValue;
         HasRemainCount = hasRemainCount;
         HasDiscount = hasDiscount;
@@ -68,10 +59,6 @@ public class StoreItemView : MonoBehaviour
     TextMeshProUGUI nameText;
     [SerializeField]
     TextMeshProUGUI remainText;
-    [SerializeField]
-    Image bottomBg;
-    [SerializeField]
-    Image costIcon;
     [SerializeField]
     TextMeshProUGUI costValue;
     [SerializeField]
@@ -95,11 +82,9 @@ public class StoreItemView : MonoBehaviour
         data = viewData;
         onClicked = clickHandler;
 
-        bg.color = data.BgColor;
-        bottomBg.color = data.BottomColor;
+        bg.color = data.BackgroundColor;
 
         LoadIcon(data.IconPath);
-        costIcon.sprite = data.CostIcon;
         nameText.text = data.Name;
         costValue.text = data.CostValue.ToString();
 

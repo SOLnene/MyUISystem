@@ -14,6 +14,6 @@ public class StoreView : UIView
         base.OnOpen(data);
         topView.Bind(OnCancel);
         viewModel = new StoreViewModel(GameContext.Instance.StoreDatabase, GameDatabase.ItemDatabase);
-        itemListView.Bind(viewModel.CreateItems(itemListView.CostIcon, itemListView.BottomColor, itemListView.FrameColor));
+        itemListView.Bind(viewModel.CreateItems());
     }
 }

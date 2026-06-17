@@ -12,10 +12,7 @@ public class StoreViewModel
         this.itemDatabase = itemDatabase;
     }
 
-    public IReadOnlyList<StoreItemViewData> CreateItems(
-        Sprite costIcon,
-        Color bottomColor,
-        Color frameColor)
+    public IReadOnlyList<StoreItemViewData> CreateItems()
     {
         var items = new List<StoreItemViewData>();
         if (storeDatabase == null || itemDatabase == null)
@@ -40,11 +37,8 @@ public class StoreViewModel
                 storeItem.ItemId.ToString(),
                 GetDisplayName(itemDefinition, storeItem.Count),
                 itemDefinition.iconPath,
-                costIcon,
                 storeItem.Price,
                 rarityColor,
-                bottomColor,
-                frameColor,
                 beforeValue: beforeValue,
                 discountPercent: storeItem.DiscountPercent,
                 hasBeforeValue: beforeValue > 0,
