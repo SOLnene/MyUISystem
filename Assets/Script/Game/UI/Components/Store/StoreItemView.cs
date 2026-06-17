@@ -10,6 +10,7 @@ public readonly struct StoreItemViewData
     public readonly string Id;
     public readonly string Name;
     public readonly string IconPath;
+    public readonly string CostIconPath;
     public readonly int CostValue;
     public readonly int BeforeValue;
     public readonly int RemainCount;
@@ -24,6 +25,7 @@ public readonly struct StoreItemViewData
         string id,
         string name,
         string iconPath,
+        string costIconPath,
         int costValue,
         Color backgroundColor,
         int beforeValue = 0,
@@ -37,6 +39,7 @@ public readonly struct StoreItemViewData
         Id = id;
         Name = name;
         IconPath = iconPath;
+        CostIconPath = costIconPath;
         CostValue = costValue;
         BeforeValue = beforeValue;
         RemainCount = remainCount;
@@ -62,6 +65,8 @@ public class StoreItemView : MonoBehaviour
     [SerializeField]
     TextMeshProUGUI costValue;
     [SerializeField]
+    Image costIcon;
+    [SerializeField]
     TextMeshProUGUI beforeValue;
     [SerializeField]
     GameObject discountArea;
@@ -74,8 +79,10 @@ public class StoreItemView : MonoBehaviour
 
     StoreItemViewData data;
     Action<StoreItemViewData> onClicked;
-    int iconRequestVersion;
-    CancellationTokenSource iconRequestCts;
+    int itemIconRequestVersion;
+    CancellationTokenSource itemIconRequestCts;
+    int costIconRequestVersion;
+    CancellationTokenSource costIconRequestCts;
 
     public void Bind(StoreItemViewData viewData, Action<StoreItemViewData> clickHandler)
     {
@@ -84,7 +91,8 @@ public class StoreItemView : MonoBehaviour
 
         bg.color = data.BackgroundColor;
 
-        LoadIcon(data.IconPath);
+        LoadItemIcon(data.IconPath);
+        LoadCostIcon(data.CostIconPath);
         nameText.text = data.Name;
         costValue.text = data.CostValue.ToString();
 
@@ -116,12 +124,12 @@ public class StoreItemView : MonoBehaviour
         onClicked?.Invoke(data);
     }
 
-    void LoadIcon(string iconPath)
+    void LoadItemIcon(string iconPath)
     {
-        iconRequestVersion++;
-        iconRequestCts?.Cancel();
-        iconRequestCts?.Dispose();
-        iconRequestCts = null;
+        itemIconRequestVersion++;
+        itemIconRequestCts?.Cancel();
+        itemIconRequestCts?.Dispose();
+        itemIconRequestCts = null;
 
         icon.sprite = null;
         if (string.IsNullOrEmpty(iconPath))
@@ -129,11 +137,11 @@ public class StoreItemView : MonoBehaviour
             return;
         }
 
-        iconRequestCts = new CancellationTokenSource();
-        LoadIconAsync(iconPath, iconRequestVersion, iconRequestCts.Token).Forget();
+        itemIconRequestCts = new CancellationTokenSource();
+        LoadItemIconAsync(iconPath, itemIconRequestVersion, itemIconRequestCts.Token).Forget();
     }
 
-    async UniTask LoadIconAsync(string iconPath, int requestVersion, CancellationToken cancellationToken)
+    async UniTask LoadItemIconAsync(string iconPath, int requestVersion, CancellationToken cancellationToken)
     {
         Sprite sprite;
         try
@@ -145,7 +153,7 @@ public class StoreItemView : MonoBehaviour
             return;
         }
 
-        if (cancellationToken.IsCancellationRequested || requestVersion != iconRequestVersion || data.IconPath != iconPath)
+        if (cancellationToken.IsCancellationRequested || requestVersion != itemIconRequestVersion || data.IconPath != iconPath)
         {
             return;
         }
@@ -153,10 +161,49 @@ public class StoreItemView : MonoBehaviour
         icon.sprite = sprite;
     }
 
+    void LoadCostIcon(string iconPath)
+    {
+        costIconRequestVersion++;
+        costIconRequestCts?.Cancel();
+        costIconRequestCts?.Dispose();
+        costIconRequestCts = null;
+
+        costIcon.sprite = null;
+        if (string.IsNullOrEmpty(iconPath))
+        {
+            return;
+        }
+
+        costIconRequestCts = new CancellationTokenSource();
+        LoadCostIconAsync(iconPath, costIconRequestVersion, costIconRequestCts.Token).Forget();
+    }
+
+    async UniTask LoadCostIconAsync(string iconPath, int requestVersion, CancellationToken cancellationToken)
+    {
+        Sprite sprite;
+        try
+        {
+            sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(iconPath, cancellationToken);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (cancellationToken.IsCancellationRequested || requestVersion != costIconRequestVersion || data.CostIconPath != iconPath)
+        {
+            return;
+        }
+
+        costIcon.sprite = sprite;
+    }
+
     void OnDestroy()
     {
-        iconRequestCts?.Cancel();
-        iconRequestCts?.Dispose();
+        itemIconRequestCts?.Cancel();
+        itemIconRequestCts?.Dispose();
+        costIconRequestCts?.Cancel();
+        costIconRequestCts?.Dispose();
         button.onClick.RemoveListener(HandleClick);
     }
 }

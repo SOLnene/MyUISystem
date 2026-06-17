@@ -32,11 +32,17 @@ public class StoreViewModel
 
             Color rarityColor = RarityConfig.GetColor(itemDefinition.itemRarity);
             int beforeValue = CalculateBeforeValue(storeItem);
+            ItemDefinition costDefinition = itemDatabase.GetItemByID(storeItem.CostItemId);
+            if (costDefinition == null)
+            {
+                Debug.LogWarning($"Store item references missing cost item id: {storeItem.CostItemId}");
+            }
 
             items.Add(new StoreItemViewData(
                 storeItem.ItemId.ToString(),
                 GetDisplayName(itemDefinition, storeItem.Count),
                 itemDefinition.iconPath,
+                costDefinition?.iconPath,
                 storeItem.Price,
                 rarityColor,
                 beforeValue: beforeValue,

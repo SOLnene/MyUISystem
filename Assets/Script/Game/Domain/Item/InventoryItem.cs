@@ -21,12 +21,13 @@ public enum ItemRarity
 /// </summary>
 public enum ItemCategory
 {
-    Equip,
-    Consumable,
-    Material,
-    QuestItem,
-    ExpBook,
-    All
+    Equip = 0,
+    Consumable = 1,
+    Material = 2,
+    QuestItem = 3,
+    ExpBook = 4,
+    Currency = 5,
+    All = 6
 }
 
 
