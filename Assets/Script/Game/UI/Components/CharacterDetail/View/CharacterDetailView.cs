@@ -38,6 +38,8 @@ namespace Game.UI.Components.CharacterDetail
         CharacterEnhancePanel enhancePanelView;
         [SerializeField]
         CharacterPromoteView promotePanelView;
+        [SerializeField]
+        CharacterDetailTopView topView;
     
         
         private const float TOP_BAR_HEIGHT = 150f;   
@@ -74,11 +76,8 @@ namespace Game.UI.Components.CharacterDetail
         public void Bind(CharacterDetailViewModel viewModel)
         {
             disposable.Clear();
-            viewModel.model.Name
-                .Subscribe(name =>
-                {
-                    charaText.text = name;
-                }).AddTo(disposable);
+            topView.Bind(viewModel.model.Name.Value, OnCancel);
+            
             final.gameObject.SetActive(false);
             contentView.Bind(viewModel.contentViewModel);
            
@@ -376,4 +375,3 @@ namespace Game.UI.Components.CharacterDetail
         }
     }
 }
-
