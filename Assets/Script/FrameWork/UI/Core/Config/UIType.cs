@@ -20,5 +20,6 @@ public enum UIType
 		TipView,
 		MainMenuView,
 		BackpackView,
+		StoreView,
 		Max,
 }

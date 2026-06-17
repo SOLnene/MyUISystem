@@ -18,7 +18,7 @@ internal class MainMenuNavigator
             { MainMenuAction.Team, () => ShowUnavailable(MainMenuAction.Team) },
             { MainMenuAction.Map, () => ShowUnavailable(MainMenuAction.Map) },
             { MainMenuAction.Quest, () => ShowUnavailable(MainMenuAction.Quest) },
-            { MainMenuAction.Shop, () => ShowUnavailable(MainMenuAction.Shop) },
+            { MainMenuAction.Shop, OpenStore },
         };
     }
 
@@ -70,6 +70,11 @@ internal class MainMenuNavigator
     private void OpenBackpack()
     {
         UIManager.Instance.Open(UIType.BackpackView);
+    }
+
+    private void OpenStore()
+    {
+        UIManager.Instance.Open(UIType.StoreView);
     }
 
     private void ShowUnavailable(MainMenuAction action)
