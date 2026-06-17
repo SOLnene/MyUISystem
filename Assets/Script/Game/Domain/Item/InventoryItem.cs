@@ -46,7 +46,7 @@ public class CategoryConfig
 [Serializable]
 public class InventoryItem
 {
-    public string InstanceId { get; private set; }
+    public long InstanceId { get; private set; }
 
     public ItemDefinition ItemDefinition{ get; private set; }
     
@@ -63,8 +63,12 @@ public class InventoryItem
     
     public InventoryItem(ItemDefinition item)
     {
-        InstanceId = Guid.NewGuid().ToString();
         ItemDefinition = item;
+    }
+
+    internal void SetInstanceId(long instanceId)
+    {
+        InstanceId = instanceId;
     }
     
     public virtual string GetDisplayName() => ItemName;

@@ -33,12 +33,15 @@ public class GameContext: Singleton<GameContext>
 public class InventoryRepository
 {
     private readonly List<InventoryItem> items = new List<InventoryItem>();
-    private readonly Dictionary<string, InventoryItem> itemsByInstanceId = new Dictionary<string, InventoryItem>();
+    private readonly Dictionary<long, InventoryItem> itemsByInstanceId = new Dictionary<long, InventoryItem>();
+    private long nextInstanceId = 1;
 
     public IReadOnlyList<InventoryItem> GetAllItems() => items;
 
     public void AddItem(InventoryItem inventoryItem)
     {
+        inventoryItem.SetInstanceId(nextInstanceId);
+        nextInstanceId++;
         items.Add(inventoryItem);
         itemsByInstanceId.Add(inventoryItem.InstanceId, inventoryItem);
     }
@@ -49,9 +52,9 @@ public class InventoryRepository
         itemsByInstanceId.Remove(inventoryItem.InstanceId);
     }
 
-    public bool TryGetItem(string instanceId, out InventoryItem item)
+    public bool TryGetItem(long instanceId, out InventoryItem item)
     {
-        if (string.IsNullOrEmpty(instanceId))
+        if (instanceId <= 0)
         {
             item = null;
             return false;
@@ -60,7 +63,7 @@ public class InventoryRepository
         return itemsByInstanceId.TryGetValue(instanceId, out item);
     }
 
-    public bool TryGetEquip(string instanceId, out EquipItem equip)
+    public bool TryGetEquip(long instanceId, out EquipItem equip)
     {
         if (TryGetItem(instanceId, out var item) && item is EquipItem equipItem)
         {
