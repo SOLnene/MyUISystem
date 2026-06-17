@@ -18,10 +18,9 @@ public class GameContext: Singleton<GameContext>
     {
         await GameDatabase.Init();
         //backpackVM = new BackpackViewModel();
-        var model = new BackpackModel();
         //todo:改为使用 Installer + DI 容器注入
-        BackpackVM = new BackpackViewModel(model);
-        InventoryRepository = new InventoryRepository(model, BackpackVM);
+        InventoryRepository = new InventoryRepository();
+        BackpackVM = new BackpackViewModel(InventoryRepository);
         CharacterRepository = new CharacterRepository();
 
         LocalGachaSchedule gachaSchedule = new LocalGachaSchedule();
@@ -33,19 +32,13 @@ public class GameContext: Singleton<GameContext>
 
 public class InventoryRepository
 {
-    public  readonly BackpackModel model;
-    private readonly BackpackViewModel vm;
+    private readonly List<InventoryItem> items = new List<InventoryItem>();
 
-    public IEnumerable<InventoryItem> GetAllItems() => model.Items;
-    public IEnumerable<ItemSlotViewModel> GetAllSlotVMs() => vm.SlotsViewModels;
+    public IReadOnlyList<InventoryItem> GetAllItems() => items;
 
-  
-    
-    public InventoryRepository(BackpackModel model, BackpackViewModel vm)
-    {
-        this.model = model;
-        this.vm = vm;
-    }
+    public void AddItem(InventoryItem inventoryItem) => items.Add(inventoryItem);
+
+    public void RemoveItem(InventoryItem inventoryItem) => items.Remove(inventoryItem);
 
     /*public IObservable<IReadOnlyList<InventoryItem>> ObserveItems()
     {

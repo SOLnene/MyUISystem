@@ -6,11 +6,11 @@ using UniRx;
 
 public class  BackpackViewModel
 {
-    readonly BackpackModel model;
+    readonly InventoryRepository inventoryRepository;
     /// <summary>
     /// 外部接口
     /// </summary>
-    public IReadOnlyList<InventoryItem> allItems => model.Items;
+    public IReadOnlyList<InventoryItem> allItems => inventoryRepository.GetAllItems();
     /*
      * 等价于
      * private readonly ReactiveCollection<ItemData> _items = new ReactiveCollection<ItemData>();
@@ -32,11 +32,11 @@ public class  BackpackViewModel
     //TODO:使用物品唯一id作为key
     public Dictionary<InventoryItem,ItemSlotViewModel> itemToSlotVM = new Dictionary<InventoryItem, ItemSlotViewModel>();
     
-    public BackpackViewModel(BackpackModel backpackModel)
+    public BackpackViewModel(InventoryRepository inventoryRepository)
     {
-        model = backpackModel;
+        this.inventoryRepository = inventoryRepository;
 
-        foreach (var item in model.Items)
+        foreach (var item in inventoryRepository.GetAllItems())
         {
             CreateSlotVM(item);
         }
@@ -60,7 +60,7 @@ public class  BackpackViewModel
     
     public void AddItem(InventoryItem inventoryItem)
     {
-        model.AddItem(inventoryItem);
+        inventoryRepository.AddItem(inventoryItem);
         CreateSlotVM(inventoryItem);
     }
     
@@ -72,7 +72,7 @@ public class  BackpackViewModel
         }
 
         bool wasSelected = selectedSlot.Value == slotVM;
-        model.RemoveItem(inventoryItem);
+        inventoryRepository.RemoveItem(inventoryItem);
         SlotsViewModels.Remove(slotVM);
         itemToSlotVM.Remove(inventoryItem);
         slotVM.Dispose();

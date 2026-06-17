@@ -1,7 +1,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using Game.Domain.Character;
 using Game.UI.Components.CharacterDetail;
 using UniRx;
 using UnityEngine;
@@ -71,6 +70,11 @@ public class GachaFlowController : IDisposable
         {
             Debug.Log("Clicked character: " + viewModel.Name);
             var characterVm = ConvertToCharacter(viewModel);
+            if (characterVm == null)
+            {
+                return;
+            }
+
             UIManager.Instance.Open(UIType.CharacterDetailView, characterVm);
             UIManager.Instance.Close(UIType.GachaView);
             UIManager.Instance.Close(UIType.GachaResultPopup);
@@ -92,8 +96,13 @@ public class GachaFlowController : IDisposable
 
     CharacterDetailViewModel ConvertToCharacter(GachaEntryViewModel entry)
     {
-        CharacterDefinition definition = GameDatabase.CharacterDatabase.Get(entry.EntryKey);
-        CharacterModel model = CharacterFactory.Create(definition, 1);
+        var model = GameContext.Instance.CharacterRepository.GetByKey(entry.EntryKey);
+        if (model == null)
+        {
+            Debug.LogError($"Gacha character not found in repository: {entry.EntryKey}");
+            return null;
+        }
+
         return new CharacterDetailViewModel(model);
     }
 
