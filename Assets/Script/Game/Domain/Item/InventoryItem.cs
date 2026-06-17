@@ -46,6 +46,8 @@ public class CategoryConfig
 [Serializable]
 public class InventoryItem
 {
+    public string InstanceId { get; private set; }
+
     public ItemDefinition ItemDefinition{ get; private set; }
     
     public int Id => ItemDefinition.id;
@@ -61,6 +63,7 @@ public class InventoryItem
     
     public InventoryItem(ItemDefinition item)
     {
+        InstanceId = Guid.NewGuid().ToString();
         ItemDefinition = item;
     }
     

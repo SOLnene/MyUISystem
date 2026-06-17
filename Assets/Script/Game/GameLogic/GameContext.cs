@@ -33,12 +33,66 @@ public class GameContext: Singleton<GameContext>
 public class InventoryRepository
 {
     private readonly List<InventoryItem> items = new List<InventoryItem>();
+    private readonly Dictionary<string, InventoryItem> itemsByInstanceId = new Dictionary<string, InventoryItem>();
 
     public IReadOnlyList<InventoryItem> GetAllItems() => items;
 
-    public void AddItem(InventoryItem inventoryItem) => items.Add(inventoryItem);
+    public void AddItem(InventoryItem inventoryItem)
+    {
+        items.Add(inventoryItem);
+        itemsByInstanceId.Add(inventoryItem.InstanceId, inventoryItem);
+    }
 
-    public void RemoveItem(InventoryItem inventoryItem) => items.Remove(inventoryItem);
+    public void RemoveItem(InventoryItem inventoryItem)
+    {
+        items.Remove(inventoryItem);
+        itemsByInstanceId.Remove(inventoryItem.InstanceId);
+    }
+
+    public bool TryGetItem(string instanceId, out InventoryItem item)
+    {
+        if (string.IsNullOrEmpty(instanceId))
+        {
+            item = null;
+            return false;
+        }
+
+        return itemsByInstanceId.TryGetValue(instanceId, out item);
+    }
+
+    public bool TryGetEquip(string instanceId, out EquipItem equip)
+    {
+        if (TryGetItem(instanceId, out var item) && item is EquipItem equipItem)
+        {
+            equip = equipItem;
+            return true;
+        }
+
+        equip = null;
+        return false;
+    }
+
+    public IEnumerable<InventoryItem> GetItemsByKey(string key)
+    {
+        foreach (var item in items)
+        {
+            if (item.Key == key)
+            {
+                yield return item;
+            }
+        }
+    }
+
+    public IEnumerable<EquipItem> GetAllEquips()
+    {
+        foreach (var item in items)
+        {
+            if (item is EquipItem equip)
+            {
+                yield return equip;
+            }
+        }
+    }
 
     /*public IObservable<IReadOnlyList<InventoryItem>> ObserveItems()
     {
