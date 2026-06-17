@@ -60,6 +60,7 @@ namespace Game.UI.Components.CharacterDetail
         int currentIndex = -1;
         bool isSwitchingTab;
         bool isPlayingResultFlow;
+        bool isClosing;
         CompositeDisposable disposable = new CompositeDisposable();
         public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
         {
@@ -69,6 +70,7 @@ namespace Game.UI.Components.CharacterDetail
         public override void OnOpen(object data)
         {
             base.OnOpen(data);
+            isClosing = false;
             vm = data as CharacterDetailViewModel;
             Bind(vm);
         }
@@ -361,6 +363,31 @@ namespace Game.UI.Components.CharacterDetail
             base.OnRemoveListener();
         }
 
+        public override void OnCancel()
+        {
+            if (isClosing)
+                return;
+
+            CloseWithTransition().Forget();
+        }
+
+        async UniTask CloseWithTransition()
+        {
+            isClosing = true;
+
+            if (enhancePanelView.gameObject.activeSelf || promotePanelView.gameObject.activeSelf)
+            {
+                await HideUpgradeOrPromotePanel(false);
+            }
+            else
+            {
+                await HideMainPanels(false);
+            }
+
+            base.OnCancel();
+        }
+        
+        
         public override void OnClose()
         {
             base.OnClose();
