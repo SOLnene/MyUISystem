@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Game.Domain.Character;
 using UniRx;
 using UnityEngine;
 /*
@@ -81,13 +82,22 @@ public class GachaViewModel : IDisposable
 
         foreach (var e in result.Entries)
         {
+            CharacterModel character = null;
+            InventoryItem item = null;
+
             if (e.entryType == GachaEntryType.Character)
             {
                 var definition = GameDatabase.CharacterDatabase.Get(e.entryKey);
-                GameContext.Instance.CharacterRepository.Add(definition);
+                character = GameContext.Instance.CharacterRepository.Add(definition);
+            }
+            else if (e.entryType == GachaEntryType.Equip)
+            {
+                var definition = GameDatabase.ItemDatabase.GetItemByKey(e.entryKey) as EquipDefinition;
+                item = new EquipItem(definition);
+                GameContext.Instance.InventoryRepository.AddItem(item);
             }
 
-            var vm = new GachaEntryViewModel(e,visualProvider);
+            var vm = new GachaEntryViewModel(e,visualProvider, character, item);
             lastDrawnItems.Add(vm);
         }
         

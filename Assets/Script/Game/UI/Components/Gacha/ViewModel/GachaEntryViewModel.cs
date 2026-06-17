@@ -13,6 +13,8 @@ public class GachaEntryViewModel
 {
     public string EntryKey { get; private set; }
     public string Name { get; private set; }
+    public CharacterModel Character { get; private set; }
+    public InventoryItem Item { get; private set; }
     //汇总界面图片
     public Sprite Icon { get;private set; }
     
@@ -27,9 +29,15 @@ public class GachaEntryViewModel
     //用于加载完成后刷新
     public readonly Subject<Unit> VisualLoaded = new Subject<Unit>();
 
-    public GachaEntryViewModel(GachaEntry entry,IGachaVisualProvider provider)
+    public GachaEntryViewModel(
+        GachaEntry entry,
+        IGachaVisualProvider provider,
+        CharacterModel character = null,
+        InventoryItem item = null)
     {
         EntryKey = entry.entryKey;
+        Character = character;
+        Item = item;
         Name = GetDisplayName(entry);
         visualProvider = provider;
         Rarity = entry.rarity;
@@ -39,6 +47,16 @@ public class GachaEntryViewModel
 
     string GetDisplayName(GachaEntry entry)
     {
+        if (Character != null)
+        {
+            return Character.Name.Value;
+        }
+
+        if (Item != null)
+        {
+            return Item.ItemName;
+        }
+
         switch (entry.entryType)
         {
             case GachaEntryType.Character:

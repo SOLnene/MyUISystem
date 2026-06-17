@@ -83,6 +83,11 @@ public class GachaFlowController : IDisposable
         {
             Debug.Log("Clicked equip: " + viewModel.Name);
             var equipVm = ConvertToEquip(viewModel);
+            if (equipVm == null)
+            {
+                return;
+            }
+
             UIManager.Instance.Open(UIType.EquipDetailView, equipVm);
             UIManager.Instance.Close(UIType.GachaView);
             UIManager.Instance.Close(UIType.GachaResultPopup);
@@ -91,19 +96,24 @@ public class GachaFlowController : IDisposable
     
     EquipItemViewModel ConvertToEquip(GachaEntryViewModel entry)
     {
-        return new EquipItemViewModel(new EquipItem(GameDatabase.ItemDatabase.GetItemByKey(entry.EntryKey) as EquipDefinition));
+        if (entry.Item is not EquipItem equip)
+        {
+            Debug.LogError($"Gacha equip item not found: {entry.EntryKey}");
+            return null;
+        }
+
+        return new EquipItemViewModel(equip);
     }
 
     CharacterDetailViewModel ConvertToCharacter(GachaEntryViewModel entry)
     {
-        var model = GameContext.Instance.CharacterRepository.GetByKey(entry.EntryKey);
-        if (model == null)
+        if (entry.Character == null)
         {
             Debug.LogError($"Gacha character not found in repository: {entry.EntryKey}");
             return null;
         }
 
-        return new CharacterDetailViewModel(model);
+        return new CharacterDetailViewModel(entry.Character);
     }
 
     public void CancelSession()
