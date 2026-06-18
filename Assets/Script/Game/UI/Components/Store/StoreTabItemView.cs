@@ -1,3 +1,4 @@
+using DG.Tweening;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -23,6 +24,12 @@ public class StoreTabItemView : UITabItemView
     Color normalContentColor = new Color(0.92f, 0.89f, 0.82f, 1f);
     [SerializeField]
     Color selectedContentColor = new Color(0.22f, 0.27f, 0.36f, 1f);
+    [SerializeField]
+    float selectFadeInDuration = 0.16f;
+    [SerializeField]
+    float selectFadeOutDuration = 0.12f;
+
+    Tween selectBgTween;
 
     protected override void ApplyOption(UITabOption option)
     {
@@ -44,10 +51,49 @@ public class StoreTabItemView : UITabItemView
         bool hover = state == VisualState.Hover;
         Color contentColor = selected ? selectedContentColor : normalContentColor;
 
-        selectBg.gameObject.SetActive(selected);
+        SetSelectBgVisible(selected, instant || !stateChanged);
         normalBg.gameObject.SetActive(!selected);
         normalBg.color = hover ? hoverBgColor : normalBgColor;
         label.color = contentColor;
         icon.color = contentColor;
+    }
+
+    void SetSelectBgVisible(bool visible, bool instant)
+    {
+        selectBgTween?.Kill();
+
+        if (instant)
+        {
+            selectBg.gameObject.SetActive(visible);
+            SetImageAlpha(selectBg, visible ? 1f : 0f);
+            return;
+        }
+
+        if (visible)
+        {
+            selectBg.gameObject.SetActive(true);
+            SetImageAlpha(selectBg, 0f);
+            selectBgTween = selectBg
+                .DOFade(1f, selectFadeInDuration)
+                .SetEase(Ease.OutCubic);
+            return;
+        }
+
+        selectBgTween = selectBg
+            .DOFade(0f, selectFadeOutDuration)
+            .SetEase(Ease.OutCubic)
+            .OnComplete(() => selectBg.gameObject.SetActive(false));
+    }
+
+    static void SetImageAlpha(Image image, float alpha)
+    {
+        Color color = image.color;
+        color.a = alpha;
+        image.color = color;
+    }
+
+    void OnDestroy()
+    {
+        selectBgTween?.Kill();
     }
 }
