@@ -7,6 +7,7 @@ using UnityEngine.UI;
 
 public readonly struct StoreItemViewData
 {
+    public readonly int StoreItemId;
     public readonly string Id;
     public readonly string Name;
     public readonly string IconPath;
@@ -22,6 +23,7 @@ public readonly struct StoreItemViewData
     public readonly bool IsSoldOut;
 
     public StoreItemViewData(
+        int storeItemId,
         string id,
         string name,
         string iconPath,
@@ -36,6 +38,7 @@ public readonly struct StoreItemViewData
         bool hasDiscount = false,
         bool isSoldOut = false)
     {
+        StoreItemId = storeItemId;
         Id = id;
         Name = name;
         IconPath = iconPath;

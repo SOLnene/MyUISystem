@@ -23,6 +23,7 @@ public class UITabGroup : MonoBehaviour
         bindDisposables.Clear();
         onSelectedIndexChanged = selectedHandler;
         options.Clear();
+        EnsureTabItems();
 
         if (tabOptions != null)
         {
@@ -101,6 +102,16 @@ public class UITabGroup : MonoBehaviour
         {
             tabItems[i].SetSelected(i == SelectedIndex);
         }
+    }
+
+    void EnsureTabItems()
+    {
+        if (tabItems.Count > 0)
+        {
+            return;
+        }
+
+        GetComponentsInChildren(true, tabItems);
     }
 
     void OnDestroy()

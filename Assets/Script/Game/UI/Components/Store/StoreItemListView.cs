@@ -37,6 +37,6 @@ public class StoreItemListView : MonoBehaviour
 
     void OnItemClicked(StoreItemViewData itemData)
     {
-        Debug.Log($"Clicked store item: {itemData.Id}");
+        Debug.Log($"Clicked store item: {itemData.StoreItemId}");
     }
 }

@@ -4,6 +4,8 @@ using UnityEngine;
 public class StoreItemDefinition : ScriptableObject
 {
     [SerializeField]
+    int storeItemId;
+    [SerializeField]
     int itemId;
     [SerializeField]
     int count = 1;
@@ -14,6 +16,7 @@ public class StoreItemDefinition : ScriptableObject
     [SerializeField, Range(0, 100)]
     int discountPercent;
 
+    public int StoreItemId => storeItemId;
     public int ItemId => itemId;
     public int Count => count;
     public int CostItemId => costItemId;

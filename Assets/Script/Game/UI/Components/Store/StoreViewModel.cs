@@ -1,10 +1,13 @@
 using System.Collections.Generic;
+using UniRx;
 using UnityEngine;
 
 public class StoreViewModel
 {
     readonly StoreDatabase storeDatabase;
     readonly ItemDatabase itemDatabase;
+
+    public readonly ReactiveProperty<StoreTabType> CurrentTab = new(StoreTabType.Gold);
 
     public StoreViewModel(StoreDatabase storeDatabase, ItemDatabase itemDatabase)
     {
@@ -13,6 +16,11 @@ public class StoreViewModel
     }
 
     public IReadOnlyList<StoreItemViewData> CreateItems()
+    {
+        return CreateItems(CurrentTab.Value);
+    }
+
+    public IReadOnlyList<StoreItemViewData> CreateItems(StoreTabType tab)
     {
         var items = new List<StoreItemViewData>();
         if (storeDatabase == null || itemDatabase == null)
@@ -23,6 +31,11 @@ public class StoreViewModel
 
         foreach (StoreItemDefinition storeItem in storeDatabase.Items)
         {
+            if (!MatchesTab(storeItem, tab))
+            {
+                continue;
+            }
+
             ItemDefinition itemDefinition = itemDatabase.GetItemByID(storeItem.ItemId);
             if (itemDefinition == null)
             {
@@ -39,6 +52,7 @@ public class StoreViewModel
             }
 
             items.Add(new StoreItemViewData(
+                storeItem.StoreItemId,
                 storeItem.ItemId.ToString(),
                 GetDisplayName(itemDefinition, storeItem.Count),
                 itemDefinition.iconPath,
@@ -52,6 +66,11 @@ public class StoreViewModel
         }
 
         return items;
+    }
+
+    public void SetTab(StoreTabType tab)
+    {
+        CurrentTab.Value = tab;
     }
 
     static string GetDisplayName(ItemDefinition itemDefinition, int count)
@@ -68,5 +87,16 @@ public class StoreViewModel
 
         float discountRate = (100 - storeItem.DiscountPercent) / 100f;
         return Mathf.CeilToInt(storeItem.Price / discountRate);
+    }
+
+    static bool MatchesTab(StoreItemDefinition storeItem, StoreTabType tab)
+    {
+        return tab switch
+        {
+            StoreTabType.Gold => storeItem.CostItemId == 201 || storeItem.CostItemId == 202,
+            StoreTabType.Fate => storeItem.CostItemId == 221 || storeItem.CostItemId == 222,
+            StoreTabType.Item203 => storeItem.CostItemId == 203,
+            _ => false,
+        };
     }
 }
