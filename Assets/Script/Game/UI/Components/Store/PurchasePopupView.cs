@@ -106,9 +106,8 @@ public class PurchasePopupView : MonoBehaviour
     {
         countValueText.text = purchaseCount.ToString();
         costValueText.text = (data.UnitPrice * purchaseCount).ToString();
-        countScrollbar.size = data.MaxPurchaseCount <= 1 ? 1 : 0;
+        countScrollbar.numberOfSteps = data.MaxPurchaseCount;
         countScrollbar.value = data.MaxPurchaseCount <= 1 ? 0 : Mathf.InverseLerp(1, data.MaxPurchaseCount, purchaseCount);
-        countScrollbar.interactable = data.MaxPurchaseCount > 1;
     }
 
     void HandleCancel()
