@@ -73,9 +73,62 @@ public class StoreViewModel
         CurrentTab.Value = tab;
     }
 
+    public bool TryCreatePurchasePopupData(int storeItemId, out PurchasePopupViewData popupData)
+    {
+        popupData = default;
+        if (storeDatabase == null || itemDatabase == null)
+        {
+            Debug.LogWarning("StoreViewModel cannot create purchase popup data because database is not ready.");
+            return false;
+        }
+
+        StoreItemDefinition storeItem = FindStoreItem(storeItemId);
+        if (storeItem == null)
+        {
+            Debug.LogWarning($"Cannot find store item id: {storeItemId}");
+            return false;
+        }
+
+        ItemDefinition itemDefinition = itemDatabase.GetItemByID(storeItem.ItemId);
+        if (itemDefinition == null)
+        {
+            Debug.LogWarning($"Store item references missing item id: {storeItem.ItemId}");
+            return false;
+        }
+
+        ItemDefinition costDefinition = itemDatabase.GetItemByID(storeItem.CostItemId);
+        if (costDefinition == null)
+        {
+            Debug.LogWarning($"Store item references missing cost item id: {storeItem.CostItemId}");
+        }
+
+        popupData = new PurchasePopupViewData(
+            storeItem.StoreItemId,
+            itemDefinition.itemName,
+            itemDefinition.iconPath,
+            costDefinition?.iconPath,
+            storeItem.Count,
+            storeItem.Price,
+            1);
+        return true;
+    }
+
     static string GetDisplayName(ItemDefinition itemDefinition, int count)
     {
         return count > 1 ? $"{itemDefinition.itemName}x{count}" : itemDefinition.itemName;
+    }
+
+    StoreItemDefinition FindStoreItem(int storeItemId)
+    {
+        foreach (StoreItemDefinition storeItem in storeDatabase.Items)
+        {
+            if (storeItem.StoreItemId == storeItemId)
+            {
+                return storeItem;
+            }
+        }
+
+        return null;
     }
 
     static int CalculateBeforeValue(StoreItemDefinition storeItem)

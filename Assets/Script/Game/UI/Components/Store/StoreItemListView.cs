@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -9,9 +10,11 @@ public class StoreItemListView : MonoBehaviour
     StoreItemView itemPrefab;
 
     readonly List<StoreItemView> itemViews = new();
+    Action<StoreItemViewData> onItemClicked;
 
-    public void Bind(IReadOnlyList<StoreItemViewData> items)
+    public void Bind(IReadOnlyList<StoreItemViewData> items, Action<StoreItemViewData> clickHandler)
     {
+        onItemClicked = clickHandler;
         EnsureItemCount(items.Count);
 
         for (int i = 0; i < itemViews.Count; i++)
@@ -37,6 +40,6 @@ public class StoreItemListView : MonoBehaviour
 
     void OnItemClicked(StoreItemViewData itemData)
     {
-        Debug.Log($"Clicked store item: {itemData.StoreItemId}");
+        onItemClicked?.Invoke(itemData);
     }
 }
