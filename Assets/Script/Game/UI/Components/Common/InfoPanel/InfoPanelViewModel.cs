@@ -57,6 +57,7 @@ public class InfoPanelViewModel: IDisposable
             subStatValue.Value = string.Empty;
         }
     }
+
     public void Dispose()
     {
         disposables.Dispose();
