@@ -7,8 +7,8 @@ public class StoreViewModel
     const int MoraItemId = 201;
     const int GenesisCrystalItemId = 202;
     const int PrimogemItemId = 203;
-    const int IntertwinedFateItemId = 221;
-    const int AcquaintFateItemId = 222;
+    const int StarglitterItemId = 221;
+    const int StardustItemId = 222;
 
     readonly StoreDatabase storeDatabase;
     readonly ItemDatabase itemDatabase;
@@ -83,10 +83,10 @@ public class StoreViewModel
     {
         return category switch
         {
-            StoreCategory.Primogem => new[] { MoraItemId },
-            StoreCategory.Mora => new[] { GenesisCrystalItemId },
-            StoreCategory.GenesisCrystal => new[] { PrimogemItemId },
-            StoreCategory.Fate => new[] { IntertwinedFateItemId, AcquaintFateItemId },
+            StoreCategory.Primogem => new[] { PrimogemItemId },
+            StoreCategory.GenesisCrystal => new[] { GenesisCrystalItemId },
+            StoreCategory.StarglitterStardust => new[] { StarglitterItemId, StardustItemId },
+            StoreCategory.Mora => new[] { MoraItemId },
             _ => new[] { PrimogemItemId },
         };
     }

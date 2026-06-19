@@ -12,15 +12,15 @@ public class StoreTabView : MonoBehaviour
     Sprite moraIcon;
     [SerializeField, FormerlySerializedAs("item203Icon")]
     Sprite genesisCrystalIcon;
-    [SerializeField]
-    Sprite fateIcon;
+    [SerializeField, FormerlySerializedAs("fateIcon"), FormerlySerializedAs("starglitterIcon")]
+    Sprite starglitterStardustIcon;
 
     static readonly IReadOnlyList<UITabOption> FallbackOptions = new[]
     {
         new UITabOption((int)StoreCategory.Primogem, "原石"),
-        new UITabOption((int)StoreCategory.Mora, "摩拉"),
         new UITabOption((int)StoreCategory.GenesisCrystal, "创世结晶"),
-        new UITabOption((int)StoreCategory.Fate, "纠缠/相遇之缘"),
+        new UITabOption((int)StoreCategory.StarglitterStardust, "星尘星辉"),
+        new UITabOption((int)StoreCategory.Mora, "摩拉"),
     };
 
     public void Bind(StoreViewModel viewModel)
@@ -30,7 +30,7 @@ public class StoreTabView : MonoBehaviour
 
     IReadOnlyList<UITabOption> CreateOptions()
     {
-        if (primogemIcon == null && moraIcon == null && genesisCrystalIcon == null && fateIcon == null)
+        if (primogemIcon == null && moraIcon == null && genesisCrystalIcon == null && starglitterStardustIcon == null)
         {
             return FallbackOptions;
         }
@@ -38,9 +38,9 @@ public class StoreTabView : MonoBehaviour
         return new[]
         {
             new UITabOption((int)StoreCategory.Primogem, "原石", primogemIcon),
-            new UITabOption((int)StoreCategory.Mora, "摩拉", moraIcon),
             new UITabOption((int)StoreCategory.GenesisCrystal, "创世结晶", genesisCrystalIcon),
-            new UITabOption((int)StoreCategory.Fate, "纠缠/相遇之缘", fateIcon),
+            new UITabOption((int)StoreCategory.StarglitterStardust, "星尘星辉", starglitterStardustIcon),
+            new UITabOption((int)StoreCategory.Mora, "摩拉", moraIcon),
         };
     }
 }

@@ -1,7 +1,7 @@
 public enum StoreCategory
 {
     Primogem,
-    Mora,
     GenesisCrystal,
-    Fate,
+    StarglitterStardust,
+    Mora,
 }
