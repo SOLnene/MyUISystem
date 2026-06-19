@@ -246,11 +246,11 @@ public class UIConfigWindow : EditorWindow
                             Enum.TryParse(jsonData.uiLayer, out UILayer layer);
                             jsonData.uiLayer = EditorGUILayout.EnumPopup("UI层级设置", layer).ToString();
                             jsonData.assetPath = AssetDatabase.GetAssetPath(uiPrefab);
-                            jsonData.uiAddress = SyncAddressable(uiPrefab,uiName,isWindow);
                             var defaultColor = GUI.color;
                             GUI.color = Color.green;
                             if (GUILayout.Button("保存设置"))
                             {
+                                jsonData.uiAddress = SyncAddressable(uiPrefab,uiName,isWindow);
                                 SaveJson();
                                 AssetDatabase.SaveAssets();
                                 AssetDatabase.Refresh();
@@ -508,7 +508,7 @@ public class UIConfigWindow : EditorWindow
         string guid = AssetDatabase.AssetPathToGUID(assetPath);
 
         // 生成规范地址
-        string address = $"ui/{(isWindow ? "popup" : "view")}/{uiName.ToLower()}";
+        string address = BuildUIAddress(uiName, isWindow);
 
         // 查找是否已有 entry
         var entry = settings.FindAssetEntry(guid);
@@ -537,5 +537,10 @@ public class UIConfigWindow : EditorWindow
 
         AssetDatabase.SaveAssets();
         return address;
+    }
+
+    string BuildUIAddress(string uiName, bool isWindow)
+    {
+        return $"ui/{(isWindow ? "popup" : "view")}/{uiName.ToLower()}";
     }
 }
