@@ -5,25 +5,34 @@ using UnityEngine;
 
 public class GameEconomy : SingletonMono<GameEconomy>
 {
-    const int GoldItemId = 201;
+    const int GoldItemId = 201; // 金币
+    const int GenesisCrystalItemId = 202; // 创世结晶
+    const int PrimogemItemId = 203; // 原石
+    const int IntertwinedFateItemId = 221; // 纠缠之缘
+    const int AcquaintFateItemId = 222; // 相遇之缘
+    const int StarglitterItemId = 223; // 无主的星辉
+    const int StardustItemId = 224; // 无主的星尘
 
     [SerializeField]
     List<CurrencyInitialValue> initialCurrencies = new()
     {
         new CurrencyInitialValue(GoldItemId, 100000),
-        new CurrencyInitialValue(202, 0),
-        new CurrencyInitialValue(203, 0),
-        new CurrencyInitialValue(221, 10),
-        new CurrencyInitialValue(222, 10),
+        new CurrencyInitialValue(GenesisCrystalItemId, 0),
+        new CurrencyInitialValue(PrimogemItemId, 4682),
+        new CurrencyInitialValue(IntertwinedFateItemId, 10),
+        new CurrencyInitialValue(AcquaintFateItemId, 10),
+        new CurrencyInitialValue(StarglitterItemId, 7),
+        new CurrencyInitialValue(StardustItemId, 60),
     };
 
-    public readonly ReactiveProperty<int> gold = new(100000);
     readonly Dictionary<int, ReactiveProperty<int>> currencies = new();
+
+    public ReactiveProperty<int> gold => GetCurrencyProperty(GoldItemId);
 
     protected override void Awake()
     {
         base.Awake();
-        EnsureCurrencies();
+        InitializeCurrencies();
     }
 
     public int GetCurrency(int itemId)
@@ -75,31 +84,21 @@ public class GameEconomy : SingletonMono<GameEconomy>
         currency.Value += amount;
     }
 
-    void EnsureCurrencies()
+    void InitializeCurrencies()
     {
-        if (currencies.Count > 0)
-        {
-            return;
-        }
+        currencies.Clear();
 
-        currencies[GoldItemId] = gold;
         foreach (CurrencyInitialValue initialValue in initialCurrencies)
         {
-            if (initialValue.ItemId == GoldItemId)
-            {
-                gold.Value = Mathf.Max(0, initialValue.Amount);
-                continue;
-            }
-
             currencies[initialValue.ItemId] = new ReactiveProperty<int>(Mathf.Max(0, initialValue.Amount));
         }
     }
 
     ReactiveProperty<int> GetCurrencyProperty(int itemId)
     {
-        EnsureCurrencies();
         if (!currencies.TryGetValue(itemId, out ReactiveProperty<int> currency))
         {
+            Debug.LogError($"未注册货币: {itemId}");
             currency = new ReactiveProperty<int>(0);
             currencies[itemId] = currency;
         }
