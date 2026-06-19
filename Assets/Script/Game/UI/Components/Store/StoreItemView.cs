@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -65,7 +66,7 @@ public class StoreItemView : MonoBehaviour
     [SerializeField]
     TextMeshProUGUI remainText;
     [SerializeField]
-    ResourceAmountView costAmountView;
+    CurrencyValueView costAmountView;
     [SerializeField]
     TextMeshProUGUI beforeValue;
     [SerializeField]
@@ -88,7 +89,7 @@ public class StoreItemView : MonoBehaviour
 
         bg.color = data.BackgroundColor;
 
-        itemIconRequestCts = IconLoader.LoadSpriteAsync(icon, data.IconPath, this, itemIconRequestCts);
+        LoadItemIcon(data.IconPath);
         costAmountView.Bind(data.CostIconPath, data.CostValue);
         nameText.text = data.Name;
 
@@ -120,9 +121,19 @@ public class StoreItemView : MonoBehaviour
         onClicked?.Invoke(data);
     }
 
+    void LoadItemIcon(string iconPath)
+    {
+        itemIconRequestCts?.Cancel();
+        itemIconRequestCts?.Dispose();
+        itemIconRequestCts = CancellationTokenSource.CreateLinkedTokenSource(
+            this.GetCancellationTokenOnDestroy());
+        IconLoader.SetSpriteAsync(icon, iconPath, itemIconRequestCts.Token).Forget();
+    }
+
     void OnDestroy()
     {
-        IconLoader.Cancel(itemIconRequestCts);
+        itemIconRequestCts?.Cancel();
+        itemIconRequestCts?.Dispose();
         button.onClick.RemoveListener(HandleClick);
     }
 }

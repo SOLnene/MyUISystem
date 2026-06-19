@@ -1,9 +1,10 @@
 using System.Threading;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class ResourceAmountView : MonoBehaviour
+public class CurrencyValueView : MonoBehaviour
 {
     [SerializeField]
     Image icon;
@@ -15,7 +16,7 @@ public class ResourceAmountView : MonoBehaviour
     public void Bind(string iconPath, int amount)
     {
         SetAmount(amount);
-        iconLoadCts = IconLoader.LoadSpriteAsync(icon, iconPath, this, iconLoadCts);
+        LoadIcon(iconPath);
     }
 
     public void SetAmount(int amount)
@@ -25,8 +26,17 @@ public class ResourceAmountView : MonoBehaviour
 
     void CancelIconLoad()
     {
-        IconLoader.Cancel(iconLoadCts);
+        iconLoadCts?.Cancel();
+        iconLoadCts?.Dispose();
         iconLoadCts = null;
+    }
+
+    void LoadIcon(string iconPath)
+    {
+        CancelIconLoad();
+        iconLoadCts = CancellationTokenSource.CreateLinkedTokenSource(
+            this.GetCancellationTokenOnDestroy());
+        IconLoader.SetSpriteAsync(icon, iconPath, iconLoadCts.Token).Forget();
     }
 
     void OnDisable()

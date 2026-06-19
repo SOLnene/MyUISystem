@@ -6,48 +6,23 @@ using UnityEngine.UI;
 
 public static class IconLoader
 {
-    public static CancellationTokenSource LoadSpriteAsync(
+    public static async UniTask SetSpriteAsync(
         Image target,
         string iconPath,
-        MonoBehaviour owner,
-        CancellationTokenSource currentCts)
+        CancellationToken cancellationToken)
     {
-        Cancel(currentCts);
         target.sprite = null;
-
         if (string.IsNullOrEmpty(iconPath))
         {
-            return null;
+            return;
         }
 
-        var requestCts = CancellationTokenSource.CreateLinkedTokenSource(
-            owner.GetCancellationTokenOnDestroy());
-        LoadSpriteAsync(target, iconPath, requestCts).Forget();
-        return requestCts;
-    }
-
-    public static void Cancel(CancellationTokenSource cts)
-    {
-        try
-        {
-            cts?.Cancel();
-        }
-        catch (ObjectDisposedException)
-        {
-        }
-    }
-
-    static async UniTask LoadSpriteAsync(
-        Image target,
-        string iconPath,
-        CancellationTokenSource requestCts)
-    {
         try
         {
             Sprite sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(
                 iconPath,
-                requestCts.Token);
-            if (requestCts.IsCancellationRequested)
+                cancellationToken);
+            if (cancellationToken.IsCancellationRequested)
             {
                 return;
             }
@@ -61,10 +36,6 @@ public static class IconLoader
         }
         catch (OperationCanceledException)
         {
-        }
-        finally
-        {
-            requestCts.Dispose();
         }
     }
 }

@@ -1,5 +1,6 @@
 using System;
 using System.Threading;
+using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -45,7 +46,7 @@ public class PurchasePopupView : MonoBehaviour
     [SerializeField]
     Scrollbar countScrollbar;
     [SerializeField]
-    ResourceAmountView costAmountView;
+    CurrencyValueView costAmountView;
     [SerializeField]
     Button itemAreaButton;
     [SerializeField]
@@ -73,7 +74,7 @@ public class PurchasePopupView : MonoBehaviour
         purchaseCount = 1;
 
         itemNameText.text = data.ItemName;
-        itemIconRequestCts = IconLoader.LoadSpriteAsync(itemIcon, data.ItemIconPath, this, itemIconRequestCts);
+        LoadItemIcon(data.ItemIconPath);
         costAmountView.Bind(data.CostIconPath, data.UnitPrice);
         RefreshCount();
 
@@ -128,9 +129,19 @@ public class PurchasePopupView : MonoBehaviour
         onConfirm?.Invoke(data, purchaseCount);
     }
 
+    void LoadItemIcon(string iconPath)
+    {
+        itemIconRequestCts?.Cancel();
+        itemIconRequestCts?.Dispose();
+        itemIconRequestCts = CancellationTokenSource.CreateLinkedTokenSource(
+            this.GetCancellationTokenOnDestroy());
+        IconLoader.SetSpriteAsync(itemIcon, iconPath, itemIconRequestCts.Token).Forget();
+    }
+
     void OnDestroy()
     {
-        IconLoader.Cancel(itemIconRequestCts);
+        itemIconRequestCts?.Cancel();
+        itemIconRequestCts?.Dispose();
         countScrollbar.onValueChanged.RemoveListener(HandleCountChanged);
         itemAreaButton.onClick.RemoveListener(HandleItemAreaClicked);
         cancelButton.onClick.RemoveListener(HandleCancel);
