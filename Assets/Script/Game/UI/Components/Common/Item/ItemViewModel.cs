@@ -46,6 +46,7 @@ public class ItemViewModel
     // 当物品数据变化时调用
     public virtual void Refresh()
     {
-        UpdateDisplayCount();
+        displayCountText.Value = Model.GetDisplayLevelText();
+        displayMainText.Value = Model.GetDisplayMainText();
     }
 }

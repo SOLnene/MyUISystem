@@ -82,8 +82,40 @@ public class InventoryItem
 }
 
 
+public interface IStackableItem
+{
+    int Count { get; }
+    void Add(int amount);
+}
+
+
 [Serializable]
-public class ConsumableItem : InventoryItem
+public class ItemStack
+{
+    public ItemDefinition ItemDefinition { get; }
+    public int ItemId => ItemDefinition.id;
+    public int Count { get; private set; }
+
+    public ItemStack(ItemDefinition itemDefinition, int count)
+    {
+        ItemDefinition = itemDefinition;
+        Count = Mathf.Max(0, count);
+    }
+
+    public void Add(int amount)
+    {
+        if (amount <= 0)
+        {
+            return;
+        }
+
+        Count += amount;
+    }
+}
+
+
+[Serializable]
+public class ConsumableItem : InventoryItem, IStackableItem
 {
     public int Count { get; private set; }
 
@@ -100,7 +132,7 @@ public class ConsumableItem : InventoryItem
 
 
 [Serializable]
-public class MaterialItem : InventoryItem
+public class MaterialItem : InventoryItem, IStackableItem
 {
     public int Count { get; private set; }
 

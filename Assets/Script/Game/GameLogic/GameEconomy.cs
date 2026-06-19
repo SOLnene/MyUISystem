@@ -8,10 +8,10 @@ public class GameEconomy : SingletonMono<GameEconomy>
     const int GoldItemId = 201; // 金币
     const int GenesisCrystalItemId = 202; // 创世结晶
     const int PrimogemItemId = 203; // 原石
-    const int IntertwinedFateItemId = 221; // 纠缠之缘
-    const int AcquaintFateItemId = 222; // 相遇之缘
-    const int StarglitterItemId = 223; // 无主的星辉
-    const int StardustItemId = 224; // 无主的星尘
+    const int StarglitterItemId = 221; // 无主的星辉
+    const int StardustItemId = 222; // 无主的星尘
+    const int IntertwinedFateItemId = 223; // 纠缠之缘
+    const int AcquaintFateItemId = 224; // 相遇之缘
 
     [SerializeField]
     List<CurrencyInitialValue> initialCurrencies = new()
@@ -19,10 +19,10 @@ public class GameEconomy : SingletonMono<GameEconomy>
         new CurrencyInitialValue(GoldItemId, 100000),
         new CurrencyInitialValue(GenesisCrystalItemId, 0),
         new CurrencyInitialValue(PrimogemItemId, 4682),
-        new CurrencyInitialValue(IntertwinedFateItemId, 10),
-        new CurrencyInitialValue(AcquaintFateItemId, 10),
         new CurrencyInitialValue(StarglitterItemId, 7),
         new CurrencyInitialValue(StardustItemId, 60),
+        new CurrencyInitialValue(IntertwinedFateItemId, 10),
+        new CurrencyInitialValue(AcquaintFateItemId, 10),
     };
 
     readonly Dictionary<int, ReactiveProperty<int>> currencies = new();

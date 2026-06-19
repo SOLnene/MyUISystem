@@ -40,6 +40,10 @@ public class  BackpackViewModel
         {
             CreateSlotVM(item);
         }
+        inventoryRepository.ObserveChanged()
+            .Subscribe(OnInventoryChanged)
+            .AddTo(disposables);
+
         var categories = new List<ItemCategory> { ItemCategory.Equip,ItemCategory.Consumable,ItemCategory.Material };
         topVM = new BackpackTopViewModel(categories);
         middleVM = new BackpackMiddleViewModel(this);
@@ -61,10 +65,38 @@ public class  BackpackViewModel
     public void AddItem(InventoryItem inventoryItem)
     {
         inventoryRepository.AddItem(inventoryItem);
-        CreateSlotVM(inventoryItem);
     }
     
     public void RemoveItem(InventoryItem inventoryItem)
+    {
+        inventoryRepository.RemoveItem(inventoryItem);
+    }
+
+    void OnInventoryChanged(InventoryChangedEvent changeEvent)
+    {
+        switch (changeEvent.Type)
+        {
+            case InventoryChangeType.Added:
+                CreateSlotVM(changeEvent.Item);
+                break;
+            case InventoryChangeType.StackChanged:
+                RefreshSlotVM(changeEvent.Item);
+                break;
+            case InventoryChangeType.Removed:
+                RemoveSlotVM(changeEvent.Item);
+                break;
+        }
+    }
+
+    void RefreshSlotVM(InventoryItem inventoryItem)
+    {
+        if (itemToSlotVM.TryGetValue(inventoryItem, out ItemSlotViewModel slotVM))
+        {
+            slotVM.ItemViewModel.Refresh();
+        }
+    }
+
+    void RemoveSlotVM(InventoryItem inventoryItem)
     {
         if (!itemToSlotVM.TryGetValue(inventoryItem, out var slotVM))
         {
@@ -72,7 +104,6 @@ public class  BackpackViewModel
         }
 
         bool wasSelected = selectedSlot.Value == slotVM;
-        inventoryRepository.RemoveItem(inventoryItem);
         SlotsViewModels.Remove(slotVM);
         itemToSlotVM.Remove(inventoryItem);
         slotVM.Dispose();
