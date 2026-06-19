@@ -45,14 +45,14 @@ public class StoreView : UIView
         purchasePopup.Show();
     }
 
-    void OnPurchaseItemAreaClicked(PurchasePopupViewData popupData)
+    void OnPurchaseItemAreaClicked(ItemDefinition itemDefinition)
     {
-        if (!viewModel.TryCreateInfoPanelItem(popupData.StoreItemId, out ItemViewModel itemViewModel))
+        if (itemDefinition == null)
         {
             return;
         }
 
-        UIManager.Instance.OpenWithView(UIType.InfoPanelPopup, itemViewModel);
+        UIManager.Instance.OpenWithView(UIType.InfoPanelPopup, itemDefinition);
     }
 
     void OnPurchaseConfirmed(PurchasePopupViewData popupData, int count)

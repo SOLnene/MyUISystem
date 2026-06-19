@@ -6,6 +6,8 @@ public class StoreItemDefinition : ScriptableObject
     [SerializeField]
     int storeItemId;
     [SerializeField]
+    StoreCategory category;
+    [SerializeField]
     int itemId;
     [SerializeField]
     int count = 1;
@@ -17,6 +19,7 @@ public class StoreItemDefinition : ScriptableObject
     int discountPercent;
 
     public int StoreItemId => storeItemId;
+    public StoreCategory Category => category;
     public int ItemId => itemId;
     public int Count => count;
     public int CostItemId => costItemId;

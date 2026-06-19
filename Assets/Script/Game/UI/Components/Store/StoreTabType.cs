@@ -1,6 +1,7 @@
-public enum StoreTabType
+public enum StoreCategory
 {
-    Gold,
+    Primogem,
+    Mora,
+    GenesisCrystal,
     Fate,
-    Item203
 }

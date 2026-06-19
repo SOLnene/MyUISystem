@@ -46,6 +46,12 @@ public class InfoPanelPopup : UIView
             return;
         }
 
+        if (data is ItemDefinition itemDefinition)
+        {
+            Show(itemDefinition);
+            return;
+        }
+
         Debug.LogError($"InfoPanelPopupView open data is invalid: {data?.GetType().Name ?? "null"}");
     }
 
@@ -58,6 +64,17 @@ public class InfoPanelPopup : UIView
         }
 
         infoPanelView.Show(itemViewModel);
+    }
+
+    void Show(ItemDefinition itemDefinition)
+    {
+        if (itemDefinition == null)
+        {
+            Debug.LogError("InfoPanelPopupView cannot show null item definition.");
+            return;
+        }
+
+        infoPanelView.Show(new ItemViewModel(new InventoryItem(itemDefinition)));
     }
 
     public void SetCurrentAmount(string text)

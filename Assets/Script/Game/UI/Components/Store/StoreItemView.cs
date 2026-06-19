@@ -66,9 +66,7 @@ public class StoreItemView : MonoBehaviour
     [SerializeField]
     TextMeshProUGUI remainText;
     [SerializeField]
-    TextMeshProUGUI costValue;
-    [SerializeField]
-    Image costIcon;
+    ResourceAmountView costAmountView;
     [SerializeField]
     TextMeshProUGUI beforeValue;
     [SerializeField]
@@ -84,8 +82,6 @@ public class StoreItemView : MonoBehaviour
     Action<StoreItemViewData> onClicked;
     int itemIconRequestVersion;
     CancellationTokenSource itemIconRequestCts;
-    int costIconRequestVersion;
-    CancellationTokenSource costIconRequestCts;
 
     public void Bind(StoreItemViewData viewData, Action<StoreItemViewData> clickHandler)
     {
@@ -95,9 +91,8 @@ public class StoreItemView : MonoBehaviour
         bg.color = data.BackgroundColor;
 
         LoadItemIcon(data.IconPath);
-        LoadCostIcon(data.CostIconPath);
+        costAmountView.Bind(data.CostIconPath, data.CostValue);
         nameText.text = data.Name;
-        costValue.text = data.CostValue.ToString();
 
         remainText.gameObject.SetActive(data.HasRemainCount);
         if (data.HasRemainCount)
@@ -164,49 +159,10 @@ public class StoreItemView : MonoBehaviour
         icon.sprite = sprite;
     }
 
-    void LoadCostIcon(string iconPath)
-    {
-        costIconRequestVersion++;
-        costIconRequestCts?.Cancel();
-        costIconRequestCts?.Dispose();
-        costIconRequestCts = null;
-
-        costIcon.sprite = null;
-        if (string.IsNullOrEmpty(iconPath))
-        {
-            return;
-        }
-
-        costIconRequestCts = new CancellationTokenSource();
-        LoadCostIconAsync(iconPath, costIconRequestVersion, costIconRequestCts.Token).Forget();
-    }
-
-    async UniTask LoadCostIconAsync(string iconPath, int requestVersion, CancellationToken cancellationToken)
-    {
-        Sprite sprite;
-        try
-        {
-            sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(iconPath, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        if (cancellationToken.IsCancellationRequested || requestVersion != costIconRequestVersion || data.CostIconPath != iconPath)
-        {
-            return;
-        }
-
-        costIcon.sprite = sprite;
-    }
-
     void OnDestroy()
     {
         itemIconRequestCts?.Cancel();
         itemIconRequestCts?.Dispose();
-        costIconRequestCts?.Cancel();
-        costIconRequestCts?.Dispose();
         button.onClick.RemoveListener(HandleClick);
     }
 }

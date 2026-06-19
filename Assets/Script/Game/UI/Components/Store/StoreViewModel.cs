@@ -7,7 +7,7 @@ public class StoreViewModel
     readonly StoreDatabase storeDatabase;
     readonly ItemDatabase itemDatabase;
 
-    public readonly ReactiveProperty<StoreTabType> CurrentTab = new(StoreTabType.Gold);
+    public readonly ReactiveProperty<StoreCategory> CurrentTab = new(StoreCategory.Primogem);
 
     public StoreViewModel(StoreDatabase storeDatabase, ItemDatabase itemDatabase)
     {
@@ -20,7 +20,7 @@ public class StoreViewModel
         return CreateItems(CurrentTab.Value);
     }
 
-    public IReadOnlyList<StoreItemViewData> CreateItems(StoreTabType tab)
+    public IReadOnlyList<StoreItemViewData> CreateItems(StoreCategory category)
     {
         var items = new List<StoreItemViewData>();
         if (storeDatabase == null || itemDatabase == null)
@@ -31,7 +31,7 @@ public class StoreViewModel
 
         foreach (StoreItemDefinition storeItem in storeDatabase.Items)
         {
-            if (!MatchesTab(storeItem, tab))
+            if (!MatchesCategory(storeItem, category))
             {
                 continue;
             }
@@ -68,9 +68,9 @@ public class StoreViewModel
         return items;
     }
 
-    public void SetTab(StoreTabType tab)
+    public void SetTab(StoreCategory category)
     {
-        CurrentTab.Value = tab;
+        CurrentTab.Value = category;
     }
 
     public bool TryCreatePurchasePopupData(int storeItemId, out PurchasePopupViewData popupData)
@@ -104,39 +104,11 @@ public class StoreViewModel
 
         popupData = new PurchasePopupViewData(
             storeItem.StoreItemId,
-            itemDefinition.itemName,
-            itemDefinition.iconPath,
+            itemDefinition,
             costDefinition?.iconPath,
             storeItem.Count,
             storeItem.Price,
             1);
-        return true;
-    }
-
-    public bool TryCreateInfoPanelItem(int storeItemId, out ItemViewModel itemViewModel)
-    {
-        itemViewModel = null;
-        if (storeDatabase == null || itemDatabase == null)
-        {
-            Debug.LogWarning("StoreViewModel cannot create info panel item because database is not ready.");
-            return false;
-        }
-
-        StoreItemDefinition storeItem = FindStoreItem(storeItemId);
-        if (storeItem == null)
-        {
-            Debug.LogWarning($"Cannot find store item id: {storeItemId}");
-            return false;
-        }
-
-        ItemDefinition itemDefinition = itemDatabase.GetItemByID(storeItem.ItemId);
-        if (itemDefinition == null)
-        {
-            Debug.LogWarning($"Store item references missing item id: {storeItem.ItemId}");
-            return false;
-        }
-
-        itemViewModel = new ItemViewModel(new InventoryItem(itemDefinition));
         return true;
     }
 
@@ -241,14 +213,8 @@ public class StoreViewModel
         return Mathf.CeilToInt(storeItem.Price / discountRate);
     }
 
-    static bool MatchesTab(StoreItemDefinition storeItem, StoreTabType tab)
+    static bool MatchesCategory(StoreItemDefinition storeItem, StoreCategory category)
     {
-        return tab switch
-        {
-            StoreTabType.Gold => storeItem.CostItemId == 201 || storeItem.CostItemId == 202,
-            StoreTabType.Fate => storeItem.CostItemId == 221 || storeItem.CostItemId == 222,
-            StoreTabType.Item203 => storeItem.CostItemId == 203,
-            _ => false,
-        };
+        return storeItem.Category == category;
     }
 }

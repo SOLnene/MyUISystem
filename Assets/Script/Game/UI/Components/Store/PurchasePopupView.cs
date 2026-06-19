@@ -8,6 +8,7 @@ using UnityEngine.UI;
 public readonly struct PurchasePopupViewData
 {
     public readonly int StoreItemId;
+    public readonly ItemDefinition ItemDefinition;
     public readonly string ItemName;
     public readonly string ItemIconPath;
     public readonly string CostIconPath;
@@ -17,16 +18,16 @@ public readonly struct PurchasePopupViewData
 
     public PurchasePopupViewData(
         int storeItemId,
-        string itemName,
-        string itemIconPath,
+        ItemDefinition itemDefinition,
         string costIconPath,
         int itemCount,
         int unitPrice,
         int maxPurchaseCount)
     {
         StoreItemId = storeItemId;
-        ItemName = itemName;
-        ItemIconPath = itemIconPath;
+        ItemDefinition = itemDefinition;
+        ItemName = itemDefinition != null ? itemDefinition.itemName : string.Empty;
+        ItemIconPath = itemDefinition?.iconPath;
         CostIconPath = costIconPath;
         ItemCount = itemCount;
         UnitPrice = unitPrice;
@@ -45,9 +46,7 @@ public class PurchasePopupView : MonoBehaviour
     [SerializeField]
     Scrollbar countScrollbar;
     [SerializeField]
-    Image costIcon;
-    [SerializeField]
-    TextMeshProUGUI costValueText;
+    ResourceAmountView costAmountView;
     [SerializeField]
     Button itemAreaButton;
     [SerializeField]
@@ -57,19 +56,17 @@ public class PurchasePopupView : MonoBehaviour
 
     PurchasePopupViewData data;
     Action<PurchasePopupViewData, int> onConfirm;
-    Action<PurchasePopupViewData> onItemAreaClicked;
+    Action<ItemDefinition> onItemAreaClicked;
     Action onCancel;
     int purchaseCount = 1;
     int itemIconRequestVersion;
     CancellationTokenSource itemIconRequestCts;
-    int costIconRequestVersion;
-    CancellationTokenSource costIconRequestCts;
 
     public void Bind(
         PurchasePopupViewData viewData,
         Action<PurchasePopupViewData, int> confirmHandler,
         Action cancelHandler,
-        Action<PurchasePopupViewData> itemAreaClickHandler = null)
+        Action<ItemDefinition> itemAreaClickHandler = null)
     {
         data = viewData;
         onConfirm = confirmHandler;
@@ -79,7 +76,7 @@ public class PurchasePopupView : MonoBehaviour
 
         itemNameText.text = data.ItemName;
         LoadItemIcon(data.ItemIconPath);
-        LoadCostIcon(data.CostIconPath);
+        costAmountView.Bind(data.CostIconPath, data.UnitPrice);
         RefreshCount();
 
         countScrollbar.onValueChanged.RemoveListener(HandleCountChanged);
@@ -112,7 +109,7 @@ public class PurchasePopupView : MonoBehaviour
     void RefreshCount()
     {
         countValueText.text = purchaseCount.ToString();
-        costValueText.text = (data.UnitPrice * purchaseCount).ToString();
+        costAmountView.SetAmount(data.UnitPrice * purchaseCount);
         countScrollbar.numberOfSteps = data.MaxPurchaseCount;
         countScrollbar.value = data.MaxPurchaseCount <= 1 ? 0 : Mathf.InverseLerp(1, data.MaxPurchaseCount, purchaseCount);
     }
@@ -125,7 +122,7 @@ public class PurchasePopupView : MonoBehaviour
 
     void HandleItemAreaClicked()
     {
-        onItemAreaClicked?.Invoke(data);
+        onItemAreaClicked?.Invoke(data.ItemDefinition);
     }
 
     void HandleConfirm()
@@ -170,49 +167,10 @@ public class PurchasePopupView : MonoBehaviour
         itemIcon.sprite = sprite;
     }
 
-    void LoadCostIcon(string iconPath)
-    {
-        costIconRequestVersion++;
-        costIconRequestCts?.Cancel();
-        costIconRequestCts?.Dispose();
-        costIconRequestCts = null;
-
-        costIcon.sprite = null;
-        if (string.IsNullOrEmpty(iconPath))
-        {
-            return;
-        }
-
-        costIconRequestCts = new CancellationTokenSource();
-        LoadCostIconAsync(iconPath, costIconRequestVersion, costIconRequestCts.Token).Forget();
-    }
-
-    async UniTask LoadCostIconAsync(string iconPath, int requestVersion, CancellationToken cancellationToken)
-    {
-        Sprite sprite;
-        try
-        {
-            sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(iconPath, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        if (cancellationToken.IsCancellationRequested || requestVersion != costIconRequestVersion || data.CostIconPath != iconPath)
-        {
-            return;
-        }
-
-        costIcon.sprite = sprite;
-    }
-
     void OnDestroy()
     {
         itemIconRequestCts?.Cancel();
         itemIconRequestCts?.Dispose();
-        costIconRequestCts?.Cancel();
-        costIconRequestCts?.Dispose();
         countScrollbar.onValueChanged.RemoveListener(HandleCountChanged);
         itemAreaButton.onClick.RemoveListener(HandleItemAreaClicked);
         cancelButton.onClick.RemoveListener(HandleCancel);
