@@ -41,13 +41,27 @@ public class StoreView : UIView
             return;
         }
 
-        purchasePopup.Bind(popupData, OnPurchaseConfirmed, null);
+        purchasePopup.Bind(popupData, OnPurchaseConfirmed, null, OnPurchaseItemAreaClicked);
         purchasePopup.Show();
+    }
+
+    void OnPurchaseItemAreaClicked(PurchasePopupViewData popupData)
+    {
+        if (!viewModel.TryCreateInfoPanelItem(popupData.StoreItemId, out ItemViewModel itemViewModel))
+        {
+            return;
+        }
+
+        UIManager.Instance.OpenWithView(UIType.InfoPanelPopup, itemViewModel);
     }
 
     void OnPurchaseConfirmed(PurchasePopupViewData popupData, int count)
     {
-        Debug.Log($"Purchase store item: {popupData.StoreItemId}, count: {count}");
+        if (!viewModel.TryPurchase(popupData.StoreItemId, count))
+        {
+            return;
+        }
+
         purchasePopup.Hide();
     }
 }

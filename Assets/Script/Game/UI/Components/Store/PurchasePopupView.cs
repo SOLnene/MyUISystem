@@ -49,12 +49,15 @@ public class PurchasePopupView : MonoBehaviour
     [SerializeField]
     TextMeshProUGUI costValueText;
     [SerializeField]
+    Button itemAreaButton;
+    [SerializeField]
     Button cancelButton;
     [SerializeField]
     Button confirmButton;
 
     PurchasePopupViewData data;
     Action<PurchasePopupViewData, int> onConfirm;
+    Action<PurchasePopupViewData> onItemAreaClicked;
     Action onCancel;
     int purchaseCount = 1;
     int itemIconRequestVersion;
@@ -65,11 +68,13 @@ public class PurchasePopupView : MonoBehaviour
     public void Bind(
         PurchasePopupViewData viewData,
         Action<PurchasePopupViewData, int> confirmHandler,
-        Action cancelHandler)
+        Action cancelHandler,
+        Action<PurchasePopupViewData> itemAreaClickHandler = null)
     {
         data = viewData;
         onConfirm = confirmHandler;
         onCancel = cancelHandler;
+        onItemAreaClicked = itemAreaClickHandler;
         purchaseCount = 1;
 
         itemNameText.text = data.ItemName;
@@ -79,6 +84,8 @@ public class PurchasePopupView : MonoBehaviour
 
         countScrollbar.onValueChanged.RemoveListener(HandleCountChanged);
         countScrollbar.onValueChanged.AddListener(HandleCountChanged);
+        itemAreaButton.onClick.RemoveListener(HandleItemAreaClicked);
+        itemAreaButton.onClick.AddListener(HandleItemAreaClicked);
         cancelButton.onClick.RemoveListener(HandleCancel);
         cancelButton.onClick.AddListener(HandleCancel);
         confirmButton.onClick.RemoveListener(HandleConfirm);
@@ -114,6 +121,11 @@ public class PurchasePopupView : MonoBehaviour
     {
         Hide();
         onCancel?.Invoke();
+    }
+
+    void HandleItemAreaClicked()
+    {
+        onItemAreaClicked?.Invoke(data);
     }
 
     void HandleConfirm()
@@ -202,6 +214,7 @@ public class PurchasePopupView : MonoBehaviour
         costIconRequestCts?.Cancel();
         costIconRequestCts?.Dispose();
         countScrollbar.onValueChanged.RemoveListener(HandleCountChanged);
+        itemAreaButton.onClick.RemoveListener(HandleItemAreaClicked);
         cancelButton.onClick.RemoveListener(HandleCancel);
         confirmButton.onClick.RemoveListener(HandleConfirm);
     }
