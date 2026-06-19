@@ -1820,14 +1820,6 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 3290300181133124167, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
-      propertyPath: m_text
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 3290300181133124167, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
-      propertyPath: m_HorizontalAlignment
-      value: 1
-      objectReference: {fileID: 0}
     - target: {fileID: 4029318330579096518, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
       propertyPath: m_Pivot.x
       value: 0
@@ -1932,61 +1924,13 @@ PrefabInstance:
       propertyPath: m_Name
       value: CostAreaWithBg
       objectReference: {fileID: 0}
-    - target: {fileID: 8688935113633244245, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
-      propertyPath: m_Spacing
-      value: 20
-      objectReference: {fileID: 0}
-    - target: {fileID: 8688935113633244245, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
-      propertyPath: m_ChildAlignment
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 8688935113633244245, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
-      propertyPath: m_Padding.m_Right
-      value: 20
-      objectReference: {fileID: 0}
-    - target: {fileID: 8688935113633244245, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
-      propertyPath: m_ChildControlWidth
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 8688935113633244245, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
-      propertyPath: m_ChildControlHeight
-      value: 1
-      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents:
-    - targetCorrespondingSourceObject: {fileID: 3821876891487078222, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
-      insertIndex: -1
-      addedObject: {fileID: 6100022180486310950}
+    m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
 --- !u!224 &8400804379462902059 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 4029318330579096518, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
   m_PrefabInstance: {fileID: 4863505785777140461}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &8535636816983831971 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 3821876891487078222, guid: 82c541a5b41e79c41b4e6d2699a210c5, type: 3}
-  m_PrefabInstance: {fileID: 4863505785777140461}
-  m_PrefabAsset: {fileID: 0}
---- !u!114 &6100022180486310950
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8535636816983831971}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 306cc8c2b49d7114eaa3623786fc2126, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  m_IgnoreLayout: 0
-  m_MinWidth: -1
-  m_MinHeight: -1
-  m_PreferredWidth: 35
-  m_PreferredHeight: 35
-  m_FlexibleWidth: -1
-  m_FlexibleHeight: -1
-  m_LayoutPriority: 1

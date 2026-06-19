@@ -1,6 +1,5 @@
 using System;
 using System.Threading;
-using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -80,7 +79,6 @@ public class StoreItemView : MonoBehaviour
 
     StoreItemViewData data;
     Action<StoreItemViewData> onClicked;
-    int itemIconRequestVersion;
     CancellationTokenSource itemIconRequestCts;
 
     public void Bind(StoreItemViewData viewData, Action<StoreItemViewData> clickHandler)
@@ -90,7 +88,7 @@ public class StoreItemView : MonoBehaviour
 
         bg.color = data.BackgroundColor;
 
-        LoadItemIcon(data.IconPath);
+        itemIconRequestCts = IconLoader.LoadSpriteAsync(icon, data.IconPath, this, itemIconRequestCts);
         costAmountView.Bind(data.CostIconPath, data.CostValue);
         nameText.text = data.Name;
 
@@ -122,47 +120,9 @@ public class StoreItemView : MonoBehaviour
         onClicked?.Invoke(data);
     }
 
-    void LoadItemIcon(string iconPath)
-    {
-        itemIconRequestVersion++;
-        itemIconRequestCts?.Cancel();
-        itemIconRequestCts?.Dispose();
-        itemIconRequestCts = null;
-
-        icon.sprite = null;
-        if (string.IsNullOrEmpty(iconPath))
-        {
-            return;
-        }
-
-        itemIconRequestCts = new CancellationTokenSource();
-        LoadItemIconAsync(iconPath, itemIconRequestVersion, itemIconRequestCts.Token).Forget();
-    }
-
-    async UniTask LoadItemIconAsync(string iconPath, int requestVersion, CancellationToken cancellationToken)
-    {
-        Sprite sprite;
-        try
-        {
-            sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(iconPath, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        if (cancellationToken.IsCancellationRequested || requestVersion != itemIconRequestVersion || data.IconPath != iconPath)
-        {
-            return;
-        }
-
-        icon.sprite = sprite;
-    }
-
     void OnDestroy()
     {
-        itemIconRequestCts?.Cancel();
-        itemIconRequestCts?.Dispose();
+        IconLoader.Cancel(itemIconRequestCts);
         button.onClick.RemoveListener(HandleClick);
     }
 }

@@ -1,6 +1,5 @@
 using System;
 using System.Threading;
-using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -59,7 +58,6 @@ public class PurchasePopupView : MonoBehaviour
     Action<ItemDefinition> onItemAreaClicked;
     Action onCancel;
     int purchaseCount = 1;
-    int itemIconRequestVersion;
     CancellationTokenSource itemIconRequestCts;
 
     public void Bind(
@@ -75,7 +73,7 @@ public class PurchasePopupView : MonoBehaviour
         purchaseCount = 1;
 
         itemNameText.text = data.ItemName;
-        LoadItemIcon(data.ItemIconPath);
+        itemIconRequestCts = IconLoader.LoadSpriteAsync(itemIcon, data.ItemIconPath, this, itemIconRequestCts);
         costAmountView.Bind(data.CostIconPath, data.UnitPrice);
         RefreshCount();
 
@@ -130,47 +128,9 @@ public class PurchasePopupView : MonoBehaviour
         onConfirm?.Invoke(data, purchaseCount);
     }
 
-    void LoadItemIcon(string iconPath)
-    {
-        itemIconRequestVersion++;
-        itemIconRequestCts?.Cancel();
-        itemIconRequestCts?.Dispose();
-        itemIconRequestCts = null;
-
-        itemIcon.sprite = null;
-        if (string.IsNullOrEmpty(iconPath))
-        {
-            return;
-        }
-
-        itemIconRequestCts = new CancellationTokenSource();
-        LoadItemIconAsync(iconPath, itemIconRequestVersion, itemIconRequestCts.Token).Forget();
-    }
-
-    async UniTask LoadItemIconAsync(string iconPath, int requestVersion, CancellationToken cancellationToken)
-    {
-        Sprite sprite;
-        try
-        {
-            sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(iconPath, cancellationToken);
-        }
-        catch (OperationCanceledException)
-        {
-            return;
-        }
-
-        if (cancellationToken.IsCancellationRequested || requestVersion != itemIconRequestVersion || data.ItemIconPath != iconPath)
-        {
-            return;
-        }
-
-        itemIcon.sprite = sprite;
-    }
-
     void OnDestroy()
     {
-        itemIconRequestCts?.Cancel();
-        itemIconRequestCts?.Dispose();
+        IconLoader.Cancel(itemIconRequestCts);
         countScrollbar.onValueChanged.RemoveListener(HandleCountChanged);
         itemAreaButton.onClick.RemoveListener(HandleItemAreaClicked);
         cancelButton.onClick.RemoveListener(HandleCancel);
