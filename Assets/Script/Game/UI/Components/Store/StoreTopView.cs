@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TMPro;
 using UniRx;
 using UnityEngine;
@@ -7,9 +8,6 @@ using UnityEngine.UI;
 public class StoreTopView : MonoBehaviour
 {
     const string Title = "商城";
-    const int StarglitterItemId = 223;
-    const int StardustItemId = 224;
-    const int PrimogemItemId = 203;
 
     [SerializeField]
     TextMeshProUGUI titleText;
@@ -28,12 +26,24 @@ public class StoreTopView : MonoBehaviour
     {
         disposable.Clear();
         titleText.text = Title;
-        BindCurrency(starglitterView, StarglitterItemId);
-        BindCurrency(stardustView, StardustItemId);
-        BindCurrency(primogemView, PrimogemItemId);
 
         closeButton.onClick.RemoveAllListeners();
         closeButton.onClick.AddListener(() => onClose?.Invoke());
+    }
+
+    public void BindCurrencies(IReadOnlyList<int> itemIds)
+    {
+        disposable.Clear();
+        CurrencyValueView[] views = { starglitterView, stardustView, primogemView };
+        for (int i = 0; i < views.Length; i++)
+        {
+            bool isVisible = i < itemIds.Count;
+            views[i].gameObject.SetActive(isVisible);
+            if (isVisible)
+            {
+                BindCurrency(views[i], itemIds[i]);
+            }
+        }
     }
 
     void BindCurrency(CurrencyValueView view, int itemId)

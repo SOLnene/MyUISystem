@@ -4,6 +4,12 @@ using UnityEngine;
 
 public class StoreViewModel
 {
+    const int MoraItemId = 201;
+    const int GenesisCrystalItemId = 202;
+    const int PrimogemItemId = 203;
+    const int IntertwinedFateItemId = 221;
+    const int AcquaintFateItemId = 222;
+
     readonly StoreDatabase storeDatabase;
     readonly ItemDatabase itemDatabase;
 
@@ -71,6 +77,18 @@ public class StoreViewModel
     public void SetTab(StoreCategory category)
     {
         CurrentTab.Value = category;
+    }
+
+    public IReadOnlyList<int> GetVisibleCurrencyItemIds(StoreCategory category)
+    {
+        return category switch
+        {
+            StoreCategory.Primogem => new[] { MoraItemId },
+            StoreCategory.Mora => new[] { GenesisCrystalItemId },
+            StoreCategory.GenesisCrystal => new[] { PrimogemItemId },
+            StoreCategory.Fate => new[] { IntertwinedFateItemId, AcquaintFateItemId },
+            _ => new[] { PrimogemItemId },
+        };
     }
 
     public bool TryCreatePurchasePopupData(int storeItemId, out PurchasePopupViewData popupData)

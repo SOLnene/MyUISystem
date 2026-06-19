@@ -24,7 +24,11 @@ public class StoreView : UIView
         tabView.Bind(viewModel);
         purchasePopup.Hide();
         viewModel.CurrentTab
-            .Subscribe(tab => itemListView.Bind(viewModel.CreateItems(tab), OnStoreItemClicked))
+            .Subscribe(tab =>
+            {
+                topView.BindCurrencies(viewModel.GetVisibleCurrencyItemIds(tab));
+                itemListView.Bind(viewModel.CreateItems(tab), OnStoreItemClicked);
+            })
             .AddTo(disposable);
     }
 
