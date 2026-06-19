@@ -21,5 +21,6 @@ public enum UIType
 		MainMenuView,
 		BackpackView,
 		StoreView,
+		InfoPanelPopup,
 		Max,
 }

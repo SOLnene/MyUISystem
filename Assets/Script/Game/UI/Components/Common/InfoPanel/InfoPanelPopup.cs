@@ -2,12 +2,10 @@ using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
 
-public class InfoPanelPopupView : UIView
+public class InfoPanelPopup : UIView
 {
     [SerializeField]
     InfoPanelView infoPanelView;
-    [SerializeField]
-    GameObject currentArea;
     [SerializeField]
     TextMeshProUGUI currentAmountText;
     [SerializeField]
@@ -65,7 +63,6 @@ public class InfoPanelPopupView : UIView
     public void SetCurrentAmount(string text)
     {
         currentAmountText.text = text;
-        currentArea.SetActive(!string.IsNullOrEmpty(text));
     }
 
     void OnCloseHandleClicked()
