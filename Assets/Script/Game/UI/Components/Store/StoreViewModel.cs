@@ -4,9 +4,9 @@ using UnityEngine;
 
 public class StoreViewModel
 {
-    const int MoraItemId = 201;
-    const int GenesisCrystalItemId = 202;
-    const int PrimogemItemId = 203;
+    const int PrimogemItemId = 201;
+    const int MoraItemId = 202;
+    const int GenesisCrystalItemId = 203;
     const int StarglitterItemId = 221;
     const int StardustItemId = 222;
 

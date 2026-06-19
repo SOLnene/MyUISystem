@@ -5,9 +5,9 @@ using UnityEngine;
 
 public class GameEconomy : SingletonMono<GameEconomy>
 {
-    const int GoldItemId = 201; // 金币
-    const int GenesisCrystalItemId = 202; // 创世结晶
-    const int PrimogemItemId = 203; // 原石
+    const int PrimogemItemId = 201; // 原石
+    const int GoldItemId = 202; // 金币
+    const int GenesisCrystalItemId = 203; // 创世结晶
     const int StarglitterItemId = 221; // 无主的星辉
     const int StardustItemId = 222; // 无主的星尘
     const int IntertwinedFateItemId = 223; // 纠缠之缘
@@ -16,9 +16,9 @@ public class GameEconomy : SingletonMono<GameEconomy>
     [SerializeField]
     List<CurrencyInitialValue> initialCurrencies = new()
     {
+        new CurrencyInitialValue(PrimogemItemId, 4682),
         new CurrencyInitialValue(GoldItemId, 100000),
         new CurrencyInitialValue(GenesisCrystalItemId, 0),
-        new CurrencyInitialValue(PrimogemItemId, 4682),
         new CurrencyInitialValue(StarglitterItemId, 7),
         new CurrencyInitialValue(StardustItemId, 60),
         new CurrencyInitialValue(IntertwinedFateItemId, 10),
