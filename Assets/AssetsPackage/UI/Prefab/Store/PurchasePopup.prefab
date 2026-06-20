@@ -696,6 +696,8 @@ GameObject:
   m_Component:
   - component: {fileID: 5755425994230132846}
   - component: {fileID: 8997340897871313650}
+  - component: {fileID: 4015522414657120356}
+  - component: {fileID: 1878150139688898151}
   m_Layer: 0
   m_Name: PageRoot
   m_TagString: Untagged
@@ -739,6 +741,43 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &4015522414657120356
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4268045410230043174}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82e8af1c72efe834bb395144422b2b42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  motionGroup: {fileID: 8997340897871313650}
+  motionRoot: {fileID: 5755425994230132846}
+  mode: 0
+  preset: {fileID: 0}
+  targetMove: {x: 0, y: 0}
+  originMove: {x: 0, y: 0}
+  moveDuration: 0.18
+  fadeDuration: 0.12
+  moveEase: 9
+  fadeEase: 1
+--- !u!114 &1878150139688898151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4268045410230043174}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5d20f43324ef5240b901dd4dd7c8ae3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  panelRoot: {fileID: 4268045410230043174}
+  motion: {fileID: 4015522414657120356}
+  inputGroup: {fileID: 8997340897871313650}
 --- !u!1 &4387186595943582094
 GameObject:
   m_ObjectHideFlags: 0

@@ -84,9 +84,9 @@ public class StoreViewModel
         return category switch
         {
             StoreCategory.Primogem => new[] { PrimogemItemId },
-            StoreCategory.GenesisCrystal => new[] { GenesisCrystalItemId },
             StoreCategory.StarglitterStardust => new[] { StarglitterItemId, StardustItemId },
             StoreCategory.Mora => new[] { MoraItemId },
+            StoreCategory.GenesisCrystal => new[] { GenesisCrystalItemId },
             _ => new[] { PrimogemItemId },
         };
     }

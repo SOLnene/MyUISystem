@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -15,46 +16,37 @@ public class StoreTabView : MonoBehaviour
     [SerializeField, FormerlySerializedAs("fateIcon"), FormerlySerializedAs("starglitterIcon")]
     Sprite starglitterStardustIcon;
 
-    static readonly IReadOnlyList<UITabOption> FallbackOptions = new[]
-    {
-        new UITabOption((int)StoreCategory.Primogem, "原石"),
-        new UITabOption((int)StoreCategory.StarglitterStardust, "星尘星辉"),
-        new UITabOption((int)StoreCategory.Mora, "摩拉"),
-        new UITabOption((int)StoreCategory.GenesisCrystal, "礼包"),
-    };
-
     public void Bind(StoreViewModel viewModel)
     {
-        IReadOnlyList<UITabOption> options = CreateOptions();
-        tabGroup.Bind(options, FindOptionIndex(options, (int)viewModel.CurrentTab.Value), index => viewModel.SetTab((StoreCategory)options[index].Id));
+        var categories = (StoreCategory[])Enum.GetValues(typeof(StoreCategory));
+        tabGroup.Bind(CreateOptions(categories), Array.IndexOf(categories, viewModel.CurrentTab.Value), index => viewModel.SetTab(categories[index]));
     }
 
-    IReadOnlyList<UITabOption> CreateOptions()
+    IReadOnlyList<UITabOption> CreateOptions(StoreCategory[] categories)
     {
-        if (primogemIcon == null && moraIcon == null && genesisCrystalIcon == null && starglitterStardustIcon == null)
+        var options = new List<UITabOption>();
+        foreach (StoreCategory category in categories)
         {
-            return FallbackOptions;
+            options.Add(CreateOption(category));
         }
 
-        return new[]
-        {
-            new UITabOption((int)StoreCategory.Primogem, "原石", primogemIcon),
-            new UITabOption((int)StoreCategory.StarglitterStardust, "星尘星辉", starglitterStardustIcon),
-            new UITabOption((int)StoreCategory.Mora, "摩拉", moraIcon),
-            new UITabOption((int)StoreCategory.GenesisCrystal, "礼包", genesisCrystalIcon),
-        };
+        return options;
     }
 
-    static int FindOptionIndex(IReadOnlyList<UITabOption> options, int optionId)
+    UITabOption CreateOption(StoreCategory category)
     {
-        for (int i = 0; i < options.Count; i++)
+        switch (category)
         {
-            if (options[i].Id == optionId)
-            {
-                return i;
-            }
+            case StoreCategory.Primogem:
+                return new UITabOption((int)category, "原石", primogemIcon);
+            case StoreCategory.StarglitterStardust:
+                return new UITabOption((int)category, "星尘星辉", starglitterStardustIcon);
+            case StoreCategory.Mora:
+                return new UITabOption((int)category, "摩拉", moraIcon);
+            case StoreCategory.GenesisCrystal:
+                return new UITabOption((int)category, "礼包", genesisCrystalIcon);
+            default:
+                return new UITabOption((int)category, category.ToString());
         }
-
-        return 0;
     }
 }
