@@ -17,8 +17,9 @@ public class GameContext: Singleton<GameContext>
         //todo:改为使用 Installer + DI 容器注入
         InventoryRepository = new InventoryRepository();
         StoreDatabase = GameDatabase.StoreDatabase;
-        BackpackVM = new BackpackViewModel(InventoryRepository);
         CharacterRepository = new CharacterRepository();
+        GameSaveSystem.TryLoadCurrentGame();
+        BackpackVM = new BackpackViewModel(InventoryRepository);
 
         LocalGachaSchedule gachaSchedule = new LocalGachaSchedule();
         GachaPoolProvider poolProvider = new GachaPoolProvider(GameDatabase.GachaPoolDatabase, gachaSchedule);

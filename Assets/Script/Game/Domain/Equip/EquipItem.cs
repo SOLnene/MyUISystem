@@ -33,11 +33,11 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public new EquipDefinition EquipDefinition => base.ItemDefinition as EquipDefinition;
     
-    public EquipItem(EquipDefinition def, int level = 1, int refine = 1,int currentExp = 0 , int nextLevelExp = 1000) : base(def)
+    public EquipItem(EquipDefinition def, int level = 1, int refine = 1,int currentExp = 0 , int nextLevelExp = 1000, int rank = 0) : base(def)
     {
         RefinementLevel = refine;
         LevelSystem = new LevelSystem(level, currentExp, (int)ItemRarity);
-        RankSystem = new RankSystem();
+        RankSystem = new RankSystem(rank);
         Stats = new EquipStats();
         levelRP = new ReactiveProperty<int>(Level);
         expRP = new ReactiveProperty<int>(CurrentExp);

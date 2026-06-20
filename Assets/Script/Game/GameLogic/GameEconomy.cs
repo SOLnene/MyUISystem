@@ -84,6 +84,31 @@ public class GameEconomy : SingletonMono<GameEconomy>
         currency.Value += amount;
     }
 
+    public CurrencySaveData ExportSaveData()
+    {
+        CurrencySaveData saveData = new CurrencySaveData();
+        foreach (KeyValuePair<int, ReactiveProperty<int>> pair in currencies)
+        {
+            saveData.items.Add(new CurrencyAmountSaveData(pair.Key, pair.Value.Value));
+        }
+
+        return saveData;
+    }
+
+    public void ImportSaveData(CurrencySaveData saveData)
+    {
+        InitializeCurrencies();
+        if (saveData == null || saveData.items == null)
+        {
+            return;
+        }
+
+        foreach (CurrencyAmountSaveData item in saveData.items)
+        {
+            currencies[item.itemId] = new ReactiveProperty<int>(Mathf.Max(0, item.amount));
+        }
+    }
+
     void InitializeCurrencies()
     {
         currencies.Clear();

@@ -25,7 +25,8 @@ public class StoreTabView : MonoBehaviour
 
     public void Bind(StoreViewModel viewModel)
     {
-        tabGroup.Bind(CreateOptions(), (int)viewModel.CurrentTab.Value, index => viewModel.SetTab((StoreCategory)index));
+        IReadOnlyList<UITabOption> options = CreateOptions();
+        tabGroup.Bind(options, FindOptionIndex(options, (int)viewModel.CurrentTab.Value), index => viewModel.SetTab((StoreCategory)options[index].Id));
     }
 
     IReadOnlyList<UITabOption> CreateOptions()
@@ -42,5 +43,18 @@ public class StoreTabView : MonoBehaviour
             new UITabOption((int)StoreCategory.Mora, "摩拉", moraIcon),
             new UITabOption((int)StoreCategory.GenesisCrystal, "礼包", genesisCrystalIcon),
         };
+    }
+
+    static int FindOptionIndex(IReadOnlyList<UITabOption> options, int optionId)
+    {
+        for (int i = 0; i < options.Count; i++)
+        {
+            if (options[i].Id == optionId)
+            {
+                return i;
+            }
+        }
+
+        return 0;
     }
 }

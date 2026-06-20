@@ -8,7 +8,7 @@ public static class CharacterFactory
     public static CharacterModel Create(CharacterDefinition definition, int level = 1,int exp = 0,int rank =0)
     {
         CharacterModel character =  new CharacterModel(
-            definition,level,exp
+            definition,level,exp,rank
             );
         //给角色一把初始武器
         var defaultWeaponDef = GameDatabase.ItemDatabase.GetItemByKey("Claymore_Default") as EquipDefinition;
