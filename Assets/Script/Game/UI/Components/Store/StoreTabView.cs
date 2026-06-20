@@ -18,9 +18,9 @@ public class StoreTabView : MonoBehaviour
     static readonly IReadOnlyList<UITabOption> FallbackOptions = new[]
     {
         new UITabOption((int)StoreCategory.Primogem, "原石"),
-        new UITabOption((int)StoreCategory.GenesisCrystal, "创世结晶"),
         new UITabOption((int)StoreCategory.StarglitterStardust, "星尘星辉"),
         new UITabOption((int)StoreCategory.Mora, "摩拉"),
+        new UITabOption((int)StoreCategory.GenesisCrystal, "礼包"),
     };
 
     public void Bind(StoreViewModel viewModel)
@@ -38,9 +38,9 @@ public class StoreTabView : MonoBehaviour
         return new[]
         {
             new UITabOption((int)StoreCategory.Primogem, "原石", primogemIcon),
-            new UITabOption((int)StoreCategory.GenesisCrystal, "创世结晶", genesisCrystalIcon),
             new UITabOption((int)StoreCategory.StarglitterStardust, "星尘星辉", starglitterStardustIcon),
             new UITabOption((int)StoreCategory.Mora, "摩拉", moraIcon),
+            new UITabOption((int)StoreCategory.GenesisCrystal, "礼包", genesisCrystalIcon),
         };
     }
 }
