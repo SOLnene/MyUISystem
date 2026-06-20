@@ -1,5 +1,6 @@
 using UnityEditor;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Game.UI.Editor
 {
@@ -23,6 +24,26 @@ namespace Game.UI.Editor
             SetupCanvasGroup(pageRoot.GetComponent<CanvasGroup>());
 
             Selection.activeGameObject = pageRoot;
+        }
+
+        [MenuItem("GameObject/My UI/Input Block", false, 11)]
+        public static void CreateInputBlock(MenuCommand command)
+        {
+            var parent = ResolveParent(command);
+            var inputBlock = new GameObject("InputBlock", typeof(RectTransform), typeof(Image));
+
+            Undo.RegisterCreatedObjectUndo(inputBlock, "Create InputBlock");
+
+            var rectTransform = inputBlock.GetComponent<RectTransform>();
+            if (parent != null)
+            {
+                Undo.SetTransformParent(rectTransform, parent, "Parent InputBlock");
+            }
+
+            SetupFullScreenRect(rectTransform);
+            SetupInputBlockImage(inputBlock.GetComponent<Image>());
+
+            Selection.activeGameObject = inputBlock;
         }
 
         static Transform ResolveParent(MenuCommand command)
@@ -59,6 +80,12 @@ namespace Game.UI.Editor
             canvasGroup.interactable = true;
             canvasGroup.blocksRaycasts = true;
             canvasGroup.ignoreParentGroups = false;
+        }
+
+        static void SetupInputBlockImage(Image image)
+        {
+            image.color = new Color(0f, 0f, 0f, 0.4f);
+            image.raycastTarget = true;
         }
     }
 }

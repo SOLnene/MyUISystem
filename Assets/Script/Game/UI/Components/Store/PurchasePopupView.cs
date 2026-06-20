@@ -3,6 +3,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Serialization;
 using UnityEngine.UI;
 
 public readonly struct PurchasePopupViewData
@@ -53,12 +54,15 @@ public class PurchasePopupView : MonoBehaviour
     Button cancelButton;
     [SerializeField]
     Button confirmButton;
+    [SerializeField]
+    AnimatedPanel contentAnimatedPanel;
 
     PurchasePopupViewData data;
     Action<PurchasePopupViewData, int> onConfirm;
     Action<ItemDefinition> onItemAreaClicked;
     Action onCancel;
     int purchaseCount = 1;
+    bool isClosing;
     CancellationTokenSource itemIconRequestCts;
 
     public void Bind(
@@ -90,11 +94,20 @@ public class PurchasePopupView : MonoBehaviour
 
     public void Show()
     {
+        isClosing = false;
         gameObject.SetActive(true);
+        contentAnimatedPanel.Show().Forget();
     }
 
     public void Hide()
     {
+        HideAsync().Forget();
+    }
+
+    public void HideImmediate()
+    {
+        isClosing = false;
+        contentAnimatedPanel.HideImmediate();
         gameObject.SetActive(false);
     }
 
@@ -115,8 +128,7 @@ public class PurchasePopupView : MonoBehaviour
 
     void HandleCancel()
     {
-        Hide();
-        onCancel?.Invoke();
+        HideAndCancelAsync().Forget();
     }
 
     void HandleItemAreaClicked()
@@ -127,6 +139,25 @@ public class PurchasePopupView : MonoBehaviour
     void HandleConfirm()
     {
         onConfirm?.Invoke(data, purchaseCount);
+    }
+
+    async UniTask HideAsync()
+    {
+        if (isClosing || !gameObject.activeSelf)
+        {
+            return;
+        }
+
+        isClosing = true;
+        await contentAnimatedPanel.Hide();
+        gameObject.SetActive(false);
+        isClosing = false;
+    }
+
+    async UniTask HideAndCancelAsync()
+    {
+        await HideAsync();
+        onCancel?.Invoke();
     }
 
     void LoadItemIcon(string iconPath)

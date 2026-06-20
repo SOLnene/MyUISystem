@@ -22,7 +22,7 @@ public class StoreView : UIView
         topView.Bind(OnCancel);
         viewModel = new StoreViewModel(GameContext.Instance.StoreDatabase, GameDatabase.ItemDatabase);
         tabView.Bind(viewModel);
-        purchasePopup.Hide();
+        purchasePopup.HideImmediate();
         viewModel.CurrentTab
             .Subscribe(tab =>
             {

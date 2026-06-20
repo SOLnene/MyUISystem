@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using TMPro;
 using UnityEngine.UI;
@@ -10,19 +11,32 @@ public class InfoPanelPopup : UIView
     TextMeshProUGUI currentAmountText;
     [SerializeField]
     Button closeHandle;
+    [SerializeField]
+    AnimatedPanel contentAnimatedPanel;
+
+    bool isClosing;
 
     public override bool RefreshWhenAlreadyOpen => true;
 
     public override void OnOpen(object data)
     {
+        isClosing = false;
         base.OnOpen(data);
         Show(data);
+        contentAnimatedPanel.Show().Forget();
     }
 
     public override void OnClose()
     {
+        contentAnimatedPanel.HideImmediate();
         infoPanelView.Hide();
+        isClosing = false;
         base.OnClose();
+    }
+
+    public override void OnCancel()
+    {
+        CloseAsync().Forget();
     }
 
     public override void OnAddListener()
@@ -85,5 +99,17 @@ public class InfoPanelPopup : UIView
     void OnCloseHandleClicked()
     {
         OnCancel();
+    }
+
+    async UniTask CloseAsync()
+    {
+        if (isClosing)
+        {
+            return;
+        }
+
+        isClosing = true;
+        await contentAnimatedPanel.Hide();
+        base.OnCancel();
     }
 }

@@ -4,12 +4,20 @@ using UnityEngine;
 
 public class AnimatedPanel : MonoBehaviour
 {
+    enum InputControlMode
+    {
+        RaycastOnly,
+        InteractableAndRaycast
+    }
+
     [SerializeField]
     GameObject panelRoot;
     [SerializeField]
     UIMotionBase motion;
     [SerializeField]
     CanvasGroup inputGroup;
+    [SerializeField]
+    InputControlMode inputControlMode = InputControlMode.RaycastOnly;
 
     int requestVersion;
 
@@ -99,7 +107,10 @@ public class AnimatedPanel : MonoBehaviour
             return;
         }
 
-        inputGroup.interactable = interactable;
         inputGroup.blocksRaycasts = interactable;
+        if (inputControlMode == InputControlMode.InteractableAndRaycast)
+        {
+            inputGroup.interactable = interactable;
+        }
     }
 }
