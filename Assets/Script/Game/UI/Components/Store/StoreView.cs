@@ -1,4 +1,5 @@
 using UniRx;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 public class StoreView : UIView
@@ -11,13 +12,23 @@ public class StoreView : UIView
     StoreItemListView itemListView;
     [SerializeField]
     PurchasePopupView purchasePopup;
+    [SerializeField]
+    AnimatedPanel topPanel;
+    [SerializeField]
+    AnimatedPanel tabPanel;
+    [SerializeField]
+    AnimatedPanel itemAreaPanel;
+    [SerializeField]
+    GameObject inputBlock;
 
     StoreViewModel viewModel;
     readonly CompositeDisposable disposable = new();
+    bool isClosing;
 
     public override void OnOpen(object data)
     {
         base.OnOpen(data);
+        isClosing = false;
         disposable.Clear();
         topView.Bind(OnCancel);
         viewModel = new StoreViewModel(GameContext.Instance.StoreDatabase, GameDatabase.ItemDatabase);
@@ -30,12 +41,39 @@ public class StoreView : UIView
                 itemListView.Bind(viewModel.CreateItems(tab), OnStoreItemClicked);
             })
             .AddTo(disposable);
+
+        ShowPanels().Forget();
     }
 
     public override void OnClose()
     {
         disposable.Clear();
         base.OnClose();
+    }
+
+    public override void OnCancel()
+    {
+        if (isClosing)
+        {
+            return;
+        }
+
+        isClosing = true;
+        CloseWithAnimation().Forget();
+    }
+
+    async UniTask ShowPanels()
+    {
+        inputBlock.SetActive(true);
+        await UniTask.WhenAll(topPanel.Show(), tabPanel.Show(), itemAreaPanel.Show());
+        inputBlock.SetActive(false);
+    }
+
+    async UniTask CloseWithAnimation()
+    {
+        inputBlock.SetActive(true);
+        await UniTask.WhenAll(topPanel.Hide(), tabPanel.Hide(), itemAreaPanel.Hide());
+        base.OnCancel();
     }
 
     void OnStoreItemClicked(StoreItemViewData itemData)

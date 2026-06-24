@@ -35,12 +35,35 @@ internal class MainMenuNavigator
 
     private void OpenCharacter()
     {
-        var characterDefinition = GameDatabase.CharacterDatabase.Get("hutao");
         var characterRepository = GameContext.Instance.CharacterRepository;
-        var characterModel = characterRepository.GetByKey(characterDefinition.key);
+
+        if (characterRepository.Characters.Count == 0)
+        {
+            string[] testCharacterKeys = { "hutao", "eula", "ayaka" };
+            for (int i = 0; i < testCharacterKeys.Length; i++)
+            {
+                var testCharacterDefinition = GameDatabase.CharacterDatabase.Get(testCharacterKeys[i]);
+                if (testCharacterDefinition != null)
+                {
+                    characterRepository.Add(testCharacterDefinition);
+                }
+            }
+        }
+
+        var characterDefinition = GameDatabase.CharacterDatabase.Get("hutao");
+        var characterModel = characterDefinition != null
+            ? characterRepository.GetByKey(characterDefinition.key)
+            : null;
+
+        if (characterModel == null && characterRepository.Characters.Count > 0)
+        {
+            characterModel = characterRepository.Characters[0];
+        }
+
         if (characterModel == null)
         {
-            characterModel = characterRepository.Add(characterDefinition);
+            Debug.LogWarning("Cannot open character detail: no character model found.");
+            return;
         }
 
         var viewModel = new CharacterDetailViewModel(characterModel);

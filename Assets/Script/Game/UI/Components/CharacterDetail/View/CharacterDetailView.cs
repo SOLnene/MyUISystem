@@ -62,6 +62,7 @@ namespace Game.UI.Components.CharacterDetail
         bool isPlayingResultFlow;
         bool isClosing;
         CompositeDisposable disposable = new CompositeDisposable();
+        CompositeDisposable characterDisposable = new CompositeDisposable();
         public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
         {
             base.OnInit(uiControlData,handle);
@@ -78,39 +79,54 @@ namespace Game.UI.Components.CharacterDetail
         public void Bind(CharacterDetailViewModel viewModel)
         {
             disposable.Clear();
-            topView.Bind(viewModel.model.Name.Value, OnCancel);
-            
-            final.gameObject.SetActive(false);
-            contentView.Bind(viewModel.contentViewModel);
-           
-            enhancePanelView.Bind(viewModel.enhanceViewmodel);
-            promotePanelView.Bind(viewModel.promoteViewmodel);
-            BackToDetailMainViewImmediate();
-            // 初始化时先决定显示哪个面板
-            //RefreshUpgradeOrPromotePanel();
+            vm = viewModel;
 
-            // 升级后/突破后重新判断一次
-            viewModel.enhanceViewmodel.requestPlayEnhanceResult
-                .Subscribe(result => PlayEnhanceResultFlow(result).Forget())
+            BindCharacterViews();
+
+            viewModel.RequestRebindCharacter
+                .Subscribe(_ => BindCharacterViews())
                 .AddTo(disposable);
 
             viewModel.onBackToMain
                 .Subscribe(_ => BackToDetailMainView())
                 .AddTo(disposable);
 
-            viewModel.promoteViewmodel.requestPlayPromoteResult
+            SetTabItems();
+            ShowMainPanels(false).Forget();
+            //todo:如果脸部动画很明显，需要给facepreset也做一个immediate方法
+        }
+
+        void BindCharacterViews()
+        {
+            characterDisposable.Clear();
+            contentView.InfoPanelView.onUpgradeClick -= OpenUpgradeOrPromotePanel;
+            topView.Bind(vm.model.Name.Value, vm.OwnedCharacters, vm.model, vm.SelectCharacter, OnCancel);
+            
+            final.gameObject.SetActive(false);
+            contentView.Bind(vm.contentViewModel);
+           
+            enhancePanelView.Bind(vm.enhanceViewmodel);
+            promotePanelView.Bind(vm.promoteViewmodel);
+            BackToDetailMainViewImmediate();
+            // 初始化时先决定显示哪个面板
+            //RefreshUpgradeOrPromotePanel();
+
+            // 升级后/突破后重新判断一次
+            vm.enhanceViewmodel.requestPlayEnhanceResult
+                .Subscribe(result => PlayEnhanceResultFlow(result).Forget())
+                .AddTo(characterDisposable);
+
+            vm.promoteViewmodel.requestPlayPromoteResult
                 .Subscribe(result => PlayPromoteResultFlow(result).Forget())
-                .AddTo(disposable);
+                .AddTo(characterDisposable);
 
             contentView.InfoPanelView.onUpgradeClick += OpenUpgradeOrPromotePanel;
 
-            SetTabItems();
             //初始化为idle
             //todo:切换角色初始化
             //todo:不写死
+            currentIndex = -1;
             SwitchTab(0, true);
-            ShowMainPanels(false).Forget();
-            //todo:如果脸部动画很明显，需要给facepreset也做一个immediate方法
         }
     
         void RefreshUpgradeOrPromotePanel()
@@ -392,12 +408,16 @@ namespace Game.UI.Components.CharacterDetail
         {
             base.OnClose();
             // 子 ViewModel 的生命周期由 CharacterDetailViewModel 统一管理
+            characterDisposable.Clear();
+            disposable.Clear();
             contentView.InfoPanelView.onUpgradeClick -= OpenUpgradeOrPromotePanel;
         }
 
         public override void OnRelease()
         {
             base.OnRelease();
+            characterDisposable.Dispose();
+            disposable.Dispose();
             
         }
     }

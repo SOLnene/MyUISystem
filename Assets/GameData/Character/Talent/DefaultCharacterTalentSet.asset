@@ -1,0 +1,51 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d6b98e5e0b94614b9a7d740ae22a9c1, type: 3}
+  m_Name: DefaultCharacterTalentSet
+  m_EditorClassIdentifier: 
+  Nodes:
+  - Name: 攻击强化 I
+    Description: 攻击力 +5%
+    Effects:
+    - StatType: 1
+      ModifierType: 1
+      Value: 0.05
+  - Name: 生命强化
+    Description: 生命值 +5%
+    Effects:
+    - StatType: 0
+      ModifierType: 1
+      Value: 0.05
+  - Name: 防御强化
+    Description: 防御力 +5%
+    Effects:
+    - StatType: 2
+      ModifierType: 1
+      Value: 0.05
+  - Name: 会心强化
+    Description: 暴击率 +5%
+    Effects:
+    - StatType: 3
+      ModifierType: 1
+      Value: 0.05
+  - Name: 攻击强化 II
+    Description: 攻击力 +10%
+    Effects:
+    - StatType: 1
+      ModifierType: 1
+      Value: 0.1
+  - Name: 会心伤害强化
+    Description: 暴击伤害 +20%
+    Effects:
+    - StatType: 4
+      ModifierType: 1
+      Value: 0.2

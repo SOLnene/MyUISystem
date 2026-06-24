@@ -1,83 +1,112 @@
 using System;
 using DG.Tweening;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
 namespace Game.UI.Components.CharacterDetail
 {
-    public class TalentNodeView : UIThreeStateSelectable
+    public class TalentNodeView : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     {
         [SerializeField]
         Button button;
         [SerializeField]
-        RectTransform iconRoot;
-        [SerializeField]
         Image selectBg;
         [SerializeField]
-        GameObject lockIcon;
-        [SerializeField]
-        GameObject magicBg;
+        TalentNodeIconView iconView;
 
         [SerializeField]
-        float hoverSelectBgAlpha = 0.5f;
+        Color hoverColor = new Color(0.45f, 0.9f, 1f, 0.55f);
         [SerializeField]
-        float selectedSelectBgAlpha = 0.75f;
+        Color selectPeakColor = new Color(0.78f, 1f, 1f, 0.85f);
+        [SerializeField]
+        Color selectColor = new Color(0.28f, 0.72f, 0.95f, 0.35f);
         [SerializeField]
         float selectedBgExpandDuration = 0.18f;
         [SerializeField]
         float stateDuration = 0.18f;
+        [SerializeField]
+        float selectedFadeDuration = 0.42f;
 
         Vector3 selectBgBaseScale;
         Sequence stateSequence;
         bool isCached;
+        bool isSelected;
+        bool isHovered;
 
         public void Bind(int index, bool active, Action<int> clickHandler)
         {
             CacheVisualState();
-            SetActiveState(active);
+            iconView.SetActiveState(active);
 
             button.transition = Selectable.Transition.None;
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => clickHandler?.Invoke(index));
-
-            SetSelected(IsSelected, true);
         }
 
-        public void SetActiveState(bool active)
+        public void SetSelected(bool selected, bool instant)
         {
-            lockIcon.SetActive(!active);
-            magicBg.SetActive(active);
+            bool wasSelected = isSelected;
+            isSelected = selected;
+            RefreshFocusVisual(instant, selected && !wasSelected);
         }
 
-        protected override void ApplyVisualState(VisualState state, bool instant, bool stateChanged)
+        public void OnPointerEnter(PointerEventData eventData)
+        {
+            isHovered = true;
+            RefreshFocusVisual(false);
+        }
+
+        public void OnPointerExit(PointerEventData eventData)
+        {
+            isHovered = false;
+            RefreshFocusVisual(false);
+        }
+
+        void RefreshFocusVisual(bool instant, bool playSelectEnter = false)
         {
             CacheVisualState();
             stateSequence?.Kill();
 
-            bool selected = state == VisualState.Selected;
-            bool hover = state == VisualState.Hover;
-            float selectBgAlpha = selected ? selectedSelectBgAlpha : hover ? hoverSelectBgAlpha : 0f;
-            Vector3 targetSelectBgScale = selectBgBaseScale;
+            bool visible = isSelected || isHovered;
+            Color targetColor = GetTargetColor();
+            Vector3 targetSelectBgScale = visible ? selectBgBaseScale : new Vector3(selectBgBaseScale.x, 0f, selectBgBaseScale.z);
 
-            if (instant || !stateChanged)
+            if (instant)
             {
-                SetImageAlpha(selectBg, selectBgAlpha);
+                selectBg.color = targetColor;
                 selectBg.rectTransform.localScale = targetSelectBgScale;
                 return;
             }
 
             stateSequence = DOTween.Sequence();
-            if (selected)
+            if (visible && selectBg.rectTransform.localScale.y <= 0.01f)
             {
-                SetImageAlpha(selectBg, 0f);
+                selectBg.color = ClearColor(targetColor);
                 selectBg.rectTransform.localScale = new Vector3(selectBgBaseScale.x, 0f, selectBgBaseScale.z);
-                stateSequence.Join(selectBg.DOFade(selectBgAlpha, selectedBgExpandDuration).SetEase(Ease.OutCubic));
+                stateSequence.Join(selectBg.DOColor(playSelectEnter ? selectPeakColor : targetColor, selectedBgExpandDuration).SetEase(Ease.OutCubic));
                 stateSequence.Join(selectBg.rectTransform.DOScale(targetSelectBgScale, selectedBgExpandDuration).SetEase(Ease.OutCubic));
-                return;
+            }
+            else
+            {
+                stateSequence.Join(selectBg.DOColor(playSelectEnter ? selectPeakColor : targetColor, stateDuration).SetEase(Ease.OutCubic));
+                stateSequence.Join(selectBg.rectTransform.DOScale(targetSelectBgScale, stateDuration).SetEase(Ease.OutCubic));
             }
 
-            stateSequence.Join(selectBg.DOFade(selectBgAlpha, stateDuration).SetEase(Ease.OutCubic));
-            stateSequence.Join(selectBg.rectTransform.DOScale(targetSelectBgScale, stateDuration).SetEase(Ease.OutCubic));
+            if (playSelectEnter)
+            {
+                stateSequence.Append(selectBg.DOColor(selectColor, selectedFadeDuration).SetEase(Ease.OutCubic));
+            }
+        }
+
+        Color GetTargetColor()
+        {
+            if (isSelected)
+            {
+                return selectColor;
+            }
+
+            return isHovered ? hoverColor : ClearColor(hoverColor);
         }
 
         void CacheVisualState()
@@ -88,15 +117,15 @@ namespace Game.UI.Components.CharacterDetail
             }
 
             selectBgBaseScale = selectBg.rectTransform.localScale;
-            SetImageAlpha(selectBg, 0f);
+            selectBg.color = ClearColor(hoverColor);
+
             isCached = true;
         }
 
-        static void SetImageAlpha(Image image, float alpha)
+        static Color ClearColor(Color color)
         {
-            Color color = image.color;
-            color.a = alpha;
-            image.color = color;
+            color.a = 0f;
+            return color;
         }
 
         void OnDestroy()

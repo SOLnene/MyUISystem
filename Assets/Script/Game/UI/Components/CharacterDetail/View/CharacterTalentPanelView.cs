@@ -14,6 +14,12 @@ namespace Game.UI.Components.CharacterDetail
         TextMeshProUGUI talentTokenText;
         [SerializeField]
         Button activateButton;
+        [SerializeField]
+        CharacterTalentSetDefinition talentSet;
+        [SerializeField]
+        TextMeshProUGUI effectText;
+        [SerializeField]
+        TalentEffectPanelView effectPanel;
 
         readonly CompositeDisposable disposables = new();
         CharacterTalentViewModel vm;
@@ -23,24 +29,36 @@ namespace Game.UI.Components.CharacterDetail
         {
             disposables.Clear();
             vm = viewModel;
+            vm.SetTalentSet(talentSet);
             vm.TalentLevel
                 .Subscribe(RefreshTalentLevel)
                 .AddTo(disposables);
             vm.TalentTokenCount
                 .Subscribe(RefreshTalentToken)
                 .AddTo(disposables);
-            vm.CanActivate
-                .Subscribe(SetActivateButton)
-                .AddTo(disposables);
 
-            activateButton.onClick.RemoveAllListeners();
-            activateButton.onClick.AddListener(vm.ActivateTalent);
+            if (effectPanel != null)
+            {
+                effectPanel.Bind(vm);
+            }
+            else
+            {
+                vm.CanActivate
+                    .Subscribe(SetActivateButton)
+                    .AddTo(disposables);
+                vm.SelectedNodeText
+                    .Subscribe(RefreshSelectedNodeText)
+                    .AddTo(disposables);
+
+                activateButton.onClick.RemoveAllListeners();
+                activateButton.onClick.AddListener(vm.ActivateTalent);
+            }
         }
 
         void RefreshTalentLevel(int talentLevel)
         {
             int activeCount = Mathf.Clamp(talentLevel, 0, CharacterModel.MaxTalentLevel);
-            int count = Mathf.Min(talentNodes.Length, CharacterModel.MaxTalentLevel);
+            int count = Mathf.Min(talentNodes.Length, vm.NodeCount);
 
             for (int i = 0; i < count; i++)
             {
@@ -53,12 +71,17 @@ namespace Game.UI.Components.CharacterDetail
 
         void RefreshTalentToken(int count)
         {
-            talentTokenText.text = count.ToString();
+            talentTokenText.text = $"天赋信物：{count}";
         }
 
         void SetActivateButton(bool canActivate)
         {
             activateButton.interactable = canActivate;
+        }
+
+        void RefreshSelectedNodeText(string text)
+        {
+            effectText.text = text;
         }
 
         void SelectNode(int index)
@@ -73,12 +96,8 @@ namespace Game.UI.Components.CharacterDetail
                 return;
             }
 
-            if (selectedIndex == index && !instant)
-            {
-                return;
-            }
-
             selectedIndex = index;
+            vm.SelectNode(index);
             for (int i = 0; i < talentNodes.Length; i++)
             {
                 talentNodes[i].SetSelected(i == selectedIndex, instant);
