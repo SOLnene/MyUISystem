@@ -1,6 +1,8 @@
 using Game.Domain.Character;
+using TMPro;
 using UniRx;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace Game.UI.Components.CharacterDetail
 {
@@ -8,16 +10,31 @@ namespace Game.UI.Components.CharacterDetail
     {
         [SerializeField]
         TalentNodeView[] talentNodes;
+        [SerializeField]
+        TextMeshProUGUI talentTokenText;
+        [SerializeField]
+        Button activateButton;
 
         readonly CompositeDisposable disposables = new();
+        CharacterTalentViewModel vm;
         int selectedIndex = -1;
 
-        public void Bind(CharacterModel character)
+        public void Bind(CharacterTalentViewModel viewModel)
         {
             disposables.Clear();
-            character.TalentLevelRP
+            vm = viewModel;
+            vm.TalentLevel
                 .Subscribe(RefreshTalentLevel)
                 .AddTo(disposables);
+            vm.TalentTokenCount
+                .Subscribe(RefreshTalentToken)
+                .AddTo(disposables);
+            vm.CanActivate
+                .Subscribe(SetActivateButton)
+                .AddTo(disposables);
+
+            activateButton.onClick.RemoveAllListeners();
+            activateButton.onClick.AddListener(vm.ActivateTalent);
         }
 
         void RefreshTalentLevel(int talentLevel)
@@ -32,6 +49,16 @@ namespace Game.UI.Components.CharacterDetail
 
             int defaultSelectedIndex = activeCount > 0 ? activeCount - 1 : 0;
             SelectNode(Mathf.Clamp(defaultSelectedIndex, 0, count - 1), true);
+        }
+
+        void RefreshTalentToken(int count)
+        {
+            talentTokenText.text = count.ToString();
+        }
+
+        void SetActivateButton(bool canActivate)
+        {
+            activateButton.interactable = canActivate;
         }
 
         void SelectNode(int index)

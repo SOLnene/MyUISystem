@@ -10,12 +10,10 @@ public interface IGachaPoolProvider
 public class GachaPoolProvider : IGachaPoolProvider
 {
     readonly GachaPoolDatabase database;
-    readonly IGachaSchedule schedule;
 
-    public GachaPoolProvider(GachaPoolDatabase database,IGachaSchedule schedule)
+    public GachaPoolProvider(GachaPoolDatabase database)
     {
         this.database = database;
-        this.schedule = schedule;
     }
 
     public GachaDefinition GetPool(string gachaKey)

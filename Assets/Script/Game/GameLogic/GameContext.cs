@@ -21,8 +21,7 @@ public class GameContext: Singleton<GameContext>
         GameSaveSystem.TryLoadCurrentGame();
         BackpackVM = new BackpackViewModel(InventoryRepository);
 
-        LocalGachaSchedule gachaSchedule = new LocalGachaSchedule();
-        GachaPoolProvider poolProvider = new GachaPoolProvider(GameDatabase.GachaPoolDatabase, gachaSchedule);
+        GachaPoolProvider poolProvider = new GachaPoolProvider(GameDatabase.GachaPoolDatabase);
         GachaService = new GachaService(poolProvider);
         GachaVisualProvider = new GachaVisualProvider(GameDatabase.CharaVisualDatabase);
     }

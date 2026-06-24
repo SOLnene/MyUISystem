@@ -46,10 +46,12 @@ public class GachaResultListView : BindableUI
 				await UniTask.Delay(150, cancellationToken: token);
 			}
 			currentState = ResultPopupState.Finished;
+			SetItemClickEnabled(results, true);
 		}
 		catch (OperationCanceledException)
 		{
 			currentState = ResultPopupState.Finished;
+			SetItemClickEnabled(results, true);
 		}
 		
 		//itemContainer.enabled = true;
@@ -62,6 +64,7 @@ public class GachaResultListView : BindableUI
 		{
 			results[i].ResetForEnter();
 		}
+		SetItemClickEnabled(results, false);
 	}
 
 	public void SetClick(ReactiveCommand<GachaEntryViewModel> command)
@@ -86,6 +89,15 @@ public class GachaResultListView : BindableUI
 			result.SkipToEnd();
 		}
 		currentState = ResultPopupState.Finished;
+		SetItemClickEnabled(results, true);
+	}
+
+	void SetItemClickEnabled(List<GachaResultItemView> results, bool enabled)
+	{
+		for (int i = 0; i < results.Count; i++)
+		{
+			results[i].SetClickEnabled(enabled);
+		}
 	}
     
 	public bool IsFinished()

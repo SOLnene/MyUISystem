@@ -36,7 +36,13 @@ internal class MainMenuNavigator
     private void OpenCharacter()
     {
         var characterDefinition = GameDatabase.CharacterDatabase.Get("hutao");
-        var characterModel = CharacterFactory.Create(characterDefinition, 1);
+        var characterRepository = GameContext.Instance.CharacterRepository;
+        var characterModel = characterRepository.GetByKey(characterDefinition.key);
+        if (characterModel == null)
+        {
+            characterModel = characterRepository.Add(characterDefinition);
+        }
+
         var viewModel = new CharacterDetailViewModel(characterModel);
         UIManager.Instance.Open(UIType.CharacterDetailView, viewModel);
     }

@@ -96,19 +96,21 @@ public class CharacterSaveData
     public int exp;
     public int rank;
     public int talentLevel;
+    public int talentTokenCount;
     public long equippedWeaponInstanceId;
 
     public CharacterSaveData()
     {
     }
 
-    public CharacterSaveData(string characterKey, int level, int exp, int rank, int talentLevel, long equippedWeaponInstanceId)
+    public CharacterSaveData(string characterKey, int level, int exp, int rank, int talentLevel, int talentTokenCount, long equippedWeaponInstanceId)
     {
         this.characterKey = characterKey;
         this.level = level;
         this.exp = exp;
         this.rank = rank;
         this.talentLevel = talentLevel;
+        this.talentTokenCount = talentTokenCount;
         this.equippedWeaponInstanceId = equippedWeaponInstanceId;
     }
 }

@@ -207,7 +207,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &5611625748216213854
 RectTransform:
   m_ObjectHideFlags: 0
@@ -249,7 +249,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 0.11372549}
-  m_RaycastTarget: 1
+  m_RaycastTarget: 0
   m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
   m_Maskable: 1
   m_OnCullStateChanged:
@@ -322,6 +322,8 @@ MonoBehaviour:
   - {fileID: 4074255130387669232}
   - {fileID: 6170376397273404581}
   - {fileID: 1574159177025301688}
+  talentTokenText: {fileID: 0}
+  activateButton: {fileID: 0}
 --- !u!1001 &539541114812967278
 PrefabInstance:
   m_ObjectHideFlags: 0

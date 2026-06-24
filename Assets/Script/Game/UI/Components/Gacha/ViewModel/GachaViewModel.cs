@@ -88,7 +88,15 @@ public class GachaViewModel : IDisposable
             if (e.entryType == GachaEntryType.Character)
             {
                 var definition = GameDatabase.CharacterDatabase.Get(e.entryKey);
-                character = GameContext.Instance.CharacterRepository.Add(definition);
+                character = GameContext.Instance.CharacterRepository.GetByKey(e.entryKey);
+                if (character != null)
+                {
+                    character.AddTalentToken(1);
+                }
+                else
+                {
+                    character = GameContext.Instance.CharacterRepository.Add(definition);
+                }
             }
             else if (e.entryType == GachaEntryType.Equip)
             {

@@ -11,6 +11,7 @@ namespace Game.UI.Components.CharacterDetail
         public CharacterDetailPreviewViewModel PreviewViewModel { get; private set; }
         public CharacterDetailInfoViewModel InfoViewModel { get; private set; }
         public CharacterDetailEquipPageViewModel EquipPageViewModel { get; private set; }
+        public CharacterTalentViewModel TalentViewModel { get; private set; }
         
         public readonly ReactiveProperty<CharacterModel> currentCharacter = new ReactiveProperty<CharacterModel>();
         
@@ -25,6 +26,7 @@ namespace Game.UI.Components.CharacterDetail
             PreviewViewModel = new CharacterDetailPreviewViewModel(model);
             InfoViewModel = new CharacterDetailInfoViewModel(model);
             EquipPageViewModel = new CharacterDetailEquipPageViewModel(model);
+            TalentViewModel = new CharacterTalentViewModel(model);
         }
 
         public void Dispose()
@@ -33,7 +35,9 @@ namespace Game.UI.Components.CharacterDetail
             PreviewViewModel.Dispose();
             InfoViewModel.Dispose();
             EquipPageViewModel.Dispose();
+            TalentViewModel.Dispose();
             disposable.Dispose();
         }
     }
+
 }

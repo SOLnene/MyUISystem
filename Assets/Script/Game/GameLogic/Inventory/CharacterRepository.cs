@@ -41,6 +41,7 @@ public class CharacterRepository
                 character.LevelSystem.CurrentExp,
                 character.RankSystem.CurrentRank,
                 character.TalentLevelRP.Value,
+                character.TalentTokenCountRP.Value,
                 equippedWeaponInstanceId));
         }
 
@@ -76,7 +77,8 @@ public class CharacterRepository
             characterData.level,
             characterData.exp,
             characterData.rank,
-            characterData.talentLevel);
+            characterData.talentLevel,
+            characterData.talentTokenCount);
         if (characterData.equippedWeaponInstanceId > 0 &&
             inventoryRepository.TryGetEquip(characterData.equippedWeaponInstanceId, out EquipItem equipItem))
         {

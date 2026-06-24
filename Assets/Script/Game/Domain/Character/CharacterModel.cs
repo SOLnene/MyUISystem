@@ -26,6 +26,10 @@ namespace Game.Domain.Character
         public int TalentLevel => talentLevelRP.Value;
         readonly ReactiveProperty<int> talentLevelRP;
         public const int MaxTalentLevel = 6;
+
+        public IReadOnlyReactiveProperty<int> TalentTokenCountRP => talentTokenCountRP;
+        public int TalentTokenCount => talentTokenCountRP.Value;
+        readonly ReactiveProperty<int> talentTokenCountRP;
         
         
         //等级系统
@@ -41,7 +45,7 @@ namespace Game.Domain.Character
         public ReactiveProperty<EquipItem> CurrentEquipRP { get; private set; }
         // ==== 构造函数 ====
 
-        public CharacterModel(CharacterDefinition definition, int level, int exp = 0,int rank = 0, int talentLevel = 0)
+        public CharacterModel(CharacterDefinition definition, int level, int exp = 0,int rank = 0, int talentLevel = 0, int talentTokenCount = 0)
         {
             this.Definition = definition;
             this.Name = new ReactiveProperty<string>(definition.displayName);
@@ -55,6 +59,7 @@ namespace Game.Domain.Character
             // RP 与 RankSystem 当前阶保持一致
             this.rankRP = new ReactiveProperty<int>(this.RankSystem.CurrentRank);
             this.talentLevelRP = new ReactiveProperty<int>(ClampTalentLevel(talentLevel));
+            this.talentTokenCountRP = new ReactiveProperty<int>(Math.Max(talentTokenCount, 0));
             this.Stats = new CharacterStats();
             
             ChangeRP = Observable.CombineLatest(LevelRP, RankRP)
@@ -67,6 +72,28 @@ namespace Game.Domain.Character
         public void SetTalentLevel(int talentLevel)
         {
             talentLevelRP.Value = ClampTalentLevel(talentLevel);
+        }
+
+        public void AddTalentToken(int count)
+        {
+            if (count <= 0)
+            {
+                return;
+            }
+
+            talentTokenCountRP.Value += count;
+        }
+
+        public bool TryActivateTalent()
+        {
+            if (TalentLevel >= MaxTalentLevel || TalentTokenCount <= 0)
+            {
+                return false;
+            }
+
+            talentTokenCountRP.Value--;
+            SetTalentLevel(TalentLevel + 1);
+            return true;
         }
 
         static int ClampTalentLevel(int talentLevel)

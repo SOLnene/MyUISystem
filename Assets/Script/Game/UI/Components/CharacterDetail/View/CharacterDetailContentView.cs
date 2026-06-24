@@ -33,7 +33,7 @@ namespace Game.UI.Components.CharacterDetail
             Debug.Log("bind content");
             infoPageView.Bind(Vm.InfoViewModel);
             equipPageView.Bind(Vm.EquipPageViewModel);
-            talentPanelView.Bind(Vm.currentCharacter.Value);
+            talentPanelView.Bind(Vm.TalentViewModel);
         }
 
         public async UniTask ShowPage(int index, bool instant)

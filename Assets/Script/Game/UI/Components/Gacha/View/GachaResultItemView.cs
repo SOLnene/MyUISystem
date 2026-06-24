@@ -38,6 +38,7 @@ public class GachaResultItemView : BindableUI
 
     Sequence seq;
     GachaEntryViewModel vm;
+    bool clickEnabled;
     public ReactiveCommand<GachaEntryViewModel> clickCommand;
     public void Bind(GachaEntryViewModel viewModel,ReactiveCommand<GachaEntryViewModel> command)
     {
@@ -77,6 +78,11 @@ public class GachaResultItemView : BindableUI
     {
         ApplyFinalState();
     }
+
+    public void SetClickEnabled(bool enabled)
+    {
+        clickEnabled = enabled;
+    }
     
     void ApplyFinalState()
     {
@@ -88,16 +94,31 @@ public class GachaResultItemView : BindableUI
 
     public void OnPointerEnter(PointerEventData eventData)
     {
+        if (!clickEnabled)
+        {
+            return;
+        }
+
         contentFeedback?.OnHoverEnter();
     }
     
     public void OnPointerExit(PointerEventData eventData)
     {
+        if (!clickEnabled)
+        {
+            return;
+        }
+
         contentFeedback?.OnHoverExit();
     }
     
     public void OnPointerClick(PointerEventData eventData)
     {
+        if (!clickEnabled)
+        {
+            return;
+        }
+
         contentFeedback?.OnSelect();
         clickCommand.Execute(vm);
     }
