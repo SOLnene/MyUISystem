@@ -21,6 +21,11 @@ namespace Game.Domain.Character
 
         public IReadOnlyReactiveProperty<int> RankRP => rankRP;
         readonly ReactiveProperty<int> rankRP;
+
+        public IReadOnlyReactiveProperty<int> TalentLevelRP => talentLevelRP;
+        public int TalentLevel => talentLevelRP.Value;
+        readonly ReactiveProperty<int> talentLevelRP;
+        public const int MaxTalentLevel = 6;
         
         
         //等级系统
@@ -36,7 +41,7 @@ namespace Game.Domain.Character
         public ReactiveProperty<EquipItem> CurrentEquipRP { get; private set; }
         // ==== 构造函数 ====
 
-        public CharacterModel(CharacterDefinition definition, int level, int exp = 0,int rank = 0)
+        public CharacterModel(CharacterDefinition definition, int level, int exp = 0,int rank = 0, int talentLevel = 0)
         {
             this.Definition = definition;
             this.Name = new ReactiveProperty<string>(definition.displayName);
@@ -49,6 +54,7 @@ namespace Game.Domain.Character
             this.expRP = new ReactiveProperty<int>(exp);
             // RP 与 RankSystem 当前阶保持一致
             this.rankRP = new ReactiveProperty<int>(this.RankSystem.CurrentRank);
+            this.talentLevelRP = new ReactiveProperty<int>(ClampTalentLevel(talentLevel));
             this.Stats = new CharacterStats();
             
             ChangeRP = Observable.CombineLatest(LevelRP, RankRP)
@@ -56,6 +62,16 @@ namespace Game.Domain.Character
             CurrentEquipRP = new ReactiveProperty<EquipItem>();
             // 初始同步一次属性
             RefreshBaseStats();
+        }
+
+        public void SetTalentLevel(int talentLevel)
+        {
+            talentLevelRP.Value = ClampTalentLevel(talentLevel);
+        }
+
+        static int ClampTalentLevel(int talentLevel)
+        {
+            return Math.Min(Math.Max(talentLevel, 0), MaxTalentLevel);
         }
 
         public ExpGainResult AddExp(int exp)

@@ -19,6 +19,8 @@ namespace Game.UI.Components.CharacterDetail
         [SerializeField]
         CharacterDetailEquipPageView equipPageView;
         [SerializeField]
+        CharacterTalentPanelView talentPanelView;
+        [SerializeField]
         AnimatedPanel pageAnimPanel;
         
         public CharacterDetailInfoPanelView InfoPanelView => infoPageView;
@@ -31,6 +33,7 @@ namespace Game.UI.Components.CharacterDetail
             Debug.Log("bind content");
             infoPageView.Bind(Vm.InfoViewModel);
             equipPageView.Bind(Vm.EquipPageViewModel);
+            talentPanelView.Bind(Vm.currentCharacter.Value);
         }
 
         public async UniTask ShowPage(int index, bool instant)
@@ -47,6 +50,7 @@ namespace Game.UI.Components.CharacterDetail
 
             infoPageView.gameObject.SetActive(index == 0);
             equipPageView.gameObject.SetActive(index == 1);
+            talentPanelView.gameObject.SetActive(index == 3);
             currentPageIndex = index;
             await pageAnimPanel.Show(instant);
         }

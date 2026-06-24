@@ -3926,6 +3926,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   equipPageView: {fileID: 3822079307462105278}
+  talentPanelView: {fileID: 3852321778287056829}
   pageAnimPanel: {fileID: 7102739520271641132}
 --- !u!225 &6282508156933755228
 CanvasGroup:
@@ -5598,9 +5599,21 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 3003841158896385995}
     m_Modifications:
+    - target: {fileID: 652896048988309590, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 60
+      objectReference: {fileID: 0}
     - target: {fileID: 759769978157338513, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}
       propertyPath: m_SizeDelta.y
-      value: 40
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 2829840464493227490, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 60
+      objectReference: {fileID: 0}
+    - target: {fileID: 5363401470481488311, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 60
       objectReference: {fileID: 0}
     - target: {fileID: 7281424927788507570, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}
       propertyPath: m_Pivot.x
@@ -5682,15 +5695,38 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 7438962669791024639, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 60
+      objectReference: {fileID: 0}
     - target: {fileID: 7884497690713899450, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}
       propertyPath: m_Name
       value: TanlentPanel
+      objectReference: {fileID: 0}
+    - target: {fileID: 7884497690713899450, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 7983304463332808280, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}
+      propertyPath: m_SizeDelta.y
+      value: 60
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}
+--- !u!114 &3852321778287056829 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 4144415740124468278, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}
+  m_PrefabInstance: {fileID: 933896689807590283}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1e6de135ec6acdc43b02b3ab728d62a0, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!224 &7636151633057358393 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 7281424927788507570, guid: 2b1579a1d249b6a4fb87e00f13f76a5d, type: 3}

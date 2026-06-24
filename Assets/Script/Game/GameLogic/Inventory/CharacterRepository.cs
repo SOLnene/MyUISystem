@@ -40,6 +40,7 @@ public class CharacterRepository
                 character.LevelSystem.Level,
                 character.LevelSystem.CurrentExp,
                 character.RankSystem.CurrentRank,
+                character.TalentLevelRP.Value,
                 equippedWeaponInstanceId));
         }
 
@@ -74,7 +75,8 @@ public class CharacterRepository
             definition,
             characterData.level,
             characterData.exp,
-            characterData.rank);
+            characterData.rank,
+            characterData.talentLevel);
         if (characterData.equippedWeaponInstanceId > 0 &&
             inventoryRepository.TryGetEquip(characterData.equippedWeaponInstanceId, out EquipItem equipItem))
         {

@@ -95,18 +95,20 @@ public class CharacterSaveData
     public int level;
     public int exp;
     public int rank;
+    public int talentLevel;
     public long equippedWeaponInstanceId;
 
     public CharacterSaveData()
     {
     }
 
-    public CharacterSaveData(string characterKey, int level, int exp, int rank, long equippedWeaponInstanceId)
+    public CharacterSaveData(string characterKey, int level, int exp, int rank, int talentLevel, long equippedWeaponInstanceId)
     {
         this.characterKey = characterKey;
         this.level = level;
         this.exp = exp;
         this.rank = rank;
+        this.talentLevel = talentLevel;
         this.equippedWeaponInstanceId = equippedWeaponInstanceId;
     }
 }

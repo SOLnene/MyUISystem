@@ -52,7 +52,7 @@ namespace Game.UI.Components.CharacterDetail
             "属性",
             "装备",
             "圣遗物",
-            "详情"
+            "天赋"
         };
           
         CharacterDetailViewModel vm;
