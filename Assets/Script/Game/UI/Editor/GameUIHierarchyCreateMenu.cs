@@ -46,6 +46,27 @@ namespace Game.UI.Editor
             Selection.activeGameObject = inputBlock;
         }
 
+        [MenuItem("GameObject/My UI/Full Screen Button", false, 12)]
+        public static void CreateFullScreenButton(MenuCommand command)
+        {
+            var parent = ResolveParent(command);
+            var fullScreenButton = new GameObject("FullScreenButton", typeof(RectTransform), typeof(Image), typeof(Button));
+
+            Undo.RegisterCreatedObjectUndo(fullScreenButton, "Create FullScreenButton");
+
+            var rectTransform = fullScreenButton.GetComponent<RectTransform>();
+            if (parent != null)
+            {
+                Undo.SetTransformParent(rectTransform, parent, "Parent FullScreenButton");
+            }
+
+            SetupFullScreenRect(rectTransform);
+            SetupTransparentButtonImage(fullScreenButton.GetComponent<Image>());
+            SetupTransparentButton(fullScreenButton.GetComponent<Button>());
+
+            Selection.activeGameObject = fullScreenButton;
+        }
+
         static Transform ResolveParent(MenuCommand command)
         {
             if (command.context is GameObject contextGo && contextGo.transform is RectTransform)
@@ -86,6 +107,17 @@ namespace Game.UI.Editor
         {
             image.color = new Color(0f, 0f, 0f, 0.4f);
             image.raycastTarget = true;
+        }
+
+        static void SetupTransparentButtonImage(Image image)
+        {
+            image.color = new Color(0f, 0f, 0f, 0f);
+            image.raycastTarget = true;
+        }
+
+        static void SetupTransparentButton(Button button)
+        {
+            button.transition = Selectable.Transition.None;
         }
     }
 }

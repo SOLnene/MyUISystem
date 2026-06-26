@@ -55,10 +55,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   button: {fileID: 865100650341055297}
-  iconRoot: {fileID: 3217857720307912549}
   selectBg: {fileID: 3219270210044099180}
-  lockIcon: {fileID: 8706127318618043409}
-  magicBg: {fileID: 8562778008730890258}
+  iconView: {fileID: 9071280494571405461}
   hoverColor: {r: 0.45, g: 0.9, b: 1, a: 0.55}
   selectPeakColor: {r: 0.78, g: 1, b: 1, a: 0.85}
   selectColor: {r: 0.28, g: 0.72, b: 0.95, a: 0.35}
@@ -458,13 +456,14 @@ RectTransform:
   m_CorrespondingSourceObject: {fileID: 1852410159169433197, guid: 4c1cb9592ec144643ac99764f3c00f0e, type: 3}
   m_PrefabInstance: {fileID: 3827274312510726408}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &8562778008730890258 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 4884202787027783962, guid: 4c1cb9592ec144643ac99764f3c00f0e, type: 3}
+--- !u!114 &9071280494571405461 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5259813186931401117, guid: 4c1cb9592ec144643ac99764f3c00f0e, type: 3}
   m_PrefabInstance: {fileID: 3827274312510726408}
   m_PrefabAsset: {fileID: 0}
---- !u!1 &8706127318618043409 stripped
-GameObject:
-  m_CorrespondingSourceObject: {fileID: 5606793651870012697, guid: 4c1cb9592ec144643ac99764f3c00f0e, type: 3}
-  m_PrefabInstance: {fileID: 3827274312510726408}
-  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 331c53943f8d31146a069db25bd4ed11, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

@@ -11,8 +11,6 @@ namespace Game.UI.Components.CharacterDetail
         [SerializeField]
         TalentNodeView[] talentNodes;
         [SerializeField]
-        TextMeshProUGUI talentTokenText;
-        [SerializeField]
         Button activateButton;
         [SerializeField]
         CharacterTalentSetDefinition talentSet;
@@ -20,10 +18,13 @@ namespace Game.UI.Components.CharacterDetail
         TextMeshProUGUI effectText;
         [SerializeField]
         TalentEffectPanelView effectPanel;
+        [SerializeField]
+        Button closeClickAreaButton;
 
         readonly CompositeDisposable disposables = new();
         CharacterTalentViewModel vm;
         int selectedIndex = -1;
+        bool isEffectPanelOpen;
 
         public void Bind(CharacterTalentViewModel viewModel)
         {
@@ -33,13 +34,14 @@ namespace Game.UI.Components.CharacterDetail
             vm.TalentLevel
                 .Subscribe(RefreshTalentLevel)
                 .AddTo(disposables);
-            vm.TalentTokenCount
-                .Subscribe(RefreshTalentToken)
-                .AddTo(disposables);
 
             if (effectPanel != null)
             {
                 effectPanel.Bind(vm);
+                effectPanel.HidePanel(true);
+                closeClickAreaButton.gameObject.SetActive(false);
+                closeClickAreaButton.onClick.RemoveAllListeners();
+                closeClickAreaButton.onClick.AddListener(CloseSelectedNode);
             }
             else
             {
@@ -65,13 +67,21 @@ namespace Game.UI.Components.CharacterDetail
                 talentNodes[i].Bind(i, i < activeCount, SelectNode);
             }
 
-            int defaultSelectedIndex = activeCount > 0 ? activeCount - 1 : 0;
-            SelectNode(Mathf.Clamp(defaultSelectedIndex, 0, count - 1), true);
-        }
+            if (effectPanel == null)
+            {
+                int defaultSelectedIndex = activeCount > 0 ? activeCount - 1 : 0;
+                SelectNode(Mathf.Clamp(defaultSelectedIndex, 0, count - 1), true);
+                return;
+            }
 
-        void RefreshTalentToken(int count)
-        {
-            talentTokenText.text = $"天赋信物：{count}";
+            if (isEffectPanelOpen && selectedIndex >= 0 && selectedIndex < count)
+            {
+                SetSelectedNodeVisual(selectedIndex, true);
+            }
+            else
+            {
+                ClearSelectedNodeVisual(true);
+            }
         }
 
         void SetActivateButton(bool canActivate)
@@ -98,9 +108,42 @@ namespace Game.UI.Components.CharacterDetail
 
             selectedIndex = index;
             vm.SelectNode(index);
+            SetSelectedNodeVisual(index, instant);
+
+            if (effectPanel != null)
+            {
+                bool wasEffectPanelOpen = isEffectPanelOpen;
+                isEffectPanelOpen = true;
+                closeClickAreaButton.gameObject.SetActive(true);
+                if (!wasEffectPanelOpen)
+                {
+                    effectPanel.ShowPanel(instant);
+                }
+            }
+        }
+
+        void CloseSelectedNode()
+        {
+            selectedIndex = -1;
+            isEffectPanelOpen = false;
+            ClearSelectedNodeVisual(false);
+            closeClickAreaButton.gameObject.SetActive(false);
+            effectPanel.HidePanel(false);
+        }
+
+        void SetSelectedNodeVisual(int index, bool instant)
+        {
             for (int i = 0; i < talentNodes.Length; i++)
             {
-                talentNodes[i].SetSelected(i == selectedIndex, instant);
+                talentNodes[i].SetSelected(i == index, instant);
+            }
+        }
+
+        void ClearSelectedNodeVisual(bool instant)
+        {
+            for (int i = 0; i < talentNodes.Length; i++)
+            {
+                talentNodes[i].SetSelected(false, instant);
             }
         }
 

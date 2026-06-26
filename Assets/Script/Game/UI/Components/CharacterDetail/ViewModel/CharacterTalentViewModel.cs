@@ -15,6 +15,10 @@ namespace Game.UI.Components.CharacterDetail
         public IReadOnlyReactiveProperty<string> SelectedNodeText => selectedNodeText;
         public IReadOnlyReactiveProperty<string> SelectedPanelText => selectedPanelText;
         public IReadOnlyReactiveProperty<string> ActivateButtonText => activateButtonText;
+        internal IReadOnlyReactiveProperty<string> SelectedTalentName => selectedTalentName;
+        internal IReadOnlyReactiveProperty<string> SelectedTalentLayerText => selectedTalentLayerText;
+        internal IReadOnlyReactiveProperty<string> SelectedTalentDescription => selectedTalentDescription;
+        internal IReadOnlyReactiveProperty<bool> SelectedNodeActivated => selectedNodeActivated;
         public int NodeCount => talentSet != null ? talentSet.NodeCount : CharacterModel.MaxTalentLevel;
 
         readonly CharacterModel model;
@@ -25,6 +29,10 @@ namespace Game.UI.Components.CharacterDetail
         readonly ReactiveProperty<string> selectedNodeText = new ReactiveProperty<string>(string.Empty);
         readonly ReactiveProperty<string> selectedPanelText = new ReactiveProperty<string>(string.Empty);
         readonly ReactiveProperty<string> activateButtonText = new ReactiveProperty<string>("激活");
+        readonly ReactiveProperty<string> selectedTalentName = new ReactiveProperty<string>(string.Empty);
+        readonly ReactiveProperty<string> selectedTalentLayerText = new ReactiveProperty<string>(string.Empty);
+        readonly ReactiveProperty<string> selectedTalentDescription = new ReactiveProperty<string>(string.Empty);
+        readonly ReactiveProperty<bool> selectedNodeActivated = new ReactiveProperty<bool>();
         readonly List<TalentEffectDefinition> activeEffects = new List<TalentEffectDefinition>();
         readonly CompositeDisposable disposable = new CompositeDisposable();
 
@@ -120,13 +128,21 @@ namespace Game.UI.Components.CharacterDetail
                 canActivateSelected.Value = false;
                 selectedNodeText.Value = string.Empty;
                 selectedPanelText.Value = string.Empty;
+                selectedTalentName.Value = string.Empty;
+                selectedTalentLayerText.Value = string.Empty;
+                selectedTalentDescription.Value = string.Empty;
+                selectedNodeActivated.Value = false;
                 activateButtonText.Value = "激活";
                 return;
             }
 
             int layer = selectedNodeIndex.Value + 1;
+            selectedNodeActivated.Value = selectedNodeIndex.Value < model.TalentLevel;
             selectedNodeText.Value = $"{node.Name}\n{node.Description}";
             selectedPanelText.Value = $"{node.Name}\n天赋 第{layer}层\n\n{node.Description}";
+            selectedTalentName.Value = node.Name;
+            selectedTalentLayerText.Value = $"天赋 第{layer}层";
+            selectedTalentDescription.Value = node.Description;
             canActivateSelected.Value = selectedNodeIndex.Value == model.TalentLevel
                 && model.TalentLevel < NodeCount
                 && model.TalentTokenCount > 0;
@@ -193,6 +209,10 @@ namespace Game.UI.Components.CharacterDetail
             selectedNodeText.Dispose();
             selectedPanelText.Dispose();
             activateButtonText.Dispose();
+            selectedTalentName.Dispose();
+            selectedTalentLayerText.Dispose();
+            selectedTalentDescription.Dispose();
+            selectedNodeActivated.Dispose();
         }
     }
 }
