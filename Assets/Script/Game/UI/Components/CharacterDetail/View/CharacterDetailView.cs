@@ -54,6 +54,7 @@ namespace Game.UI.Components.CharacterDetail
             "圣遗物",
             "天赋"
         };
+        const int DefaultOpenTabIndex = 0;
           
         CharacterDetailViewModel vm;
 
@@ -61,6 +62,7 @@ namespace Game.UI.Components.CharacterDetail
         bool isSwitchingTab;
         bool isPlayingResultFlow;
         bool isClosing;
+        bool isTalentDetailMode;
         CompositeDisposable disposable = new CompositeDisposable();
         CompositeDisposable characterDisposable = new CompositeDisposable();
         public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
@@ -100,6 +102,8 @@ namespace Game.UI.Components.CharacterDetail
         {
             characterDisposable.Clear();
             contentView.InfoPanelView.onUpgradeClick -= OpenUpgradeOrPromotePanel;
+            contentView.TalentPanelView.TalentDetailOpened -= OpenTalentDetailMode;
+            contentView.TalentPanelView.TalentDetailClosed -= CloseTalentDetailMode;
             topView.Bind(vm.model.Name.Value, vm.OwnedCharacters, vm.model, vm.SelectCharacter, OnCancel);
             
             final.gameObject.SetActive(false);
@@ -121,6 +125,8 @@ namespace Game.UI.Components.CharacterDetail
                 .AddTo(characterDisposable);
 
             contentView.InfoPanelView.onUpgradeClick += OpenUpgradeOrPromotePanel;
+            contentView.TalentPanelView.TalentDetailOpened += OpenTalentDetailMode;
+            contentView.TalentPanelView.TalentDetailClosed += CloseTalentDetailMode;
 
             //初始化为idle
             //todo:切换角色初始化
@@ -131,7 +137,7 @@ namespace Game.UI.Components.CharacterDetail
             }
 
             currentIndex = -1;
-            SwitchTab(0, true);
+            SwitchTab(DefaultOpenTabIndex, true);
         }
     
         void RefreshUpgradeOrPromotePanel()
@@ -177,6 +183,7 @@ namespace Game.UI.Components.CharacterDetail
 
         void BackToDetailMainViewImmediate()
         {
+            isTalentDetailMode = false;
             contentView.gameObject.SetActive(true);
             topBarLayer.gameObject.SetActive(true);
             enhancePanelView.gameObject.SetActive(false);
@@ -212,6 +219,39 @@ namespace Game.UI.Components.CharacterDetail
             );
             contentView.gameObject.SetActive(false);
             topBarLayer.gameObject.SetActive(false);
+        }
+
+        void OpenTalentDetailMode()
+        {
+            SetTalentDetailMode(true, false).Forget();
+        }
+
+        void CloseTalentDetailMode()
+        {
+            SetTalentDetailMode(false, false).Forget();
+        }
+
+        async UniTask SetTalentDetailMode(bool active, bool instant)
+        {
+            if (isTalentDetailMode == active)
+            {
+                return;
+            }
+
+            isTalentDetailMode = active;
+            if (active)
+            {
+                await UniTask.WhenAll(
+                    topPanel.Hide(instant),
+                    tabPanel.Hide(instant)
+                );
+                return;
+            }
+
+            await UniTask.WhenAll(
+                topPanel.Show(instant),
+                tabPanel.Show(instant)
+            );
         }
 
         async UniTask HideUpgradeOrPromotePanel(bool instant)
@@ -416,6 +456,8 @@ namespace Game.UI.Components.CharacterDetail
             characterDisposable.Clear();
             disposable.Clear();
             contentView.InfoPanelView.onUpgradeClick -= OpenUpgradeOrPromotePanel;
+            contentView.TalentPanelView.TalentDetailOpened -= OpenTalentDetailMode;
+            contentView.TalentPanelView.TalentDetailClosed -= CloseTalentDetailMode;
         }
 
         public override void OnRelease()

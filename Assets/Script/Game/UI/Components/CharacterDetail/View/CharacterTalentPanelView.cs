@@ -1,3 +1,4 @@
+using System;
 using Game.Domain.Character;
 using TMPro;
 using UniRx;
@@ -8,6 +9,9 @@ namespace Game.UI.Components.CharacterDetail
 {
     public class CharacterTalentPanelView : MonoBehaviour
     {
+        public event Action TalentDetailOpened;
+        public event Action TalentDetailClosed;
+
         [SerializeField]
         TalentNodeView[] talentNodes;
         [SerializeField]
@@ -30,6 +34,8 @@ namespace Game.UI.Components.CharacterDetail
         {
             disposables.Clear();
             vm = viewModel;
+            selectedIndex = -1;
+            isEffectPanelOpen = false;
             vm.SetTalentSet(talentSet);
             vm.TalentLevel
                 .Subscribe(RefreshTalentLevel)
@@ -118,6 +124,7 @@ namespace Game.UI.Components.CharacterDetail
                 closeClickAreaButton.gameObject.SetActive(true);
                 if (!wasEffectPanelOpen)
                 {
+                    TalentDetailOpened?.Invoke();
                     effectPanel.ShowPanel(instant);
                 }
             }
@@ -129,6 +136,7 @@ namespace Game.UI.Components.CharacterDetail
             isEffectPanelOpen = false;
             ClearSelectedNodeVisual(false);
             closeClickAreaButton.gameObject.SetActive(false);
+            TalentDetailClosed?.Invoke();
             effectPanel.HidePanel(false);
         }
 

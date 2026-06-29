@@ -9,6 +9,7 @@ public class StoreViewModel
     const int GenesisCrystalItemId = 203;
     const int StarglitterItemId = 221;
     const int StardustItemId = 222;
+    const int DailyPurchaseLimit = 10;
 
     readonly StoreDatabase storeDatabase;
     readonly ItemDatabase itemDatabase;
@@ -126,7 +127,7 @@ public class StoreViewModel
             costDefinition?.iconPath,
             storeItem.Count,
             storeItem.Price,
-            1);
+            CalculateMaxPurchaseCount(storeItem));
         return true;
     }
 
@@ -183,6 +184,17 @@ public class StoreViewModel
         }
 
         return null;
+    }
+
+    static int CalculateMaxPurchaseCount(StoreItemDefinition storeItem)
+    {
+        if (storeItem.Price <= 0)
+        {
+            return DailyPurchaseLimit;
+        }
+
+        int affordableCount = GameEconomy.Instance.GetCurrency(storeItem.CostItemId) / storeItem.Price;
+        return Mathf.Min(DailyPurchaseLimit, affordableCount);
     }
 
     void AddPurchasedItem(ItemDefinition itemDefinition, int amount)

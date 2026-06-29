@@ -32,7 +32,7 @@ public readonly struct PurchasePopupViewData
         CostIconPath = costIconPath;
         ItemCount = itemCount;
         UnitPrice = unitPrice;
-        MaxPurchaseCount = Mathf.Max(1, maxPurchaseCount);
+        MaxPurchaseCount = Mathf.Max(0, maxPurchaseCount);
     }
 }
 
@@ -113,7 +113,7 @@ public class PurchasePopupView : MonoBehaviour
 
     void HandleCountChanged(float value)
     {
-        int max = Mathf.Max(1, data.MaxPurchaseCount);
+        int max = data.MaxPurchaseCount;
         purchaseCount = max <= 1 ? 1 : Mathf.RoundToInt(Mathf.Lerp(1, max, value));
         RefreshCount();
     }
@@ -123,7 +123,9 @@ public class PurchasePopupView : MonoBehaviour
         countValueText.text = purchaseCount.ToString();
         costAmountView.SetAmount(data.UnitPrice * purchaseCount);
         countScrollbar.numberOfSteps = data.MaxPurchaseCount;
-        countScrollbar.value = data.MaxPurchaseCount <= 1 ? 0 : Mathf.InverseLerp(1, data.MaxPurchaseCount, purchaseCount);
+        countScrollbar.interactable = data.MaxPurchaseCount > 1;
+        confirmButton.interactable = data.MaxPurchaseCount > 0;
+        countScrollbar.value = data.MaxPurchaseCount <= 1 ? 1 : Mathf.InverseLerp(1, data.MaxPurchaseCount, purchaseCount);
     }
 
     void HandleCancel()

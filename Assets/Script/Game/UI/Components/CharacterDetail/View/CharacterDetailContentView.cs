@@ -24,6 +24,7 @@ namespace Game.UI.Components.CharacterDetail
         AnimatedPanel pageAnimPanel;
         
         public CharacterDetailInfoPanelView InfoPanelView => infoPageView;
+        public CharacterTalentPanelView TalentPanelView => talentPanelView;
         CharacterDetailContentViewModel vm;
         int currentPageIndex = -1;
     
