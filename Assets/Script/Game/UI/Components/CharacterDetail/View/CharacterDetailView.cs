@@ -125,6 +125,11 @@ namespace Game.UI.Components.CharacterDetail
             //初始化为idle
             //todo:切换角色初始化
             //todo:不写死
+            for (int i = 0; i < tabItems.Length; i++)
+            {
+                tabItems[i].SetSelected(false, true);
+            }
+
             currentIndex = -1;
             SwitchTab(0, true);
         }
