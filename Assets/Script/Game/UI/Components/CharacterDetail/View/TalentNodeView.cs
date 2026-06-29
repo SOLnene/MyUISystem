@@ -1,5 +1,6 @@
 using System;
 using DG.Tweening;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -14,6 +15,8 @@ namespace Game.UI.Components.CharacterDetail
         Image selectBg;
         [SerializeField]
         TalentNodeIconView iconView;
+        [SerializeField]
+        TextMeshProUGUI nameText;
 
         [SerializeField]
         Color hoverColor = new Color(0.45f, 0.9f, 1f, 0.55f);
@@ -42,6 +45,11 @@ namespace Game.UI.Components.CharacterDetail
             button.transition = Selectable.Transition.None;
             button.onClick.RemoveAllListeners();
             button.onClick.AddListener(() => clickHandler?.Invoke(index));
+        }
+
+        internal void SetName(string name)
+        {
+            nameText.text = name;
         }
 
         public void SetSelected(bool selected, bool instant)

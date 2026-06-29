@@ -65,6 +65,7 @@ namespace Game.UI.Components.CharacterDetail
             for (int i = 0; i < count; i++)
             {
                 talentNodes[i].Bind(i, i < activeCount, SelectNode);
+                talentNodes[i].SetName(talentSet.GetNode(i)?.Name ?? string.Empty);
             }
 
             if (effectPanel == null)
