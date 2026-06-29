@@ -29,18 +29,19 @@ namespace Game.UI.Components.CharacterDetail
         [SerializeField]
         float animationDuration = 0.22f;
 
-        const int talentTokenRequireCount = 1;
-
         readonly CompositeDisposable disposables = new();
         RectTransform panelRoot;
         Vector2 shownPosition;
         Sequence panelSequence;
+        int talentCostCount = 1;
         bool isMotionCached;
 
         public void Bind(CharacterTalentViewModel viewModel)
         {
             disposables.Clear();
             iconRoot.gameObject.SetActive(true);
+            talentCostCount = viewModel.TalentCostCount;
+            SetTalentCostIcon(viewModel.TalentCostItemId);
 
             viewModel.SelectedTalentName
                 .Subscribe(RefreshTalentName)
@@ -119,7 +120,7 @@ namespace Game.UI.Components.CharacterDetail
 
         void RefreshTalentTokenCost(int tokenCount)
         {
-            costItemView.SetCount(tokenCount, talentTokenRequireCount);
+            costItemView.SetCount(tokenCount, talentCostCount);
         }
 
         void SetActivateButton(bool canActivate)
@@ -154,6 +155,22 @@ namespace Game.UI.Components.CharacterDetail
         Vector2 GetHiddenPosition()
         {
             return shownPosition + new Vector2(hiddenOffsetX, 0f);
+        }
+
+        void SetTalentCostIcon(int itemId)
+        {
+            if (GameDatabase.ItemDatabase == null)
+            {
+                return;
+            }
+
+            ItemDefinition itemDefinition = GameDatabase.ItemDatabase.GetItemByID(itemId);
+            if (itemDefinition == null)
+            {
+                return;
+            }
+
+            costItemView.SetIconPath(itemDefinition.iconPath);
         }
 
         void OnDestroy()

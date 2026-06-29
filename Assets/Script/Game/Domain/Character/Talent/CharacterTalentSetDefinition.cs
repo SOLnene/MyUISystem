@@ -42,8 +42,14 @@ namespace Game.Domain.Character
     {
         public const int MaxNodeCount = 6;
 
+        [SerializeField]
+        int talentCostItemId;
+        [SerializeField]
+        int talentCostCount = 1;
         public List<TalentNodeDefinition> Nodes = new(MaxNodeCount);
 
+        internal int TalentCostItemId => talentCostItemId;
+        internal int TalentCostCount => talentCostCount;
         public int NodeCount => Nodes?.Count ?? 0;
 
         public TalentNodeDefinition GetNode(int index)

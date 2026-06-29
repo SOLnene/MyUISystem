@@ -19,6 +19,8 @@ namespace Game.UI.Components.CharacterDetail
         internal IReadOnlyReactiveProperty<string> SelectedTalentLayerText => selectedTalentLayerText;
         internal IReadOnlyReactiveProperty<string> SelectedTalentDescription => selectedTalentDescription;
         internal IReadOnlyReactiveProperty<bool> SelectedNodeActivated => selectedNodeActivated;
+        internal int TalentCostItemId => talentSet != null ? talentSet.TalentCostItemId : 0;
+        internal int TalentCostCount => talentSet != null ? talentSet.TalentCostCount : 1;
         public int NodeCount => talentSet != null ? talentSet.NodeCount : CharacterModel.MaxTalentLevel;
 
         readonly CharacterModel model;
