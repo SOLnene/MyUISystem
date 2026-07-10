@@ -9,79 +9,98 @@ public class PlanarReflectionManager : MonoBehaviour
     public Camera _reflectionCamera = null;
     public Transform _planar = null;
     [Range(0, 1)] public float _reflectionFactor = 0.5f;
+    private const float ClipPlaneOffset = 0.001f;
     
     //private Material _planarMaterial = null;
     //private RenderTexture _reflectionRenderTarget = null;
     
     void Start()
     {
-        // hold planar material
-        //_planarMaterial = _planar.GetComponent<MeshRenderer>().material;
-        
-        // create render texture for reflection camera 
-        //_reflectionRenderTarget = new RenderTexture(Screen.width,Screen.height,24);
-        //_reflectionCamera.targetTexture = _reflectionRenderTarget;
-        _reflectionCamera.enabled = true;
-        
-        // Bind material & render texture
-        //_planarMaterial.SetTexture(Shader.PropertyToID("_ReflectionTex"),_reflectionRenderTarget);
+        _reflectionCamera.enabled = false;
+        _reflectionCamera.useOcclusionCulling = false;
+    }
+
+    void OnDisable()
+    {
+        _reflectionCamera.ResetWorldToCameraMatrix();
+        _reflectionCamera.ResetProjectionMatrix();
     }
     
-    void Update()
+    void LateUpdate()
     {
-        CalcReflectionCameraProperties();
+        RenderReflection();
         //_planarMaterial.SetFloat(Shader.PropertyToID("_ReflectionFactor"),_reflectionFactor);
-        //ApplyReflectionClipPlane();
     }
     
-    private void CalcReflectionCameraProperties()
+    private void RenderReflection()
     {
-        // Camera properties in World Space
-        Vector3 cameraPosWorldSpace = _mainCamera.transform.position;
-        Vector3 cameraForwardWorldSpace = _mainCamera.transform.forward;
-        Vector3 cameraUpDirWorldSpace = _mainCamera.transform.up;
-        
-        // Convert properties from World Space to Planar Local Space
-        Vector3 cameraPosPlanarSpace = _planar.InverseTransformPoint(cameraPosWorldSpace);
-        Vector3 cameraForwardPlanarSpace = _planar.InverseTransformDirection(cameraForwardWorldSpace);
-        Vector3 cameraUpPlanarSpace = _planar.InverseTransformDirection(cameraUpDirWorldSpace);
-        
-        // Reflect in Planar Local Space, revert in Y direction is OK 
-        cameraPosPlanarSpace.y *= -1.0f;
-        cameraForwardPlanarSpace.y *= -1.0f;
-        cameraUpPlanarSpace.y *= -1.0f;
-        
-        // Convert properties back to World Space from Planar's Local Space
-        cameraPosWorldSpace = _planar.TransformPoint(cameraPosPlanarSpace);
-        cameraForwardWorldSpace = _planar.TransformDirection(cameraForwardPlanarSpace);
-        cameraUpDirWorldSpace = _planar.TransformDirection(cameraUpPlanarSpace);
-        
-        // Apply properties to reflection camera
-        _reflectionCamera.transform.position = cameraPosWorldSpace;
-        _reflectionCamera.transform.LookAt(cameraPosWorldSpace + cameraForwardWorldSpace, cameraUpDirWorldSpace);
-        //_reflectionCamera.transform.rotation = Quaternion.LookRotation(cameraForwardWorldSpace, cameraUpDirWorldSpace);
-    }
-    
-    void ApplyReflectionClipPlane()
-    {
-        Vector3 pos = _planar.position;
-        Vector3 normal = _planar.up;
-
-        float clipPlaneOffset = 0.01f;
-
+        Vector3 planePosition = _planar.position;
+        Vector3 planeNormal = _planar.up.normalized;
         Vector4 plane = new Vector4(
-            normal.x,
-            normal.y,
-            normal.z,
-            -Vector3.Dot(normal, pos) - clipPlaneOffset
-            );
+            planeNormal.x,
+            planeNormal.y,
+            planeNormal.z,
+            -Vector3.Dot(planeNormal, planePosition));
 
+        Matrix4x4 reflectionMatrix = CalculateReflectionMatrix(plane);
+        Vector3 cameraPosition = reflectionMatrix.MultiplyPoint(_mainCamera.transform.position);
+        Vector3 cameraForward = Vector3.Reflect(_mainCamera.transform.forward, planeNormal);
+        Vector3 cameraUp = Vector3.Reflect(_mainCamera.transform.up, planeNormal);
+
+        _reflectionCamera.nearClipPlane = _mainCamera.nearClipPlane;
+        _reflectionCamera.farClipPlane = _mainCamera.farClipPlane;
+        _reflectionCamera.orthographic = _mainCamera.orthographic;
+        _reflectionCamera.orthographicSize = _mainCamera.orthographicSize;
+        _reflectionCamera.transform.SetPositionAndRotation(
+            cameraPosition,
+            Quaternion.LookRotation(cameraForward, cameraUp));
+
+        _reflectionCamera.worldToCameraMatrix = _mainCamera.worldToCameraMatrix * reflectionMatrix;
+        _reflectionCamera.projectionMatrix = _mainCamera.projectionMatrix;
+        Vector4 clipPlane = CameraSpacePlane(planePosition, planeNormal);
+        _reflectionCamera.projectionMatrix = _reflectionCamera.CalculateObliqueMatrix(clipPlane);
+
+        bool previousInvertCulling = GL.invertCulling;
+        try
+        {
+            GL.invertCulling = !previousInvertCulling;
+            _reflectionCamera.Render();
+        }
+        finally
+        {
+            GL.invertCulling = previousInvertCulling;
+        }
+    }
+
+    private Vector4 CameraSpacePlane(Vector3 position, Vector3 normal)
+    {
+        Vector3 offsetPosition = position - normal * ClipPlaneOffset;
         Matrix4x4 viewMatrix = _reflectionCamera.worldToCameraMatrix;
-        Matrix4x4 projection = _mainCamera.projectionMatrix;
+        Vector3 cameraPosition = viewMatrix.MultiplyPoint(offsetPosition);
+        Vector3 cameraNormal = viewMatrix.MultiplyVector(normal).normalized;
 
-        Vector4 clipPlaneCameraSpace = Matrix4x4.Transpose(Matrix4x4.Inverse(viewMatrix)) * plane;
+        return new Vector4(
+            cameraNormal.x,
+            cameraNormal.y,
+            cameraNormal.z,
+            -Vector3.Dot(cameraPosition, cameraNormal));
+    }
 
-        _reflectionCamera.projectionMatrix =
-            _mainCamera.CalculateObliqueMatrix(clipPlaneCameraSpace);
+    private static Matrix4x4 CalculateReflectionMatrix(Vector4 plane)
+    {
+        Matrix4x4 matrix = Matrix4x4.identity;
+        matrix.m00 = 1f - 2f * plane.x * plane.x;
+        matrix.m01 = -2f * plane.x * plane.y;
+        matrix.m02 = -2f * plane.x * plane.z;
+        matrix.m03 = -2f * plane.w * plane.x;
+        matrix.m10 = -2f * plane.y * plane.x;
+        matrix.m11 = 1f - 2f * plane.y * plane.y;
+        matrix.m12 = -2f * plane.y * plane.z;
+        matrix.m13 = -2f * plane.w * plane.y;
+        matrix.m20 = -2f * plane.z * plane.x;
+        matrix.m21 = -2f * plane.z * plane.y;
+        matrix.m22 = 1f - 2f * plane.z * plane.z;
+        matrix.m23 = -2f * plane.w * plane.z;
+        return matrix;
     }
 }

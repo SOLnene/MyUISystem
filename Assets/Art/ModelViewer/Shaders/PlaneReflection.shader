@@ -60,9 +60,7 @@ Shader "Unlit/PlaneReflection"
             {
                 float2 uv = i.uv;
                 float2 screenUV = i.screenPos.xy / i.screenPos.w;
-                screenUV.x = 1-screenUV.x;
-             
-                
+
                 float2 finalUV = screenUV;
                 //float4 refl = tex2D(_ReflectionTex, finalUV);
                // 4. 边缘裁切：防止采样到 RT 的边缘重复
@@ -82,7 +80,8 @@ Shader "Unlit/PlaneReflection"
                 col.rgb *= (1-_Darkness);
 
                 // 距离渐隐
-                float fade = smoothstep(_FadeEnd, _FadeStart, uv.y);
+                float fadeDistance = length(uv * 2.0 - 1.0);
+                float fade = 1.0 - smoothstep(_FadeStart, _FadeEnd, fadeDistance);
                 
                 col.a *= fade;
 
