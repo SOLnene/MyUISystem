@@ -77,12 +77,13 @@ public class ModelViewer : SingletonMono<ModelViewer>
     {
     
         // 1. 平滑插值 (Lerp)
+        targetPitch = ClampPitchAbovePlane(targetPitch, targetYaw, targetPos);
         currentYaw = Mathf.Lerp(currentYaw, targetYaw, Time.deltaTime * smoothSpeed);
         currentPitch = Mathf.Lerp(currentPitch, targetPitch, Time.deltaTime * smoothSpeed);
         currentPos = Vector3.Lerp(currentPos, targetPos, Time.deltaTime * smoothSpeed);
-       
+        currentPitch = ClampPitchAbovePlane(currentPitch, currentYaw, currentPos);
+
         ApplyTransforms();
-        ClampCameraAbovePlane();
         // 实际相机控制 Z 轴偏移
         if (displayCamera)
         {
@@ -112,8 +113,8 @@ public class ModelViewer : SingletonMono<ModelViewer>
         targetYaw += delta.x * rotateSensitivity; 
         
         // 垂直滑动 -> 修改相机俯仰
-        targetPitch += delta.y * rotateSensitivity;
-        targetPitch = Mathf.Clamp(targetPitch, minPitch, maxPitch);
+        float desiredPitch = Mathf.Clamp(targetPitch + delta.y * rotateSensitivity, minPitch, maxPitch);
+        targetPitch = ClampPitchAbovePlane(desiredPitch, targetYaw, targetPos);
     }
 
     public void Scroll(float scrollDelta, Vector2 viewportPos)
@@ -137,15 +138,63 @@ public class ModelViewer : SingletonMono<ModelViewer>
             {
                 return;
             }
-            targetPos = displayCamera.transform.parent.InverseTransformPoint(expectedWorldPos);
+            Vector3 candidateTargetPos = displayCamera.transform.parent.InverseTransformPoint(expectedWorldPos);
+            if (!IsCameraAbovePlane(targetPitch, targetYaw, candidateTargetPos))
+            {
+                return;
+            }
+            targetPos = candidateTargetPos;
         }
         else
         {
             float t = Mathf.Abs(step) * resetSpeed ; // 0.8f 可调，控制复位速度
-            targetPos = Vector3.Lerp(targetPos, initialCameraLocalPos, t);
+            Vector3 candidateTargetPos = Vector3.Lerp(targetPos, initialCameraLocalPos, t);
+            if (!IsCameraAbovePlane(targetPitch, targetYaw, candidateTargetPos))
+            {
+                return;
+            }
+            targetPos = candidateTargetPos;
             Debug.Log("After scroll: " + targetPos);
         }
-        ClampCameraAbovePlane();
+    }
+
+    private float ClampPitchAbovePlane(float desiredPitch, float yaw, Vector3 cameraLocalPosition)
+    {
+        desiredPitch = Mathf.Clamp(desiredPitch, minPitch, maxPitch);
+        if (IsCameraAbovePlane(desiredPitch, yaw, cameraLocalPosition))
+        {
+            return desiredPitch;
+        }
+
+        float validPitch = minPitch;
+        float invalidPitch = desiredPitch;
+        for (int i = 0; i < 12; i++)
+        {
+            float middlePitch = (validPitch + invalidPitch) * 0.5f;
+            if (IsCameraAbovePlane(middlePitch, yaw, cameraLocalPosition))
+            {
+                validPitch = middlePitch;
+            }
+            else
+            {
+                invalidPitch = middlePitch;
+            }
+        }
+
+        return validPitch;
+    }
+
+    private bool IsCameraAbovePlane(float pitch, float yaw, Vector3 cameraLocalPosition)
+    {
+        Matrix4x4 pivotLocalToWorld = cameraPivot.parent.localToWorldMatrix * Matrix4x4.TRS(
+            cameraPivot.localPosition,
+            Quaternion.Euler(pitch, yaw, 0),
+            cameraPivot.localScale);
+        Vector3 cameraWorldPosition = pivotLocalToWorld.MultiplyPoint3x4(cameraLocalPosition);
+        float distanceToPlane = Vector3.Dot(
+            cameraWorldPosition - planeTransform.position,
+            planeTransform.up.normalized);
+        return distanceToPlane >= heightLimit;
     }
 
     // 防止相机穿过 plane
