@@ -342,8 +342,8 @@ MonoBehaviour:
   faceRenderers: []
   minBlinkInterval: 2.5
   maxBlinkInterval: 7
-  minCloseDuration: 0.12
-  maxCloseDuration: 0.22
+  minCloseDuration: 0.22
+  maxCloseDuration: 0.28
 --- !u!1 &730419582973948462
 GameObject:
   m_ObjectHideFlags: 0
@@ -1071,7 +1071,7 @@ GameObject:
   - component: {fileID: 7022045072873553327}
   - component: {fileID: 4568052538829725976}
   m_Layer: 5
-  m_Name: Camera
+  m_Name: ReflectionCamera
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1920,7 +1920,7 @@ Camera:
   m_Depth: 1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 5120
+    m_Bits: 13312
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 8400000, guid: e77571291b5d07543b551813c7cdf65b, type: 2}
   m_TargetDisplay: 0
@@ -4755,7 +4755,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3806570253526287533}
-  m_Layer: 5
+  m_Layer: 13
   m_Name: StarDomeRoot
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -5764,7 +5764,7 @@ SkinnedMeshRenderer:
   - 0
   - 0
   - 0
-  - 5
+  - 0
   - 0
   - 0
   - 0
@@ -6713,8 +6713,8 @@ GameObject:
   - component: {fileID: 3939301076031114863}
   - component: {fileID: 7110897844951561191}
   - component: {fileID: 6737992260626092267}
-  m_Layer: 5
-  m_Name: Sphere
+  m_Layer: 13
+  m_Name: StarDomeSphere
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
