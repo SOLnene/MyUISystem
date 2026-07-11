@@ -60,6 +60,10 @@ public class EquipDetailViewModel: IDisposable
         {
             bottomVM.totalCostGold.Value = cost;
         }).AddTo(disposables);
+        enhanceVM.previewExp.Subscribe(exp =>
+        {
+            bottomVM.canEnhance.Value = exp > 0;
+        }).AddTo(disposables);
         
         refineVM.previewCost.Subscribe(cost =>
         {

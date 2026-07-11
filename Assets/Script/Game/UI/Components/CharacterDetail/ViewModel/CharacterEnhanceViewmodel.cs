@@ -136,6 +136,11 @@ namespace Game.UI.Components.CharacterDetail
         public void ConfirmEnhance()
         {
             int exp = materialInput.GetTotalExp();
+            if (exp <= 0)
+            {
+                return;
+            }
+
             int oldLevel = model.LevelRP.Value;
             float oldProgress = GetExpProgress();
             int levelUpCount = previewVm.levelUpCount.Value;
