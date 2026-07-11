@@ -9,10 +9,10 @@ public class StoreViewModel
     const int GenesisCrystalItemId = 203;
     const int StarglitterItemId = 221;
     const int StardustItemId = 222;
-    const int DailyPurchaseLimit = 10;
 
     readonly StoreDatabase storeDatabase;
     readonly ItemDatabase itemDatabase;
+    readonly StorePurchaseService purchaseService = new();
 
     public readonly ReactiveProperty<StoreCategory> CurrentTab = new(StoreCategory.Primogem);
 
@@ -121,13 +121,14 @@ public class StoreViewModel
             Debug.LogWarning($"Store item references missing cost item id: {storeItem.CostItemId}");
         }
 
+        StorePurchasePreview preview = purchaseService.CreatePreview(storeItem);
         popupData = new PurchasePopupViewData(
             storeItem.StoreItemId,
             itemDefinition,
             costDefinition?.iconPath,
             storeItem.Count,
             storeItem.Price,
-            CalculateMaxPurchaseCount(storeItem));
+            preview.MaxPurchaseCount);
         return true;
     }
 
@@ -158,14 +159,7 @@ public class StoreViewModel
             return false;
         }
 
-        int totalPrice = storeItem.Price * purchaseCount;
-        if (!GameEconomy.Instance.TrySpendCurrency(storeItem.CostItemId, totalPrice))
-        {
-            return false;
-        }
-
-        AddPurchasedItem(itemDefinition, storeItem.Count * purchaseCount);
-        return true;
+        return purchaseService.TryPurchase(storeItem, itemDefinition, purchaseCount);
     }
 
     static string GetDisplayName(ItemDefinition itemDefinition, int count)
@@ -184,52 +178,6 @@ public class StoreViewModel
         }
 
         return null;
-    }
-
-    static int CalculateMaxPurchaseCount(StoreItemDefinition storeItem)
-    {
-        if (storeItem.Price <= 0)
-        {
-            return DailyPurchaseLimit;
-        }
-
-        int affordableCount = GameEconomy.Instance.GetCurrency(storeItem.CostItemId) / storeItem.Price;
-        return Mathf.Min(DailyPurchaseLimit, affordableCount);
-    }
-
-    void AddPurchasedItem(ItemDefinition itemDefinition, int amount)
-    {
-        if (itemDefinition.category == ItemCategory.Currency)
-        {
-            GameEconomy.Instance.AddCurrency(itemDefinition.id, amount);
-            return;
-        }
-
-        InventoryRepository inventoryRepository = GameContext.Instance.InventoryRepository;
-        switch (itemDefinition.category)
-        {
-            case ItemCategory.Consumable:
-                inventoryRepository.AddItem(new ConsumableItem(itemDefinition, amount));
-                break;
-            case ItemCategory.Material:
-            case ItemCategory.ExpBook:
-                inventoryRepository.AddItem(new MaterialItem(itemDefinition, amount));
-                break;
-            case ItemCategory.Equip:
-                for (int i = 0; i < amount; i++)
-                {
-                    inventoryRepository.AddItem(new EquipItem(itemDefinition as EquipDefinition));
-                }
-
-                break;
-            default:
-                for (int i = 0; i < amount; i++)
-                {
-                    inventoryRepository.AddItem(new InventoryItem(itemDefinition));
-                }
-
-                break;
-        }
     }
 
     static int CalculateBeforeValue(StoreItemDefinition storeItem)
