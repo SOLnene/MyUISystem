@@ -1,8 +1,9 @@
+using System;
 using System.Collections.Generic;
 using UniRx;
 using UnityEngine;
 
-public class StoreViewModel
+public class StoreViewModel : IDisposable
 {
     const int PrimogemItemId = 201;
     const int MoraItemId = 202;
@@ -13,36 +14,43 @@ public class StoreViewModel
     readonly StoreDatabase storeDatabase;
     readonly ItemDatabase itemDatabase;
     readonly StorePurchaseService purchaseService = new();
+    readonly CompositeDisposable disposables = new();
+    readonly List<StoreItemViewModel> allItemViewModels = new();
+    readonly Dictionary<int, StoreItemViewModel> itemViewModelsById = new();
 
     public readonly ReactiveProperty<StoreCategory> CurrentTab = new(StoreCategory.Primogem);
+    public readonly ReactiveProperty<IReadOnlyList<StoreItemViewModel>> Items = new(new List<StoreItemViewModel>());
 
     public StoreViewModel(StoreDatabase storeDatabase, ItemDatabase itemDatabase)
     {
         this.storeDatabase = storeDatabase;
         this.itemDatabase = itemDatabase;
+
+        InitializeItemViewModels();
+
+        CurrentTab
+            .Subscribe(_ => RefreshVisibleItems())
+            .AddTo(disposables);
+
+        purchaseService.Changed
+            .Subscribe(RefreshStoreItemPreview)
+            .AddTo(disposables);
+
+        GameEconomy.Instance.CurrencyChanged
+            .Subscribe(RefreshCurrencyRelatedPreviews)
+            .AddTo(disposables);
     }
 
-    public IReadOnlyList<StoreItemViewData> CreateItems()
+    void InitializeItemViewModels()
     {
-        return CreateItems(CurrentTab.Value);
-    }
-
-    public IReadOnlyList<StoreItemViewData> CreateItems(StoreCategory category)
-    {
-        var items = new List<StoreItemViewData>();
         if (storeDatabase == null || itemDatabase == null)
         {
             Debug.LogWarning("StoreViewModel cannot load items because database is not ready.");
-            return items;
+            return;
         }
 
         foreach (StoreItemDefinition storeItem in storeDatabase.Items)
         {
-            if (!MatchesCategory(storeItem, category))
-            {
-                continue;
-            }
-
             ItemDefinition itemDefinition = itemDatabase.GetItemByID(storeItem.ItemId);
             if (itemDefinition == null)
             {
@@ -58,26 +66,30 @@ public class StoreViewModel
                 Debug.LogWarning($"Store item references missing cost item id: {storeItem.CostItemId}");
             }
 
-            items.Add(new StoreItemViewData(
-                storeItem.StoreItemId,
-                storeItem.ItemId.ToString(),
-                GetDisplayName(itemDefinition, storeItem.Count),
-                itemDefinition.iconPath,
+            var itemViewModel = new StoreItemViewModel(
+                storeItem,
+                itemDefinition,
                 costDefinition?.iconPath,
-                storeItem.Price,
                 rarityColor,
-                beforeValue: beforeValue,
-                discountPercent: storeItem.DiscountPercent,
-                hasBeforeValue: beforeValue > 0,
-                hasDiscount: storeItem.HasDiscount));
+                beforeValue,
+                purchaseService);
+            allItemViewModels.Add(itemViewModel);
+            itemViewModelsById[storeItem.StoreItemId] = itemViewModel;
         }
-
-        return items;
     }
 
     public void SetTab(StoreCategory category)
     {
         CurrentTab.Value = category;
+    }
+
+    public void Dispose()
+    {
+        disposables.Dispose();
+        foreach (StoreItemViewModel itemViewModel in allItemViewModels)
+        {
+            itemViewModel.Dispose();
+        }
     }
 
     public IReadOnlyList<int> GetVisibleCurrencyItemIds(StoreCategory category)
@@ -162,11 +174,6 @@ public class StoreViewModel
         return purchaseService.TryPurchase(storeItem, itemDefinition, purchaseCount);
     }
 
-    static string GetDisplayName(ItemDefinition itemDefinition, int count)
-    {
-        return count > 1 ? $"{itemDefinition.itemName}x{count}" : itemDefinition.itemName;
-    }
-
     StoreItemDefinition FindStoreItem(int storeItemId)
     {
         foreach (StoreItemDefinition storeItem in storeDatabase.Items)
@@ -194,5 +201,38 @@ public class StoreViewModel
     static bool MatchesCategory(StoreItemDefinition storeItem, StoreCategory category)
     {
         return storeItem.Category == category;
+    }
+
+    void RefreshVisibleItems()
+    {
+        var visibleItems = new List<StoreItemViewModel>();
+        foreach (StoreItemViewModel itemViewModel in allItemViewModels)
+        {
+            if (itemViewModel.Category == CurrentTab.Value)
+            {
+                visibleItems.Add(itemViewModel);
+            }
+        }
+
+        Items.Value = visibleItems;
+    }
+
+    void RefreshStoreItemPreview(int storeItemId)
+    {
+        if (itemViewModelsById.TryGetValue(storeItemId, out StoreItemViewModel itemViewModel))
+        {
+            itemViewModel.RefreshPurchasePreview();
+        }
+    }
+
+    void RefreshCurrencyRelatedPreviews(int itemId)
+    {
+        foreach (StoreItemViewModel itemViewModel in allItemViewModels)
+        {
+            if (itemViewModel.CostItemId == itemId)
+            {
+                itemViewModel.RefreshPurchasePreview();
+            }
+        }
     }
 }

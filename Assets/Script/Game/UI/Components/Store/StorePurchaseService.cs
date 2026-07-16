@@ -1,6 +1,8 @@
+using System;
 using UnityEngine;
+using UniRx;
 
-readonly struct StorePurchasePreview
+public readonly struct StorePurchasePreview
 {
     public readonly int MaxPurchaseCount;
     public readonly int RemainingLimit;
@@ -19,6 +21,7 @@ class StorePurchaseService
     const int DailyPurchaseLimit = 10;
 
     static readonly StorePurchaseRepository purchaseRepository = new();
+    public IObservable<int> Changed => purchaseRepository.Changed;
 
     public StorePurchasePreview CreatePreview(StoreItemDefinition storeItem)
     {

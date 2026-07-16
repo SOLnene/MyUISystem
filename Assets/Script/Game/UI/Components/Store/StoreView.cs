@@ -38,8 +38,10 @@ public class StoreView : UIView
             .Subscribe(tab =>
             {
                 topView.BindCurrencies(viewModel.GetVisibleCurrencyItemIds(tab));
-                itemListView.Bind(viewModel.CreateItems(tab), OnStoreItemClicked);
             })
+            .AddTo(disposable);
+        viewModel.Items
+            .Subscribe(items => itemListView.Bind(items, OnStoreItemClicked))
             .AddTo(disposable);
 
         ShowPanels().Forget();
@@ -48,6 +50,7 @@ public class StoreView : UIView
     public override void OnClose()
     {
         disposable.Clear();
+        viewModel?.Dispose();
         base.OnClose();
     }
 
@@ -76,9 +79,9 @@ public class StoreView : UIView
         base.OnCancel();
     }
 
-    void OnStoreItemClicked(StoreItemViewData itemData)
+    void OnStoreItemClicked(StoreItemViewModel itemViewModel)
     {
-        if (!viewModel.TryCreatePurchasePopupData(itemData.StoreItemId, out PurchasePopupViewData popupData))
+        if (!viewModel.TryCreatePurchasePopupData(itemViewModel.StoreItemId, out PurchasePopupViewData popupData))
         {
             return;
         }

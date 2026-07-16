@@ -2,6 +2,7 @@ using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using TMPro;
+using UniRx;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -78,47 +79,57 @@ public class StoreItemView : MonoBehaviour
     [SerializeField]
     string remainFormat = "本月剩余数量:{0}";
 
-    StoreItemViewData data;
-    Action<StoreItemViewData> onClicked;
+    StoreItemViewModel viewModel;
+    Action<StoreItemViewModel> onClicked;
+    readonly CompositeDisposable bindDisposables = new();
     CancellationTokenSource itemIconRequestCts;
 
-    public void Bind(StoreItemViewData viewData, Action<StoreItemViewData> clickHandler)
+    public void Bind(StoreItemViewModel itemViewModel, Action<StoreItemViewModel> clickHandler)
     {
-        data = viewData;
+        bindDisposables.Clear();
+        viewModel = itemViewModel;
         onClicked = clickHandler;
 
-        bg.color = data.BackgroundColor;
+        bg.color = viewModel.BackgroundColor;
 
-        LoadItemIcon(data.IconPath);
-        costAmountView.Bind(data.CostIconPath, data.CostValue);
-        nameText.text = data.Name;
+        LoadItemIcon(viewModel.IconPath);
+        costAmountView.Bind(viewModel.CostIconPath, viewModel.CostValue);
+        nameText.text = viewModel.Name;
 
-        remainText.gameObject.SetActive(data.HasRemainCount);
-        if (data.HasRemainCount)
+        beforeValue.gameObject.SetActive(viewModel.HasBeforeValue);
+        if (viewModel.HasBeforeValue)
         {
-            remainText.text = string.Format(remainFormat, data.RemainCount);
+            beforeValue.text = viewModel.BeforeValue.ToString();
         }
 
-        beforeValue.gameObject.SetActive(data.HasBeforeValue);
-        if (data.HasBeforeValue)
+        discountArea.SetActive(viewModel.HasDiscount);
+        if (viewModel.HasDiscount)
         {
-            beforeValue.text = data.BeforeValue.ToString();
+            discountValue.text = $"-{viewModel.DiscountPercent}%";
         }
 
-        discountArea.SetActive(data.HasDiscount);
-        if (data.HasDiscount)
-        {
-            discountValue.text = $"-{data.DiscountPercent}%";
-        }
+        viewModel.PurchasePreview
+            .Subscribe(ApplyPurchasePreview)
+            .AddTo(bindDisposables);
 
-        button.interactable = !data.IsSoldOut;
         button.onClick.RemoveListener(HandleClick);
         button.onClick.AddListener(HandleClick);
     }
 
     void HandleClick()
     {
-        onClicked?.Invoke(data);
+        onClicked?.Invoke(viewModel);
+    }
+
+    void ApplyPurchasePreview(StorePurchasePreview preview)
+    {
+        remainText.gameObject.SetActive(viewModel.HasRemainCount);
+        if (viewModel.HasRemainCount)
+        {
+            remainText.text = string.Format(remainFormat, preview.RemainingLimit);
+        }
+
+        button.interactable = preview.RemainingLimit > 0;
     }
 
     void LoadItemIcon(string iconPath)
@@ -132,6 +143,7 @@ public class StoreItemView : MonoBehaviour
 
     void OnDestroy()
     {
+        bindDisposables.Dispose();
         itemIconRequestCts?.Cancel();
         itemIconRequestCts?.Dispose();
         button.onClick.RemoveListener(HandleClick);

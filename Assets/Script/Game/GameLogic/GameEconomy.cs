@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UniRx;
@@ -26,8 +27,10 @@ public class GameEconomy : SingletonMono<GameEconomy>
     };
 
     readonly Dictionary<int, ReactiveProperty<int>> currencies = new();
+    readonly Subject<int> currencyChanged = new();
 
     public ReactiveProperty<int> gold => GetCurrencyProperty(GoldItemId);
+    public IObservable<int> CurrencyChanged => currencyChanged;
 
     protected override void Awake()
     {
@@ -65,6 +68,7 @@ public class GameEconomy : SingletonMono<GameEconomy>
         }
 
         currency.Value -= amount;
+        currencyChanged.OnNext(itemId);
         return true;
     }
 
@@ -82,6 +86,7 @@ public class GameEconomy : SingletonMono<GameEconomy>
 
         ReactiveProperty<int> currency = GetCurrencyProperty(itemId);
         currency.Value += amount;
+        currencyChanged.OnNext(itemId);
     }
 
     public CurrencySaveData ExportSaveData()
@@ -106,6 +111,7 @@ public class GameEconomy : SingletonMono<GameEconomy>
         foreach (CurrencyAmountSaveData item in saveData.items)
         {
             currencies[item.itemId] = new ReactiveProperty<int>(Mathf.Max(0, item.amount));
+            currencyChanged.OnNext(item.itemId);
         }
     }
 

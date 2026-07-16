@@ -10,9 +10,9 @@ public class StoreItemListView : MonoBehaviour
     StoreItemView itemPrefab;
 
     readonly List<StoreItemView> itemViews = new();
-    Action<StoreItemViewData> onItemClicked;
+    Action<StoreItemViewModel> onItemClicked;
 
-    public void Bind(IReadOnlyList<StoreItemViewData> items, Action<StoreItemViewData> clickHandler)
+    public void Bind(IReadOnlyList<StoreItemViewModel> items, Action<StoreItemViewModel> clickHandler)
     {
         onItemClicked = clickHandler;
         EnsureItemCount(items.Count);
@@ -38,8 +38,8 @@ public class StoreItemListView : MonoBehaviour
         }
     }
 
-    void OnItemClicked(StoreItemViewData itemData)
+    void OnItemClicked(StoreItemViewModel itemViewModel)
     {
-        onItemClicked?.Invoke(itemData);
+        onItemClicked?.Invoke(itemViewModel);
     }
 }
