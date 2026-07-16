@@ -77,7 +77,7 @@ Shader "ModelViewer/StarDome"
 
             fixed4 Frag(Varyings input) : SV_Target
             {
-                fixed3 stars = tex2D(_MainTex, input.uv).rgb * _Tint.rgb * _Intensity;
+                fixed3 starSample = tex2D(_MainTex, input.uv).rgb;
                 float2 nebulaUV = input.uv * _NebulaTex_ST.xy + _NebulaTex_ST.zw;
                 float2 flowUV = nebulaUV * 2.0 + _Time.y * _NebulaSpeedB.xy;
                 fixed2 flow = tex2D(_NebulaTex, flowUV).rg * 2.0 - 1.0;
@@ -86,6 +86,7 @@ Shader "ModelViewer/StarDome"
                 half density = dot(noise, fixed3(0.3333, 0.3333, 0.3333));
                 density = smoothstep(_NebulaThreshold, 1.0, density) * _NebulaStrength;
 
+                fixed3 stars = starSample * _Tint.rgb * _Intensity;
                 fixed3 color = stars + _OverlayColor.rgb * _OverlayStrength;
                 color += _NebulaColor.rgb * density;
                 return fixed4(color, 1);

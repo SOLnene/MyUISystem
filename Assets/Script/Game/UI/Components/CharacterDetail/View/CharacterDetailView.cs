@@ -73,6 +73,7 @@ namespace Game.UI.Components.CharacterDetail
         public override void OnOpen(object data)
         {
             base.OnOpen(data);
+            ModelViewer.Instance.PlayStarFieldParticles();
             isClosing = false;
             vm = data as CharacterDetailViewModel;
             Bind(vm);
@@ -451,6 +452,7 @@ namespace Game.UI.Components.CharacterDetail
         
         public override void OnClose()
         {
+            ModelViewer.Instance.StopStarFieldParticles();
             base.OnClose();
             // 子 ViewModel 的生命周期由 CharacterDetailViewModel 统一管理
             characterDisposable.Clear();

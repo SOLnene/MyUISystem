@@ -7,8 +7,8 @@ Material:
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
-  m_Name: PlaneReflection
-  m_Shader: {fileID: 4800000, guid: f6eb5132c0e03b04a803e23e6d7f0ffd, type: 3}
+  m_Name: M_StarTwinkleParticle
+  m_Shader: {fileID: 4800000, guid: 8498b4dca9b94727adacc4cf53c60f2e, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
@@ -23,17 +23,24 @@ Material:
   m_SavedProperties:
     serializedVersion: 3
     m_TexEnvs:
-    - _ReflectionTex:
-        m_Texture: {fileID: 8400000, guid: 1fd54abd9abe4c345858eaa4f7674fe7, type: 2}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: ff30120a245ddc2479ce3f17777e9bd6, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Alpha: 0.5
-    - _Blur: 0
-    - _Darkness: 0.3
-    - _FadeEnd: 1
-    - _FadeStart: 0.7
-    - _MoveDistance: 0
-    m_Colors: []
+    - _CycleDuration: 3.2
+    - _LocalPhaseJitter: 0.15
+    - _MaxBrightness: 1.4
+    - _MaxScale: 1.15
+    - _MinBrightness: 0
+    - _MinScale: 0.25
+    - _PulseSharpness: 3
+    - _RegionFrequency: 2.5
+    m_Colors:
+    - _ColorA: {r: 0.86, g: 0.95, b: 1, a: 1}
+    - _ColorB: {r: 0.38, g: 1, b: 0.94, a: 1}
+    - _ColorC: {r: 0.38, g: 0.68, b: 1, a: 1}
+    - _ColorD: {r: 1, g: 0.48, b: 0.78, a: 1}
+    - _ColorE: {r: 1, g: 0.82, b: 0.38, a: 1}
   m_BuildTextureStacks: []

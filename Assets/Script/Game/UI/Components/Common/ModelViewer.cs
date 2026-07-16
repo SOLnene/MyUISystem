@@ -12,6 +12,9 @@ public class ModelViewer : SingletonMono<ModelViewer>
     [FormerlySerializedAs("modelCamera")][SerializeField] Camera displayCamera;
     [SerializeField] Camera modelCamera;
     [SerializeField] Transform planeTransform;
+
+    [Header("Background Effects")]
+    [SerializeField] ParticleSystem starSphere;
     
     [Header("Rotation Settings")]
     [SerializeField] float rotateSensitivity = 0.4f;
@@ -374,5 +377,16 @@ public class ModelViewer : SingletonMono<ModelViewer>
         targetPitch = 0;
         // 直接回到最开始记录的本地坐标
         targetPos = initialCameraLocalPos;
+    }
+
+    internal void PlayStarFieldParticles()
+    {
+        starSphere.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        starSphere.Play(false);
+    }
+
+    internal void StopStarFieldParticles()
+    {
+        starSphere.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 }
