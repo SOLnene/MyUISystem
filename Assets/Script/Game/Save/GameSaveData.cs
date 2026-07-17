@@ -4,7 +4,7 @@ using System.Collections.Generic;
 [Serializable]
 public class GameSaveData
 {
-    public int version = 2;
+    public int version;
     public string savedAtUtc;
     public CurrencySaveData currencies = new CurrencySaveData();
     public InventorySaveData inventory = new InventorySaveData();

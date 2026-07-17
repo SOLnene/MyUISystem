@@ -40,13 +40,20 @@ internal class MainMenuNavigator
         if (characterRepository.Characters.Count == 0)
         {
             string[] testCharacterKeys = { "hutao", "eula", "ayaka" };
+            bool addedCharacter = false;
             for (int i = 0; i < testCharacterKeys.Length; i++)
             {
                 var testCharacterDefinition = GameDatabase.CharacterDatabase.Get(testCharacterKeys[i]);
                 if (testCharacterDefinition != null)
                 {
                     characterRepository.Add(testCharacterDefinition);
+                    addedCharacter = true;
                 }
+            }
+
+            if (addedCharacter)
+            {
+                GameSaveCoordinator.Instance.MarkDirty();
             }
         }
 

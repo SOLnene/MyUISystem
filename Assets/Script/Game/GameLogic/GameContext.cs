@@ -1,8 +1,7 @@
 using Cysharp.Threading.Tasks;
 public class GameContext: Singleton<GameContext>
 {
-    bool isInitializing;
-    bool isInitialized;
+    AsyncLazy initializeTask;
     bool initialTestItemsRequested;
 
     public BackpackViewModel BackpackVM { get; private set; }
@@ -19,28 +18,10 @@ public class GameContext: Singleton<GameContext>
                              || LastSaveLoadResult == SaveLoadResult.RecoveredFromBackup;
     //可能有多个不同的实现
     public IGachaVisualProvider GachaVisualProvider { get; private set; }
-    public async UniTask Init()
+    public UniTask Init()
     {
-        while (isInitializing)
-        {
-            await UniTask.Yield();
-        }
-
-        if (isInitialized)
-        {
-            return;
-        }
-
-        isInitializing = true;
-        try
-        {
-            await Initialize();
-            isInitialized = true;
-        }
-        finally
-        {
-            isInitializing = false;
-        }
+        initializeTask ??= UniTask.Lazy(Initialize);
+        return initializeTask.Task;
     }
 
     async UniTask Initialize()
