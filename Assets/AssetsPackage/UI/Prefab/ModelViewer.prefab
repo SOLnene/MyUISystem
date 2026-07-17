@@ -2203,7 +2203,7 @@ ParticleSystem:
       m_PostInfinity: 2
       m_RotationOrder: 4
   moveWithTransform: 2
-  moveWithCustomTransform: {fileID: 3806570253526287533}
+  moveWithCustomTransform: {fileID: 7818537859023707358}
   scalingMode: 1
   randomSeed: 0
   InitialModule:
@@ -2383,7 +2383,7 @@ ParticleSystem:
     startSize:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 2.2
+      scalar: 1
       minScalar: 1
       maxCurve:
         serializedVersion: 2
@@ -7186,7 +7186,7 @@ Transform:
   m_Children:
   - {fileID: 3121956048604122768}
   - {fileID: 2080142209386795216}
-  m_Father: {fileID: 3806570253526287533}
+  m_Father: {fileID: 7818537859023707358}
   m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
 --- !u!198 &3485691446677330045
 ParticleSystem:
@@ -7262,7 +7262,7 @@ ParticleSystem:
       m_PostInfinity: 2
       m_RotationOrder: 4
   moveWithTransform: 2
-  moveWithCustomTransform: {fileID: 3806570253526287533}
+  moveWithCustomTransform: {fileID: 7818537859023707358}
   scalingMode: 1
   randomSeed: 0
   InitialModule:
@@ -7442,8 +7442,8 @@ ParticleSystem:
     startSize:
       serializedVersion: 2
       minMaxState: 3
-      scalar: 0.6
-      minScalar: 0.12
+      scalar: 0.8
+      minScalar: 0.2
       maxCurve:
         serializedVersion: 2
         m_Curve:
@@ -7759,7 +7759,7 @@ ParticleSystem:
         m_RotationOrder: 4
     randomizeRotationDirection: 0
     gravitySource: 0
-    maxNumParticles: 250
+    maxNumParticles: 1000
     customEmitterVelocity: {x: 0, y: 0, z: 0}
     size3D: 0
     rotation3D: 0
@@ -7819,7 +7819,7 @@ ParticleSystem:
   ShapeModule:
     serializedVersion: 6
     enabled: 1
-    type: 2
+    type: 0
     angle: 25
     length: 5
     boxThickness: {x: 0, y: 0, z: 0}
@@ -7895,13 +7895,13 @@ ParticleSystem:
     m_UseMeshMaterialIndex: 0
     m_UseMeshColors: 1
     alignToDirection: 0
-    m_Texture: {fileID: 0}
-    m_TextureClipChannel: 3
-    m_TextureClipThreshold: 0
+    m_Texture: {fileID: 2800000, guid: ab4c56d2b592c524d902c8c7f5989aed, type: 3}
+    m_TextureClipChannel: 0
+    m_TextureClipThreshold: 0.2
     m_TextureUVChannel: 0
-    m_TextureColorAffectsParticles: 1
-    m_TextureAlphaAffectsParticles: 1
-    m_TextureBilinearFiltering: 0
+    m_TextureColorAffectsParticles: 0
+    m_TextureAlphaAffectsParticles: 0
+    m_TextureBilinearFiltering: 1
     randomDirectionAmount: 0
     sphericalDirectionAmount: 0
     randomPositionAmount: 0
@@ -8025,7 +8025,7 @@ ParticleSystem:
     rateOverTime:
       serializedVersion: 2
       minMaxState: 0
-      scalar: 40
+      scalar: 100
       minScalar: 10
       maxCurve:
         serializedVersion: 2
@@ -12355,6 +12355,53 @@ Transform:
   - {fileID: 3921788177478006914}
   m_Father: {fileID: 1308810981685668790}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &2934921495537618960
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7818537859023707358}
+  - component: {fileID: 6463880549450966826}
+  m_Layer: 13
+  m_Name: StarParticleRoot
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7818537859023707358
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2934921495537618960}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 6230379865877441681}
+  m_Father: {fileID: 3806570253526287533}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6463880549450966826
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2934921495537618960}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2c230b68771b4fc4919233347f0f6fe4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  rotationAxis: {x: 0.15, y: 1, z: 0.05}
+  degreesPerSecond: 0.5
 --- !u!1 &2945479427567445486
 GameObject:
   m_ObjectHideFlags: 0
@@ -12462,7 +12509,7 @@ ParticleSystem:
       m_PostInfinity: 2
       m_RotationOrder: 4
   moveWithTransform: 2
-  moveWithCustomTransform: {fileID: 3806570253526287533}
+  moveWithCustomTransform: {fileID: 7818537859023707358}
   scalingMode: 1
   randomSeed: 0
   InitialModule:
@@ -19408,7 +19455,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6931824364810387231}
-  - {fileID: 6230379865877441681}
+  - {fileID: 7818537859023707358}
   m_Father: {fileID: 1503864968369643243}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5235309359669913567
