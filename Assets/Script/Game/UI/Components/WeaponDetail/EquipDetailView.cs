@@ -65,6 +65,7 @@ public partial class EquipDetailView : UIView
     public override void OnOpen(object data)
     {
         base.OnOpen(data);
+        ModelViewer.Instance.PlayStarFieldParticles();
         isClosing = false;
         inputBlockCount = 0;
         SetInputBlocked(false);
@@ -355,10 +356,12 @@ public partial class EquipDetailView : UIView
     
     void OnWeaponChanged(EquipItemViewModel viewModel)
     {
-    if (viewModel == null)
+        if (viewModel == null)
         {
             return;
         }
+
+        ModelViewer.Instance.ShowEquipPreviewAsync(viewModel.Model.Key).Forget(Debug.LogException);
         //TopHub.SetTitle(viewModel.Model.ItemName);
     }
     
@@ -410,6 +413,8 @@ public partial class EquipDetailView : UIView
 
     public override void OnClose()
     {
+        ModelViewer.Instance.ShowCharacterPreview();
+        ModelViewer.Instance.StopStarFieldParticles();
         base.OnClose();
         disposable.Clear();
         equipDetailVm?.Dispose();

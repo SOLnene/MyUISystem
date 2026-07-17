@@ -73,6 +73,7 @@ namespace Game.UI.Components.CharacterDetail
         public override void OnOpen(object data)
         {
             base.OnOpen(data);
+            ModelViewer.Instance.ShowCharacterPreview();
             ModelViewer.Instance.PlayStarFieldParticles();
             isClosing = false;
             vm = data as CharacterDetailViewModel;

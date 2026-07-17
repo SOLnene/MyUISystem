@@ -1,4 +1,6 @@
 using System;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
 using UnityEngine.Serialization;
@@ -7,6 +9,9 @@ public class ModelViewer : SingletonMono<ModelViewer>
 {
     [Header("Transforms")]
     [SerializeField] Transform modelRoot;
+    [SerializeField] Transform characterRoot;
+    [SerializeField] Transform equipRoot;
+    [SerializeField] ModelPreviewDatabase modelPreviewDatabase;
     //角色胸口
     [SerializeField] Transform cameraPivot;
     [FormerlySerializedAs("modelCamera")][SerializeField] Camera displayCamera;
@@ -59,6 +64,11 @@ public class ModelViewer : SingletonMono<ModelViewer>
     [SerializeField] public FaceExpressionPreset[] facePresets;
     
     [SerializeField] FaceController faceController;
+
+    CancellationTokenSource previewLoadCancellation;
+    GameObject loadedPreviewObject;
+    int previewRequestVersion;
+    int starFieldUserCount;
 
     public bool IsInTransition => isInTransition;
     public event Action OnPreviewTransitionCompleted;
@@ -370,6 +380,163 @@ public class ModelViewer : SingletonMono<ModelViewer>
         canDrag = transitionAllowDrag;
         OnPreviewTransitionCompleted?.Invoke();
     }
+
+    public UniTask ShowEquipPreviewAsync(string equipKey)
+    {
+        return ShowPreviewAsync(ModelPreviewType.Equip, equipKey);
+    }
+
+    public async UniTask ShowPreviewAsync(ModelPreviewType previewType, string targetKey)
+    {
+        CancelPreviewLoad();
+        ReleaseLoadedPreview();
+
+        Transform previewRoot = previewType == ModelPreviewType.Character
+            ? characterRoot
+            : equipRoot;
+        characterRoot.gameObject.SetActive(previewType == ModelPreviewType.Character);
+        equipRoot.gameObject.SetActive(previewType == ModelPreviewType.Equip);
+        SetDirectChildrenActive(previewRoot, false);
+
+        ModelPreviewDefinition definition = modelPreviewDatabase.Get(previewType, targetKey);
+        if (definition == null)
+        {
+            Debug.LogWarning($"Model preview definition not found: {previewType}/{targetKey}", this);
+            return;
+        }
+
+        ApplyPreviewCamera(definition.CameraPreset);
+
+        int requestVersion = previewRequestVersion;
+        var cancellation = new CancellationTokenSource();
+        previewLoadCancellation = cancellation;
+        GameObject previewObject;
+        try
+        {
+            previewObject = await ResourceManager.Instance.InstantiateItemAsync(
+                definition.ModelAddress,
+                previewRoot,
+                false,
+                cancellation.Token);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        finally
+        {
+            if (previewLoadCancellation == cancellation)
+            {
+                previewLoadCancellation.Dispose();
+                previewLoadCancellation = null;
+            }
+        }
+
+        if (previewObject == null)
+        {
+            return;
+        }
+
+        if (requestVersion != previewRequestVersion)
+        {
+            ResourceManager.Instance.Recycle(previewObject);
+            return;
+        }
+
+        Transform previewTransform = previewObject.transform;
+        previewTransform.localPosition = definition.LocalPosition;
+        previewTransform.localRotation = Quaternion.Euler(definition.LocalEulerAngles);
+        previewTransform.localScale = definition.LocalScale;
+        SetLayerRecursively(previewObject, LayerMask.NameToLayer("ModelDisplay"));
+        loadedPreviewObject = previewObject;
+        previewObject.SetActive(true);
+    }
+
+    public void ShowCharacterPreview()
+    {
+        CancelPreviewLoad();
+        ReleaseLoadedPreview();
+        equipRoot.gameObject.SetActive(false);
+        characterRoot.gameObject.SetActive(true);
+        SetDirectChildrenActive(characterRoot, true);
+
+        if (presets != null && presets.Length > 0)
+        {
+            ApplyPreviewCamera(presets[0]);
+        }
+        else
+        {
+            ResetView();
+            canDrag = true;
+        }
+    }
+
+    void ApplyPreviewCamera(CameraPreset preset)
+    {
+        if (preset == null)
+        {
+            ResetView();
+            canDrag = true;
+            return;
+        }
+
+        if (seq != null && seq.IsActive())
+        {
+            seq.Kill();
+        }
+
+        targetPos = currentPos = preset.cameraLocalPosition;
+        targetPitch = currentPitch = preset.pitch;
+        targetYaw = currentYaw = preset.yaw;
+        displayCamera.transform.localPosition = currentPos;
+        displayCamera.fieldOfView = preset.fov;
+        ApplyTransforms();
+        isInTransition = false;
+        cameraTransitionPending = false;
+        animationTransitionPending = false;
+        faceTransitionPending = false;
+        canDrag = preset.allowDrag;
+    }
+
+    void CancelPreviewLoad()
+    {
+        previewRequestVersion++;
+        if (previewLoadCancellation == null)
+        {
+            return;
+        }
+
+        previewLoadCancellation.Cancel();
+        previewLoadCancellation.Dispose();
+        previewLoadCancellation = null;
+    }
+
+    void ReleaseLoadedPreview()
+    {
+        if (loadedPreviewObject == null)
+        {
+            return;
+        }
+
+        ResourceManager.Instance.Recycle(loadedPreviewObject);
+        loadedPreviewObject = null;
+    }
+
+    static void SetDirectChildrenActive(Transform root, bool active)
+    {
+        for (int i = 0; i < root.childCount; i++)
+        {
+            root.GetChild(i).gameObject.SetActive(active);
+        }
+    }
+
+    static void SetLayerRecursively(GameObject root, int layer)
+    {
+        foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
+        {
+            child.gameObject.layer = layer;
+        }
+    }
     
     public void ResetView()
     {
@@ -381,12 +548,24 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     internal void PlayStarFieldParticles()
     {
+        starFieldUserCount++;
+        if (starFieldUserCount > 1)
+        {
+            return;
+        }
+
         starSphere.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         starSphere.Play(false);
     }
 
     internal void StopStarFieldParticles()
     {
+        starFieldUserCount = Mathf.Max(0, starFieldUserCount - 1);
+        if (starFieldUserCount > 0)
+        {
+            return;
+        }
+
         starSphere.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
 }
