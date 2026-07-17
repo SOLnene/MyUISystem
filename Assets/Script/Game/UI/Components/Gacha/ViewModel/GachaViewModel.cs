@@ -108,6 +108,8 @@ public class GachaViewModel : IDisposable
             var vm = new GachaEntryViewModel(e,visualProvider, character, item);
             lastDrawnItems.Add(vm);
         }
+
+        GameSaveCoordinator.Instance.MarkDirty();
         
         currentSession?.Dispose();
         currentSession = new GachaSessionViewModel(lastDrawnItems);

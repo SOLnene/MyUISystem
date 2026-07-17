@@ -4,10 +4,13 @@ using System.Collections.Generic;
 [Serializable]
 public class GameSaveData
 {
-    public int version = 1;
+    public int version = 2;
+    public string savedAtUtc;
     public CurrencySaveData currencies = new CurrencySaveData();
     public InventorySaveData inventory = new InventorySaveData();
     public CharacterRepositorySaveData characters = new CharacterRepositorySaveData();
+    public GachaSaveData gacha = new GachaSaveData();
+    public StorePurchaseSaveData store = new StorePurchaseSaveData();
 }
 
 [Serializable]
@@ -112,5 +115,53 @@ public class CharacterSaveData
         this.talentLevel = talentLevel;
         this.talentTokenCount = talentTokenCount;
         this.equippedWeaponInstanceId = equippedWeaponInstanceId;
+    }
+}
+
+[Serializable]
+public class GachaSaveData
+{
+    public List<GachaPitySaveData> pityCounters = new List<GachaPitySaveData>();
+}
+
+[Serializable]
+public class GachaPitySaveData
+{
+    public string gachaKey;
+    public int count;
+
+    public GachaPitySaveData()
+    {
+    }
+
+    public GachaPitySaveData(string gachaKey, int count)
+    {
+        this.gachaKey = gachaKey;
+        this.count = count;
+    }
+}
+
+[Serializable]
+public class StorePurchaseSaveData
+{
+    public List<StorePurchaseRecordSaveData> records = new List<StorePurchaseRecordSaveData>();
+}
+
+[Serializable]
+public class StorePurchaseRecordSaveData
+{
+    public int storeItemId;
+    public string periodKey;
+    public int purchasedCount;
+
+    public StorePurchaseRecordSaveData()
+    {
+    }
+
+    public StorePurchaseRecordSaveData(int storeItemId, string periodKey, int purchasedCount)
+    {
+        this.storeItemId = storeItemId;
+        this.periodKey = periodKey;
+        this.purchasedCount = purchasedCount;
     }
 }

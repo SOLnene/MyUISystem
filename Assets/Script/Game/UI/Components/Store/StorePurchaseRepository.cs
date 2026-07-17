@@ -32,6 +32,41 @@ class StorePurchaseRepository
         changed.OnNext(storeItemId);
     }
 
+    public StorePurchaseSaveData ExportSaveData()
+    {
+        StorePurchaseSaveData saveData = new StorePurchaseSaveData();
+        foreach (KeyValuePair<int, StorePurchaseRecord> pair in records)
+        {
+            saveData.records.Add(new StorePurchaseRecordSaveData(
+                pair.Key,
+                pair.Value.PeriodKey,
+                pair.Value.PurchasedCount));
+        }
+
+        return saveData;
+    }
+
+    public void ImportSaveData(StorePurchaseSaveData saveData)
+    {
+        records.Clear();
+        if (saveData == null || saveData.records == null)
+        {
+            return;
+        }
+
+        foreach (StorePurchaseRecordSaveData recordData in saveData.records)
+        {
+            if (recordData == null || recordData.storeItemId <= 0 || string.IsNullOrEmpty(recordData.periodKey))
+            {
+                continue;
+            }
+
+            records[recordData.storeItemId] = new StorePurchaseRecord(
+                recordData.periodKey,
+                Math.Max(0, recordData.purchasedCount));
+        }
+    }
+
     StorePurchaseRecord GetTodayRecord(int storeItemId)
     {
         string periodKey = DateTime.Now.ToString("yyyy-MM-dd");
@@ -57,8 +92,9 @@ class StorePurchaseRecord
     public string PeriodKey;
     public int PurchasedCount;
 
-    public StorePurchaseRecord(string periodKey)
+    public StorePurchaseRecord(string periodKey, int purchasedCount = 0)
     {
         PeriodKey = periodKey;
+        PurchasedCount = purchasedCount;
     }
 }

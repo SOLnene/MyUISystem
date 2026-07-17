@@ -65,11 +65,13 @@ public class  BackpackViewModel
     public void AddItem(InventoryItem inventoryItem)
     {
         inventoryRepository.AddItem(inventoryItem);
+        GameSaveCoordinator.Instance.MarkDirty();
     }
     
     public void RemoveItem(InventoryItem inventoryItem)
     {
         inventoryRepository.RemoveItem(inventoryItem);
+        GameSaveCoordinator.Instance.MarkDirty();
     }
 
     void OnInventoryChanged(InventoryChangedEvent changeEvent)

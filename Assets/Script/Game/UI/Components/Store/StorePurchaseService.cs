@@ -20,8 +20,13 @@ class StorePurchaseService
 {
     const int DailyPurchaseLimit = 10;
 
-    static readonly StorePurchaseRepository purchaseRepository = new();
+    readonly StorePurchaseRepository purchaseRepository;
     public IObservable<int> Changed => purchaseRepository.Changed;
+
+    public StorePurchaseService(StorePurchaseRepository purchaseRepository)
+    {
+        this.purchaseRepository = purchaseRepository;
+    }
 
     public StorePurchasePreview CreatePreview(StoreItemDefinition storeItem)
     {
@@ -55,7 +60,18 @@ class StorePurchaseService
 
         AddPurchasedItem(itemDefinition, storeItem.Count * purchaseCount);
         purchaseRepository.AddPurchasedCount(storeItem.StoreItemId, purchaseCount);
+        GameSaveCoordinator.Instance.MarkDirty();
         return true;
+    }
+
+    public StorePurchaseSaveData ExportSaveData()
+    {
+        return purchaseRepository.ExportSaveData();
+    }
+
+    public void ImportSaveData(StorePurchaseSaveData saveData)
+    {
+        purchaseRepository.ImportSaveData(saveData);
     }
 
     void AddPurchasedItem(ItemDefinition itemDefinition, int amount)

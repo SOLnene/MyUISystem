@@ -47,6 +47,36 @@ public class GachaService: IGachaService
         return new GachaResult(entries);
     }
 
+    public GachaSaveData ExportSaveData()
+    {
+        GachaSaveData saveData = new GachaSaveData();
+        foreach (KeyValuePair<string, int> pair in pityCounters)
+        {
+            saveData.pityCounters.Add(new GachaPitySaveData(pair.Key, pair.Value));
+        }
+
+        return saveData;
+    }
+
+    public void ImportSaveData(GachaSaveData saveData)
+    {
+        pityCounters.Clear();
+        if (saveData == null || saveData.pityCounters == null)
+        {
+            return;
+        }
+
+        foreach (GachaPitySaveData pityData in saveData.pityCounters)
+        {
+            if (pityData == null || string.IsNullOrEmpty(pityData.gachaKey))
+            {
+                continue;
+            }
+
+            pityCounters[pityData.gachaKey] = Mathf.Max(0, pityData.count);
+        }
+    }
+
     GachaEntry DrawSingle(GachaDefinition pool,ref int pityCounter)
     {
         pityCounter++;

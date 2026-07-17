@@ -1,6 +1,10 @@
 using Cysharp.Threading.Tasks;
 public class GameContext: Singleton<GameContext>
 {
+    bool isInitializing;
+    bool isInitialized;
+    bool initialTestItemsRequested;
+
     public BackpackViewModel BackpackVM { get; private set; }
 
     public InventoryRepository InventoryRepository { get; private set; }
@@ -8,9 +12,38 @@ public class GameContext: Singleton<GameContext>
     public StoreDatabase StoreDatabase { get; private set; }
     //全项目只有一个实现
     public GachaService GachaService { get; private set; }
+    internal StorePurchaseService StorePurchaseService { get; private set; }
+    internal SaveLoadResult LastSaveLoadResult { get; private set; } = SaveLoadResult.NotFound;
+    internal bool CanSave => LastSaveLoadResult == SaveLoadResult.Success
+                             || LastSaveLoadResult == SaveLoadResult.NotFound
+                             || LastSaveLoadResult == SaveLoadResult.RecoveredFromBackup;
     //可能有多个不同的实现
     public IGachaVisualProvider GachaVisualProvider { get; private set; }
     public async UniTask Init()
+    {
+        while (isInitializing)
+        {
+            await UniTask.Yield();
+        }
+
+        if (isInitialized)
+        {
+            return;
+        }
+
+        isInitializing = true;
+        try
+        {
+            await Initialize();
+            isInitialized = true;
+        }
+        finally
+        {
+            isInitializing = false;
+        }
+    }
+
+    async UniTask Initialize()
     {
         await GameDatabase.Init();
         //backpackVM = new BackpackViewModel();
@@ -18,11 +51,27 @@ public class GameContext: Singleton<GameContext>
         InventoryRepository = new InventoryRepository();
         StoreDatabase = GameDatabase.StoreDatabase;
         CharacterRepository = new CharacterRepository();
-        GameSaveSystem.TryLoadCurrentGame();
-        BackpackVM = new BackpackViewModel(InventoryRepository);
-
         GachaPoolProvider poolProvider = new GachaPoolProvider(GameDatabase.GachaPoolDatabase);
         GachaService = new GachaService(poolProvider);
+        StorePurchaseService = new StorePurchaseService(new StorePurchaseRepository());
         GachaVisualProvider = new GachaVisualProvider(GameDatabase.CharaVisualDatabase);
+
+        LastSaveLoadResult = GameSaveSystem.LoadCurrentGame();
+        BackpackVM = new BackpackViewModel(InventoryRepository);
+        if (CanSave && (LastSaveLoadResult == SaveLoadResult.NotFound || GameSaveSystem.NeedsResave))
+        {
+            GameSaveCoordinator.Instance.MarkDirty();
+        }
+    }
+
+    internal bool TryRequestInitialTestItems()
+    {
+        if (LastSaveLoadResult != SaveLoadResult.NotFound || initialTestItemsRequested)
+        {
+            return false;
+        }
+
+        initialTestItemsRequested = true;
+        return true;
     }
 }

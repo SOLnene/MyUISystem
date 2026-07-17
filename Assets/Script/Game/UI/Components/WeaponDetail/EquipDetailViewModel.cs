@@ -91,6 +91,7 @@ public class EquipDetailViewModel: IDisposable
                 requestPlayEnhanceResult.OnNext(new EnhanceResultData(oldLevel, newLevel, oldProgress, newProgress, levelUpCount, needSwitchContent, rarityColor));
                 enhanceVM.ClearSelectedMaterials();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
+                GameSaveCoordinator.Instance.MarkDirty();
             }
             else
             {
@@ -119,6 +120,7 @@ public class EquipDetailViewModel: IDisposable
             int newMaxLevel = weapon.Model.GetCurrentMaxLevel();
             Color rarityColor = RarityConfig.GetColor(weapon.Model.ItemRarity);
             requestPlayPromoteResult.OnNext(new PromoteLevelResultData(oldRank, newRank, currentLevel, oldMaxLevel, newMaxLevel, rarityColor));
+            GameSaveCoordinator.Instance.MarkDirty();
         }).AddTo(disposables);
 
         bottomVM.onRefineClick.Subscribe(_ =>
@@ -136,6 +138,7 @@ public class EquipDetailViewModel: IDisposable
                 bottomVM.isRefineMaxed.Value = weapon.IsRefineMaxed();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
                 requestPlayRefineResult.OnNext(new RefineResultData(oldRefineLevel, newRefineLevel, wasCanRefine != !weapon.IsRefineMaxed()));
+                GameSaveCoordinator.Instance.MarkDirty();
             }
         }).AddTo(disposables);
         

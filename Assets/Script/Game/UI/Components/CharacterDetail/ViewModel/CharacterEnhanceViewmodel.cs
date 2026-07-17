@@ -152,6 +152,7 @@ namespace Game.UI.Components.CharacterDetail
             materialInput.Clear();
             requestPlayEnhanceResult.OnNext(new EnhanceResultData(oldLevel, newLevel, oldProgress, newProgress, levelUpCount, needSwitchContent, rarityColor));
             onUpgrade.Execute(Unit.Default);
+            GameSaveCoordinator.Instance.MarkDirty();
         }
 
         float GetExpProgress()

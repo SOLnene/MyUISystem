@@ -131,6 +131,7 @@ namespace Game.UI.Components.CharacterDetail
                 Color rarityColor = GetRarityColor();
                 requestPlayPromoteResult.OnNext(new PromoteLevelResultData(oldRank, newRank, currentLevel, oldMaxLevel, newMaxLevel, rarityColor));
                 onPromote.Execute(Unit.Default);
+                GameSaveCoordinator.Instance.MarkDirty();
                 return true;
             }
             return false;

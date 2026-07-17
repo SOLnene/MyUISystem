@@ -14,6 +14,10 @@ public static class ItemFactory
     public static List<InventoryItem> CreateTestItems()
     {
         var items = new List<InventoryItem>();
+        if (!GameContext.Instance.TryRequestInitialTestItems())
+        {
+            return items;
+        }
 
         foreach (var def in GameDatabase.ItemDatabase.allItems)
         {

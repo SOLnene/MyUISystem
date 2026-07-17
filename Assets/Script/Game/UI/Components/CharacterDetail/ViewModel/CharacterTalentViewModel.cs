@@ -107,6 +107,7 @@ namespace Game.UI.Components.CharacterDetail
             {
                 SelectNode(model.TalentLevel - 1);
                 RefreshTalentStats();
+                GameSaveCoordinator.Instance.MarkDirty();
             }
         }
 

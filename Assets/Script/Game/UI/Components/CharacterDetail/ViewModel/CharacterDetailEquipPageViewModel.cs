@@ -61,6 +61,7 @@ public class CharacterDetailEquipPageViewModel
         }
 
         model.ChangeEquip(selectedWeapon);
+        GameSaveCoordinator.Instance.MarkDirty();
         RefreshReplaceButtonState();
     }
     
