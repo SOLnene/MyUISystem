@@ -13,10 +13,11 @@ public class StoreViewModel : IDisposable
 
     readonly StoreDatabase storeDatabase;
     readonly ItemDatabase itemDatabase;
-    readonly StorePurchaseService purchaseService = new();
+    readonly StorePurchaseService purchaseService;
     readonly CompositeDisposable disposables = new();
     readonly List<StoreItemViewModel> allItemViewModels = new();
     readonly Dictionary<int, StoreItemViewModel> itemViewModelsById = new();
+    readonly Dictionary<int, List<StoreItemViewModel>> itemViewModelsByCostItemId = new();
 
     public readonly ReactiveProperty<StoreCategory> CurrentTab = new(StoreCategory.Primogem);
     public readonly ReactiveProperty<IReadOnlyList<StoreItemViewModel>> Items = new(new List<StoreItemViewModel>());
@@ -25,8 +26,10 @@ public class StoreViewModel : IDisposable
     {
         this.storeDatabase = storeDatabase;
         this.itemDatabase = itemDatabase;
+        purchaseService = GameContext.Instance.StorePurchaseService;
 
         InitializeItemViewModels();
+        ObserveCostCurrencies();
 
         CurrentTab
             .Subscribe(_ => RefreshVisibleItems())
@@ -34,10 +37,6 @@ public class StoreViewModel : IDisposable
 
         purchaseService.Changed
             .Subscribe(RefreshStoreItemPreview)
-            .AddTo(disposables);
-
-        GameEconomy.Instance.CurrencyChanged
-            .Subscribe(RefreshCurrencyRelatedPreviews)
             .AddTo(disposables);
     }
 
@@ -75,6 +74,26 @@ public class StoreViewModel : IDisposable
                 purchaseService);
             allItemViewModels.Add(itemViewModel);
             itemViewModelsById[storeItem.StoreItemId] = itemViewModel;
+            if (!itemViewModelsByCostItemId.TryGetValue(
+                    itemViewModel.CostItemId,
+                    out List<StoreItemViewModel> itemViewModels))
+            {
+                itemViewModels = new List<StoreItemViewModel>();
+                itemViewModelsByCostItemId.Add(itemViewModel.CostItemId, itemViewModels);
+            }
+
+            itemViewModels.Add(itemViewModel);
+        }
+    }
+
+    void ObserveCostCurrencies()
+    {
+        foreach (int costItemId in itemViewModelsByCostItemId.Keys)
+        {
+            GameEconomy.Instance.ObserveCurrency(costItemId)
+                .Skip(1)
+                .Subscribe(_ => RefreshCurrencyRelatedPreviews(costItemId))
+                .AddTo(disposables);
         }
     }
 
@@ -225,14 +244,18 @@ public class StoreViewModel : IDisposable
         }
     }
 
-    void RefreshCurrencyRelatedPreviews(int itemId)
+    void RefreshCurrencyRelatedPreviews(int costItemId)
     {
-        foreach (StoreItemViewModel itemViewModel in allItemViewModels)
+        if (!itemViewModelsByCostItemId.TryGetValue(
+                costItemId,
+                out List<StoreItemViewModel> itemViewModels))
         {
-            if (itemViewModel.CostItemId == itemId)
-            {
-                itemViewModel.RefreshPurchasePreview();
-            }
+            return;
+        }
+
+        foreach (StoreItemViewModel itemViewModel in itemViewModels)
+        {
+            itemViewModel.RefreshPurchasePreview();
         }
     }
 }
