@@ -17,6 +17,8 @@ public class ModelViewer : SingletonMono<ModelViewer>
     [FormerlySerializedAs("modelCamera")][SerializeField] Camera displayCamera;
     [SerializeField] Camera modelCamera;
     [SerializeField] Transform planeTransform;
+    [SerializeField] Renderer planeRenderer;
+    [SerializeField] PlanarReflectionManager reflectionManager;
 
     [Header("Background Effects")]
     [SerializeField] ParticleSystem starSphere;
@@ -70,6 +72,8 @@ public class ModelViewer : SingletonMono<ModelViewer>
     int previewRequestVersion;
     int starFieldUserCount;
 
+    const string PlaneReflectionKeyword = "_PLANE_REFLECTION";
+
     public bool IsInTransition => isInTransition;
     public event Action OnPreviewTransitionCompleted;
     void Start()
@@ -83,6 +87,8 @@ public class ModelViewer : SingletonMono<ModelViewer>
             initialCameraLocalPos = displayCamera.transform.localPosition;
             currentPos = targetPos = initialCameraLocalPos;
         }
+
+        SetPlaneReflection(characterRoot.gameObject.activeSelf);
     }
 
     // 每一帧平滑处理
@@ -397,6 +403,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
         characterRoot.gameObject.SetActive(previewType == ModelPreviewType.Character);
         equipRoot.gameObject.SetActive(previewType == ModelPreviewType.Equip);
         SetDirectChildrenActive(previewRoot, false);
+        SetPlaneReflection(previewType == ModelPreviewType.Character);
 
         ModelPreviewDefinition definition = modelPreviewDatabase.Get(previewType, targetKey);
         if (definition == null)
@@ -459,6 +466,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
         equipRoot.gameObject.SetActive(false);
         characterRoot.gameObject.SetActive(true);
         SetDirectChildrenActive(characterRoot, true);
+        SetPlaneReflection(true);
 
         if (presets != null && presets.Length > 0)
         {
@@ -536,6 +544,20 @@ public class ModelViewer : SingletonMono<ModelViewer>
         {
             child.gameObject.layer = layer;
         }
+    }
+
+    void SetPlaneReflection(bool enabled)
+    {
+        if (enabled)
+        {
+            planeRenderer.sharedMaterial.EnableKeyword(PlaneReflectionKeyword);
+        }
+        else
+        {
+            planeRenderer.sharedMaterial.DisableKeyword(PlaneReflectionKeyword);
+        }
+
+        reflectionManager.enabled = enabled;
     }
     
     public void ResetView()

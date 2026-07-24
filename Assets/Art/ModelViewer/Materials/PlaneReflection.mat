@@ -11,7 +11,8 @@ Material:
   m_Shader: {fileID: 4800000, guid: f6eb5132c0e03b04a803e23e6d7f0ffd, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
-  m_ValidKeywords: []
+  m_ValidKeywords:
+  - _PLANE_REFLECTION
   m_InvalidKeywords: []
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
@@ -34,6 +35,11 @@ Material:
     - _Darkness: 0.3
     - _FadeEnd: 1
     - _FadeStart: 0.7
+    - _GradientEnd: 0.65
+    - _GradientStart: 0
     - _MoveDistance: 0
-    m_Colors: []
+    - _UseReflection: 1
+    m_Colors:
+    - _GradientBottomColor: {r: 0.42, g: 0.36, b: 0.58, a: 0.9}
+    - _GradientTopColor: {r: 0.24, g: 0.21, b: 0.4, a: 0}
   m_BuildTextureStacks: []

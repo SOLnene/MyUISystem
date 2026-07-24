@@ -2,11 +2,16 @@ Shader "Unlit/PlaneReflection"
 {
     Properties
     {
+        [Toggle(_PLANE_REFLECTION)] _UseReflection ("Use Reflection", Float) = 1
         _ReflectionTex ("Reflection RT", 2D) = "white" {}
         _Blur ("Blur", Range(0,0.01)) = 0.003
         _Darkness ("Darkness", Range(0,1)) = 0.6
         _FadeStart ("Fade Start", Range(0,1)) = 0.1
         _FadeEnd ("Fade End", Range(0,1)) = 0.9
+        _GradientBottomColor ("Gradient Bottom Color", Color) = (0.42,0.36,0.58,0.9)
+        _GradientTopColor ("Gradient Top Color", Color) = (0.24,0.21,0.4,0)
+        _GradientStart ("Gradient Start", Range(0,1)) = 0
+        _GradientEnd ("Gradient End", Range(0,1)) = 0.65
       
     }
 
@@ -23,6 +28,7 @@ Shader "Unlit/PlaneReflection"
 
             #pragma vertex vert
             #pragma fragment frag
+            #pragma multi_compile_local_fragment _ _PLANE_REFLECTION
 
             #include "UnityCG.cginc"
 
@@ -31,6 +37,10 @@ Shader "Unlit/PlaneReflection"
             float _Darkness;
             float _FadeStart;
             float _FadeEnd;
+            fixed4 _GradientBottomColor;
+            fixed4 _GradientTopColor;
+            float _GradientStart;
+            float _GradientEnd;
 
             struct appdata
             {
@@ -61,6 +71,7 @@ Shader "Unlit/PlaneReflection"
                 float2 uv = i.uv;
                 float2 screenUV = i.screenPos.xy / i.screenPos.w;
 
+#if defined(_PLANE_REFLECTION)
                 float2 finalUV = screenUV;
                 //float4 refl = tex2D(_ReflectionTex, finalUV);
                // 4. 边缘裁切：防止采样到 RT 的边缘重复
@@ -86,6 +97,10 @@ Shader "Unlit/PlaneReflection"
                 col.a *= fade;
 
                 return col;
+#else
+                float gradient = smoothstep(_GradientStart, _GradientEnd, screenUV.y);
+                return lerp(_GradientBottomColor, _GradientTopColor, gradient);
+#endif
             }
 
             ENDCG
