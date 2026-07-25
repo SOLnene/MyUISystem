@@ -39,7 +39,7 @@ internal class MainMenuNavigator
 
         if (characterRepository.Characters.Count == 0)
         {
-            string[] testCharacterKeys = { "hutao", "eula", "ayaka" };
+            string[] testCharacterKeys = { "citlali", "eula", "hutao" };
             bool addedCharacter = false;
             for (int i = 0; i < testCharacterKeys.Length; i++)
             {

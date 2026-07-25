@@ -1,5 +1,6 @@
 using System;
 using Cysharp.Threading.Tasks;
+using Game.Domain.Character;
 using SkierFramework;
 using TMPro;
 using UniRx;
@@ -78,6 +79,7 @@ namespace Game.UI.Components.CharacterDetail
             isClosing = false;
             vm = data as CharacterDetailViewModel;
             Bind(vm);
+            ShowInitialCharacterPreviewAsync(vm.model).Forget();
         }
 
         public void Bind(CharacterDetailViewModel viewModel)
@@ -106,7 +108,7 @@ namespace Game.UI.Components.CharacterDetail
             contentView.InfoPanelView.onUpgradeClick -= OpenUpgradeOrPromotePanel;
             contentView.TalentPanelView.TalentDetailOpened -= OpenTalentDetailMode;
             contentView.TalentPanelView.TalentDetailClosed -= CloseTalentDetailMode;
-            topView.Bind(vm.model.Name.Value, vm.OwnedCharacters, vm.model, vm.SelectCharacter, OnCancel);
+            topView.Bind(vm.model.Name.Value, vm.OwnedCharacters, vm.model, RequestCharacterSwitch, OnCancel);
             
             final.gameObject.SetActive(false);
             contentView.Bind(vm.contentViewModel);
@@ -140,6 +142,36 @@ namespace Game.UI.Components.CharacterDetail
 
             currentIndex = -1;
             SwitchTab(DefaultOpenTabIndex, true);
+        }
+
+        void RequestCharacterSwitch(CharacterModel character)
+        {
+            if (character == null || character == vm.model || isClosing)
+            {
+                return;
+            }
+
+            SwitchCharacterAsync(character).Forget();
+        }
+
+        async UniTask SwitchCharacterAsync(CharacterModel character)
+        {
+            bool previewReady = await ModelViewer.Instance.TryShowPreviewAsync(
+                ModelPreviewType.Character,
+                character.Definition.key);
+            if (!previewReady || isClosing || vm == null)
+            {
+                return;
+            }
+
+            vm.SelectCharacter(character);
+        }
+
+        async UniTask ShowInitialCharacterPreviewAsync(CharacterModel character)
+        {
+            await ModelViewer.Instance.TryShowPreviewAsync(
+                ModelPreviewType.Character,
+                character.Definition.key);
         }
     
         void RefreshUpgradeOrPromotePanel()
@@ -453,6 +485,7 @@ namespace Game.UI.Components.CharacterDetail
         
         public override void OnClose()
         {
+            ModelViewer.Instance.CancelPendingPreviewLoad();
             ModelViewer.Instance.StopStarFieldParticles();
             base.OnClose();
             // 子 ViewModel 的生命周期由 CharacterDetailViewModel 统一管理

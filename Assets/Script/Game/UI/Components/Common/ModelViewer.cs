@@ -337,6 +337,12 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     void StartAnimationTransition(CameraPreset preset, bool immediate)
     {
+        if (loadedPreviewObject != null)
+        {
+            MarkAnimationTransitionComplete();
+            return;
+        }
+
         if (immediate)
         {
             characterPreviewAnimator.ApplyPresetImmediate(preset, MarkAnimationTransitionComplete);
@@ -353,6 +359,12 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     void StartFaceTransition(FaceExpressionPreset preset)
     {
+        if (loadedPreviewObject != null)
+        {
+            MarkFaceTransitionComplete();
+            return;
+        }
+
         SwitchFacePreset(preset);
         MarkFaceTransitionComplete();
     }
@@ -394,26 +406,23 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     public async UniTask ShowPreviewAsync(ModelPreviewType previewType, string targetKey)
     {
-        CancelPreviewLoad();
-        ReleaseLoadedPreview();
+        await TryShowPreviewAsync(previewType, targetKey);
+    }
 
-        Transform previewRoot = previewType == ModelPreviewType.Character
-            ? characterRoot
-            : equipRoot;
-        characterRoot.gameObject.SetActive(previewType == ModelPreviewType.Character);
-        equipRoot.gameObject.SetActive(previewType == ModelPreviewType.Equip);
-        SetDirectChildrenActive(previewRoot, false);
-        SetPlaneReflection(previewType == ModelPreviewType.Character);
+    internal async UniTask<bool> TryShowPreviewAsync(ModelPreviewType previewType, string targetKey)
+    {
+        CancelPreviewLoad();
 
         ModelPreviewDefinition definition = modelPreviewDatabase.Get(previewType, targetKey);
         if (definition == null)
         {
             Debug.LogWarning($"Model preview definition not found: {previewType}/{targetKey}", this);
-            return;
+            return false;
         }
 
-        ApplyPreviewCamera(definition.CameraPreset);
-
+        Transform previewRoot = previewType == ModelPreviewType.Character
+            ? characterRoot
+            : equipRoot;
         int requestVersion = previewRequestVersion;
         var cancellation = new CancellationTokenSource();
         previewLoadCancellation = cancellation;
@@ -428,7 +437,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
         }
         catch (OperationCanceledException)
         {
-            return;
+            return false;
         }
         finally
         {
@@ -441,13 +450,13 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
         if (previewObject == null)
         {
-            return;
+            return false;
         }
 
         if (requestVersion != previewRequestVersion)
         {
             ResourceManager.Instance.Recycle(previewObject);
-            return;
+            return false;
         }
 
         Transform previewTransform = previewObject.transform;
@@ -455,8 +464,27 @@ public class ModelViewer : SingletonMono<ModelViewer>
         previewTransform.localRotation = Quaternion.Euler(definition.LocalEulerAngles);
         previewTransform.localScale = definition.LocalScale;
         SetLayerRecursively(previewObject, LayerMask.NameToLayer("ModelDisplay"));
+
+        GameObject previousPreviewObject = loadedPreviewObject;
+        characterRoot.gameObject.SetActive(previewType == ModelPreviewType.Character);
+        equipRoot.gameObject.SetActive(previewType == ModelPreviewType.Equip);
+        SetDirectChildrenActive(previewRoot, false);
+        SetPlaneReflection(previewType == ModelPreviewType.Character);
+        ApplyPreviewCamera(definition.CameraPreset);
         loadedPreviewObject = previewObject;
         previewObject.SetActive(true);
+
+        if (previousPreviewObject != null)
+        {
+            ResourceManager.Instance.Recycle(previousPreviewObject);
+        }
+
+        return true;
+    }
+
+    internal void CancelPendingPreviewLoad()
+    {
+        CancelPreviewLoad();
     }
 
     public void ShowCharacterPreview()
