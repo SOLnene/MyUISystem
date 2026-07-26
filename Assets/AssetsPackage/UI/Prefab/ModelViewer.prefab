@@ -19230,6 +19230,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1503864968369643243}
   - component: {fileID: 501417558517305311}
+  - component: {fileID: 900000000000000101}
   m_Layer: 5
   m_Name: ModelViewer
   m_TagString: Untagged
@@ -19257,6 +19258,7 @@ Transform:
   - {fileID: 7022045072873553327}
   - {fileID: 1613273054095183001}
   - {fileID: 4764184488549356519}
+  - {fileID: 4150574872193786030}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &501417558517305311
@@ -19272,9 +19274,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   modelRoot: {fileID: 4408487495821630833}
-  characterRoot: {fileID: 87822653358802260}
-  equipRoot: {fileID: 2595042820487529923}
-  modelPreviewDatabase: {fileID: 11400000, guid: 742f64222f504b8e96e45a568b05c50c, type: 2}
+  previewController: {fileID: 900000000000000101}
   cameraPivot: {fileID: 4435302963657511762}
   displayCamera: {fileID: 7421745948605561341}
   modelCamera: {fileID: 7421745948605561341}
@@ -19291,7 +19291,6 @@ MonoBehaviour:
   maxDistance: 4
   heightLimit: 0.15
   resetSpeed: 0.5
-  characterPreviewAnimator: {fileID: 9151853813197216425}
   presets:
   - {fileID: 11400000, guid: e2a630c9ed4de0345aeecc078f1e6e1f, type: 2}
   - {fileID: 11400000, guid: d08d9a67e6a197c438090bca6d23535c, type: 2}
@@ -19302,6 +19301,22 @@ MonoBehaviour:
   - {fileID: 11400000, guid: bd0f6f214c837214c93d8be3b53b3aa6, type: 2}
   - {fileID: 11400000, guid: 4b29f1b4d475b4042a1dcf84fdc5be74, type: 2}
   - {fileID: 11400000, guid: 6eb725554e1b52b42958173eca5ffa36, type: 2}
+--- !u!114 &900000000000000101
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4852943657513259575}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a6f0c4fdd1ea4ea6b4f7b2f88bbdf274, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  characterRoot: {fileID: 87822653358802260}
+  equipRoot: {fileID: 2595042820487529923}
+  modelPreviewDatabase: {fileID: 11400000, guid: 742f64222f504b8e96e45a568b05c50c, type: 2}
+  characterPreviewAnimator: {fileID: 9151853813197216425}
   faceController: {fileID: 5359034103114415151}
 --- !u!1 &4930201673157034183
 GameObject:
@@ -20404,8 +20419,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 12f6b5e67df640799ad4cbacdd3f6d75, type: 3}
-  m_Name:
-  m_EditorClassIdentifier:
+  m_Name: 
+  m_EditorClassIdentifier: 
   rotationAxis: {x: 0, y: 1, z: 0}
   degreesPerSecond: 12
 --- !u!1 &6165824165120222381
@@ -24596,6 +24611,72 @@ PrefabInstance:
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 14c91e00f10d95840958ed4d8599452d, type: 3}
   m_PrefabInstance: {fileID: 1820262528764844950}
+  m_PrefabAsset: {fileID: 0}
+--- !u!1001 &4473047113243592517
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 1503864968369643243}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.0628756
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_Name
+      value: Avatar_Girl_Catalyst_Citlali
+      objectReference: {fileID: 0}
+    - target: {fileID: 5866666021909216657, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+      propertyPath: m_Controller
+      value: 
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+--- !u!4 &4150574872193786030 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 5e3bade41c25bd746bfc0e4ea8011738, type: 3}
+  m_PrefabInstance: {fileID: 4473047113243592517}
   m_PrefabAsset: {fileID: 0}
 --- !u!1001 &4730321603535007578
 PrefabInstance:

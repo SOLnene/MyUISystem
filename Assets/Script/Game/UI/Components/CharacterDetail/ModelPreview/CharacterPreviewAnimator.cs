@@ -16,6 +16,7 @@ public class CharacterPreviewAnimator : MonoBehaviour
     [SerializeField]
     private AnimatorOverrideController overrideController;
 
+    private AnimatorOverrideController runtimeOverrideController;
     private const string STATE_NAME = "Idle";
 
     private Coroutine idleRoutine;
@@ -36,14 +37,76 @@ public class CharacterPreviewAnimator : MonoBehaviour
   #endregion
     void Awake()
     {
-        //overrideController = new AnimatorOverrideController(animator.runtimeAnimatorController);
-        animator.runtimeAnimatorController = overrideController;
+        if (animator != null)
+        {
+            Bind(animator);
+        }
+    }
 
+    public void Bind(Animator targetAnimator)
+    {
+        StopActiveRoutines();
+        ReleaseRuntimeController();
+        animator = targetAnimator;
+        if (animator == null)
+        {
+            return;
+        }
+
+        runtimeOverrideController = Instantiate(overrideController);
+        animator.runtimeAnimatorController = runtimeOverrideController;
         animator.applyRootMotion = false; // 防止飞走
+        isPlayingStateA = true;
+    }
+
+    public void Unbind()
+    {
+        StopActiveRoutines();
+        animator = null;
+        ReleaseRuntimeController();
+        currentPreset = null;
+        isPlayingStateA = true;
+    }
+
+    void StopActiveRoutines()
+    {
+        if (idleRoutine != null)
+        {
+            StopCoroutine(idleRoutine);
+            idleRoutine = null;
+        }
+
+        if (completeRoutine != null)
+        {
+            StopCoroutine(completeRoutine);
+            completeRoutine = null;
+        }
+    }
+
+    void ReleaseRuntimeController()
+    {
+        if (runtimeOverrideController == null)
+        {
+            return;
+        }
+
+        Destroy(runtimeOverrideController);
+        runtimeOverrideController = null;
+    }
+
+    void OnDestroy()
+    {
+        ReleaseRuntimeController();
     }
     // AnimatorOverrideController有问题，先用这个
     public void ApplyPreset(CameraPreset preset, Action onCompleted = null)
     {
+        if (animator == null || runtimeOverrideController == null)
+        {
+            onCompleted?.Invoke();
+            return;
+        }
+
         /*var s = preset.animationClip.name;
         animator.CrossFade(s, preset.crossFadeDuration);*/
         currentPreset = preset;
@@ -59,14 +122,14 @@ public class CharacterPreviewAnimator : MonoBehaviour
         if (isPlayingStateA)
         {
             // 注意：这里的 "DefaultClipB" 必须是你 Animator Controller 中 StateB 默认绑定的 Clip 的真实名称
-            overrideController["biye"] = clip; 
+            runtimeOverrideController["biye"] = clip;
             animator.CrossFadeInFixedTime("StateB", preset.crossFadeDuration);
             Debug.Log("Switching to StateB: " + clip.name);
         }
         else
         {
             // 注意：这里的 "DefaultClipA" 必须是你 Animator Controller 中 StateA 默认绑定的 Clip 的真实名称
-            overrideController["idle"] = clip; 
+            runtimeOverrideController["idle"] = clip;
             animator.CrossFadeInFixedTime("StateA", preset.crossFadeDuration);
             Debug.Log("Switching to StateA: " + clip.name);
         }
@@ -86,6 +149,12 @@ public class CharacterPreviewAnimator : MonoBehaviour
     //用于初始化动作
     public void ApplyPresetImmediate(CameraPreset preset, Action onCompleted = null)
     {
+        if (animator == null || runtimeOverrideController == null)
+        {
+            onCompleted?.Invoke();
+            return;
+        }
+
         if (completeRoutine != null)
         {
             StopCoroutine(completeRoutine);
@@ -100,7 +169,7 @@ public class CharacterPreviewAnimator : MonoBehaviour
         }
 
         // 强制写入 override
-        overrideController["idle"] = clip;
+        runtimeOverrideController["idle"] = clip;
         
         animator.Play("StateA", 0, 0f);
 

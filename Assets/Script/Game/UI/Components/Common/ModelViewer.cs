@@ -1,5 +1,4 @@
 using System;
-using System.Threading;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
@@ -9,9 +8,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
 {
     [Header("Transforms")]
     [SerializeField] Transform modelRoot;
-    [SerializeField] Transform characterRoot;
-    [SerializeField] Transform equipRoot;
-    [SerializeField] ModelPreviewDatabase modelPreviewDatabase;
+    [SerializeField] ModelPreviewController previewController;
     //角色胸口
     [SerializeField] Transform cameraPivot;
     [FormerlySerializedAs("modelCamera")][SerializeField] Camera displayCamera;
@@ -60,16 +57,11 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     Sequence seq;
     //todo:动态获取/更新
-    [SerializeField] CharacterPreviewAnimator characterPreviewAnimator;
+    int currentPresetIndex;
     //先这样测试
     [SerializeField]public  CameraPreset[] presets;
     [SerializeField] public FaceExpressionPreset[] facePresets;
     
-    [SerializeField] FaceController faceController;
-
-    CancellationTokenSource previewLoadCancellation;
-    GameObject loadedPreviewObject;
-    int previewRequestVersion;
     int starFieldUserCount;
 
     const string PlaneReflectionKeyword = "_PLANE_REFLECTION";
@@ -88,7 +80,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
             currentPos = targetPos = initialCameraLocalPos;
         }
 
-        SetPlaneReflection(characterRoot.gameObject.activeSelf);
+        SetPlaneReflection(previewController.IsCharacterPreviewActive);
     }
 
     // 每一帧平滑处理
@@ -271,6 +263,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
             ? facePresets[index]
             : null;
 
+        currentPresetIndex = index;
         BeginTransition(preset.allowDrag);
         StartCameraTransition(preset, immediate);
         StartAnimationTransition(preset, immediate);
@@ -337,34 +330,19 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     void StartAnimationTransition(CameraPreset preset, bool immediate)
     {
-        if (loadedPreviewObject != null)
-        {
-            MarkAnimationTransitionComplete();
-            return;
-        }
-
-        if (immediate)
-        {
-            characterPreviewAnimator.ApplyPresetImmediate(preset, MarkAnimationTransitionComplete);
-            return;
-        }
-
-        characterPreviewAnimator.ApplyPreset(preset, MarkAnimationTransitionComplete);
+        previewController.ApplyAnimationPreset(
+            preset,
+            immediate,
+            MarkAnimationTransitionComplete);
     }
     
     public void SwitchFacePreset(FaceExpressionPreset preset)
     {
-        faceController.ApplyFacePreset(preset);
+        previewController.ApplyFacePreset(preset);
     }
 
     void StartFaceTransition(FaceExpressionPreset preset)
     {
-        if (loadedPreviewObject != null)
-        {
-            MarkFaceTransitionComplete();
-            return;
-        }
-
         SwitchFacePreset(preset);
         MarkFaceTransitionComplete();
     }
@@ -411,72 +389,18 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     internal async UniTask<bool> TryShowPreviewAsync(ModelPreviewType previewType, string targetKey)
     {
-        CancelPreviewLoad();
-
-        ModelPreviewDefinition definition = modelPreviewDatabase.Get(previewType, targetKey);
+        ModelPreviewDefinition definition =
+            await previewController.ShowAsync(previewType, targetKey);
         if (definition == null)
         {
-            Debug.LogWarning($"Model preview definition not found: {previewType}/{targetKey}", this);
             return false;
         }
 
-        Transform previewRoot = previewType == ModelPreviewType.Character
-            ? characterRoot
-            : equipRoot;
-        int requestVersion = previewRequestVersion;
-        var cancellation = new CancellationTokenSource();
-        previewLoadCancellation = cancellation;
-        GameObject previewObject;
-        try
-        {
-            previewObject = await ResourceManager.Instance.InstantiateItemAsync(
-                definition.ModelAddress,
-                previewRoot,
-                false,
-                cancellation.Token);
-        }
-        catch (OperationCanceledException)
-        {
-            return false;
-        }
-        finally
-        {
-            if (previewLoadCancellation == cancellation)
-            {
-                previewLoadCancellation.Dispose();
-                previewLoadCancellation = null;
-            }
-        }
-
-        if (previewObject == null)
-        {
-            return false;
-        }
-
-        if (requestVersion != previewRequestVersion)
-        {
-            ResourceManager.Instance.Recycle(previewObject);
-            return false;
-        }
-
-        Transform previewTransform = previewObject.transform;
-        previewTransform.localPosition = definition.LocalPosition;
-        previewTransform.localRotation = Quaternion.Euler(definition.LocalEulerAngles);
-        previewTransform.localScale = definition.LocalScale;
-        SetLayerRecursively(previewObject, LayerMask.NameToLayer("ModelDisplay"));
-
-        GameObject previousPreviewObject = loadedPreviewObject;
-        characterRoot.gameObject.SetActive(previewType == ModelPreviewType.Character);
-        equipRoot.gameObject.SetActive(previewType == ModelPreviewType.Equip);
-        SetDirectChildrenActive(previewRoot, false);
         SetPlaneReflection(previewType == ModelPreviewType.Character);
         ApplyPreviewCamera(definition.CameraPreset);
-        loadedPreviewObject = previewObject;
-        previewObject.SetActive(true);
-
-        if (previousPreviewObject != null)
+        if (previewType == ModelPreviewType.Character)
         {
-            ResourceManager.Instance.Recycle(previousPreviewObject);
+            ApplyCurrentCharacterPresetImmediate();
         }
 
         return true;
@@ -484,16 +408,12 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     internal void CancelPendingPreviewLoad()
     {
-        CancelPreviewLoad();
+        previewController.CancelPendingLoad();
     }
 
     public void ShowCharacterPreview()
     {
-        CancelPreviewLoad();
-        ReleaseLoadedPreview();
-        equipRoot.gameObject.SetActive(false);
-        characterRoot.gameObject.SetActive(true);
-        SetDirectChildrenActive(characterRoot, true);
+        previewController.ShowDefaultCharacter();
         SetPlaneReflection(true);
 
         if (presets != null && presets.Length > 0)
@@ -534,44 +454,23 @@ public class ModelViewer : SingletonMono<ModelViewer>
         canDrag = preset.allowDrag;
     }
 
-    void CancelPreviewLoad()
+    void ApplyCurrentCharacterPresetImmediate()
     {
-        previewRequestVersion++;
-        if (previewLoadCancellation == null)
+        if (presets == null
+            || currentPresetIndex < 0
+            || currentPresetIndex >= presets.Length)
         {
             return;
         }
 
-        previewLoadCancellation.Cancel();
-        previewLoadCancellation.Dispose();
-        previewLoadCancellation = null;
-    }
+        CameraPreset preset = presets[currentPresetIndex];
+        previewController.ApplyAnimationPreset(preset, true, null);
 
-    void ReleaseLoadedPreview()
-    {
-        if (loadedPreviewObject == null)
-        {
-            return;
-        }
-
-        ResourceManager.Instance.Recycle(loadedPreviewObject);
-        loadedPreviewObject = null;
-    }
-
-    static void SetDirectChildrenActive(Transform root, bool active)
-    {
-        for (int i = 0; i < root.childCount; i++)
-        {
-            root.GetChild(i).gameObject.SetActive(active);
-        }
-    }
-
-    static void SetLayerRecursively(GameObject root, int layer)
-    {
-        foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
-        {
-            child.gameObject.layer = layer;
-        }
+        FaceExpressionPreset facePreset =
+            facePresets != null && currentPresetIndex < facePresets.Length
+                ? facePresets[currentPresetIndex]
+                : null;
+        previewController.ApplyFacePreset(facePreset);
     }
 
     void SetPlaneReflection(bool enabled)

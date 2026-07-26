@@ -24,6 +24,7 @@ public class FaceController : MonoBehaviour
     bool canBlink;
     //眨眼计时器
     float blinkTimer;
+    Tween blinkTween;
     [Header("眨眼参数")]
     [SerializeField, Tooltip("两次眨眼之间的最小间隔（秒）")]
     private float minBlinkInterval = 2.5f;
@@ -52,6 +53,34 @@ public class FaceController : MonoBehaviour
     {
         CollectFaceRenderers();
         CacheAllExpressions();
+    }
+
+    public void Bind(SkinnedMeshRenderer[] renderers)
+    {
+        ResetAll();
+        StopBlink();
+        faceRenderers.Clear();
+
+        foreach (SkinnedMeshRenderer renderer in renderers)
+        {
+            if (renderer != null
+                && renderer.sharedMesh != null
+                && renderer.sharedMesh.blendShapeCount > 0
+                && !faceRenderers.Contains(renderer))
+            {
+                faceRenderers.Add(renderer);
+            }
+        }
+
+        CacheAllExpressions();
+    }
+
+    public void Unbind()
+    {
+        ResetAll();
+        StopBlink();
+        faceRenderers.Clear();
+        expressionMap.Clear();
     }
 
     void Update()
@@ -185,6 +214,11 @@ public class FaceController : MonoBehaviour
 
     public void SetBlink()
     {
+        if (expressionMap.Count == 0)
+        {
+            return;
+        }
+
         if (!canBlink)
         {
             //假设C只用来做闭眼动画
@@ -200,16 +234,31 @@ public class FaceController : MonoBehaviour
             SetExpression("Eye_WinkC_L",1);
             SetExpression("Eye_WinkC_R",1);
             // 延迟一小段时间后复位（闭眼时间 ≈ 0.08~0.15 秒）
-            DOVirtual.DelayedCall(Random.Range(minCloseDuration, maxCloseDuration), () =>
+            blinkTween = DOVirtual.DelayedCall(Random.Range(minCloseDuration, maxCloseDuration), () =>
             {
                 if (canBlink)
                 {
                     SetExpression("Eye_WinkC_L",0);
                     SetExpression("Eye_WinkC_R",0);
                 }
+
+                blinkTween = null;
             });
             
             blinkTimer = 0f;
         }
+    }
+
+    void StopBlink()
+    {
+        blinkTween?.Kill();
+        blinkTween = null;
+        blinkTimer = 0f;
+        canBlink = false;
+    }
+
+    void OnDestroy()
+    {
+        blinkTween?.Kill();
     }
 }
