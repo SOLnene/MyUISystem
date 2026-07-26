@@ -50,6 +50,15 @@ public sealed class ModelPreviewController : MonoBehaviour
             : equipRoot;
         var cancellation = new CancellationTokenSource();
         loadCancellation = cancellation;
+        if (previewType == ModelPreviewType.Character)
+        {
+            equipRoot.gameObject.SetActive(false);
+        }
+        else
+        {
+            characterRoot.gameObject.SetActive(false);
+        }
+
         GameObject previewObject = null;
 
         try

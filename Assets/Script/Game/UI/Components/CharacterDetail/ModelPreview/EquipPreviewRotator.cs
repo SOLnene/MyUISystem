@@ -26,6 +26,6 @@ public sealed class EquipPreviewRotator : MonoBehaviour
 
         angle = Mathf.Repeat(angle + degreesPerSecond * Time.unscaledDeltaTime, 360f);
         transform.localRotation =
-            initialLocalRotation * Quaternion.AngleAxis(angle, rotationAxis.normalized);
+            Quaternion.AngleAxis(angle, rotationAxis.normalized) * initialLocalRotation;
     }
 }

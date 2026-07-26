@@ -413,7 +413,6 @@ public partial class EquipDetailView : UIView
 
     public override void OnClose()
     {
-        ModelViewer.Instance.ShowCharacterPreview();
         ModelViewer.Instance.StopStarFieldParticles();
         base.OnClose();
         disposable.Clear();

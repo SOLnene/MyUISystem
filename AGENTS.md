@@ -20,6 +20,7 @@
 
 ## 项目约束
 - 这是 Unity C# 项目
+- Git 提交标题必须使用中文，除非用户明确要求使用其他语言。
 - 保持现有 MVVM / ViewModel 方向
 - UI 优先遵循 UIConfig / UIType / UIView
 - 资源加载优先复用 ResourceManager

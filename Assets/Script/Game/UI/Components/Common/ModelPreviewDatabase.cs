@@ -8,15 +8,21 @@ using UnityEngine;
 public class ModelPreviewDatabase : ScriptableObject
 {
     [SerializeField] List<ModelPreviewDefinition> definitions = new();
+    [SerializeField] ModelPreviewDefinition equipFallback;
 
     Dictionary<ModelPreviewType, Dictionary<string, ModelPreviewDefinition>> lookup;
 
     public ModelPreviewDefinition Get(ModelPreviewType previewType, string targetKey)
     {
         EnsureLookup();
-        return lookup.TryGetValue(previewType, out var definitionsByKey)
-               && definitionsByKey.TryGetValue(targetKey, out var definition)
-            ? definition
+        if (lookup.TryGetValue(previewType, out var definitionsByKey)
+            && definitionsByKey.TryGetValue(targetKey, out var definition))
+        {
+            return definition;
+        }
+
+        return previewType == ModelPreviewType.Equip
+            ? equipFallback
             : null;
     }
 
