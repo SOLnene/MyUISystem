@@ -39,7 +39,7 @@ internal class MainMenuNavigator
 
         if (characterRepository.Characters.Count == 0)
         {
-            string[] testCharacterKeys = { "citlali", "eula", "hutao" };
+            string[] testCharacterKeys = { "citlali", "columbina", "furina", "lumine" };
             bool addedCharacter = false;
             for (int i = 0; i < testCharacterKeys.Length; i++)
             {
@@ -57,7 +57,7 @@ internal class MainMenuNavigator
             }
         }
 
-        var characterDefinition = GameDatabase.CharacterDatabase.Get("hutao");
+        var characterDefinition = GameDatabase.CharacterDatabase.Get("citlali");
         var characterModel = characterDefinition != null
             ? characterRepository.GetByKey(characterDefinition.key)
             : null;
