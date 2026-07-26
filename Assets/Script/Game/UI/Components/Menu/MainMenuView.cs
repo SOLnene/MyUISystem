@@ -13,6 +13,7 @@ public enum MainMenuAction
     Map,
     Quest,
     Shop,
+    Achievement,
 }
 
 public enum MainMenuRedDotKey

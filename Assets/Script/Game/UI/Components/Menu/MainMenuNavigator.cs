@@ -19,6 +19,7 @@ internal class MainMenuNavigator
             { MainMenuAction.Map, () => ShowUnavailable(MainMenuAction.Map) },
             { MainMenuAction.Quest, () => ShowUnavailable(MainMenuAction.Quest) },
             { MainMenuAction.Shop, OpenStore },
+            { MainMenuAction.Achievement, OpenAchievement },
         };
     }
 
@@ -111,6 +112,11 @@ internal class MainMenuNavigator
     private void OpenStore()
     {
         UIManager.Instance.Open(UIType.StoreView);
+    }
+
+    private void OpenAchievement()
+    {
+        UIManager.Instance.Open(UIType.AchievementView);
     }
 
     private void ShowUnavailable(MainMenuAction action)
