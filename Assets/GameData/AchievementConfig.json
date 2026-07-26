@@ -1,0 +1,24 @@
+{
+  "version": 1,
+  "categories": [
+    {
+      "id": "world_wonders",
+      "name": "天地万象",
+      "iconAddress": "Assets/Art/Sprite/Icon/UI_AchievementIcon_A001.png",
+      "order": 0,
+      "achievements": [
+        {
+          "id": "zoo_tycoon",
+          "title": "动物园大亨",
+          "description": "使用道具「四方八方之网」捕获1只野外生物。",
+          "iconAddress": "Assets/Art/Sprite/Icon/UI_AchievementIcon_1_0.png",
+          "target": 1,
+          "reward": {
+            "itemId": 201,
+            "amount": 5
+          }
+        }
+      ]
+    }
+  ]
+}
