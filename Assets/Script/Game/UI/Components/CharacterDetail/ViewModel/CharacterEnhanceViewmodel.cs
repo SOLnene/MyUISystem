@@ -151,6 +151,8 @@ namespace Game.UI.Components.CharacterDetail
             Color rarityColor = GetRarityColor();
             materialInput.Clear();
             requestPlayEnhanceResult.OnNext(new EnhanceResultData(oldLevel, newLevel, oldProgress, newProgress, levelUpCount, needSwitchContent, rarityColor));
+            AchievementProgressService.Instance.AddProgress(
+                AchievementProgressKeys.CharacterEnhance);
             onUpgrade.Execute(Unit.Default);
             GameSaveCoordinator.Instance.MarkDirty();
         }

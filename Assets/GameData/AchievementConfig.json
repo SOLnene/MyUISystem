@@ -8,14 +8,75 @@
       "order": 0,
       "achievements": [
         {
-          "id": "zoo_tycoon",
-          "title": "动物园大亨",
-          "description": "使用道具「四方八方之网」捕获1只野外生物。",
+          "id": "first_wish",
+          "title": "初次祈愿",
+          "description": "完成1次祈愿。",
           "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "gacha_draw",
           "target": 1,
           "reward": {
             "itemId": 201,
             "amount": 5
+          }
+        },
+        {
+          "id": "wish_regular",
+          "title": "祈愿常客",
+          "description": "累计完成10次祈愿。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "gacha_draw",
+          "target": 10,
+          "reward": {
+            "itemId": 201,
+            "amount": 5
+          }
+        },
+        {
+          "id": "weapon_training",
+          "title": "武器养成",
+          "description": "成功强化武器3次。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "weapon_enhance",
+          "target": 3,
+          "reward": {
+            "itemId": 201,
+            "amount": 10
+          }
+        },
+        {
+          "id": "character_training",
+          "title": "角色成长",
+          "description": "成功强化角色3次。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "character_enhance",
+          "target": 3,
+          "reward": {
+            "itemId": 201,
+            "amount": 5
+          }
+        },
+        {
+          "id": "shop_customer",
+          "title": "商店常客",
+          "description": "累计购买5件商品。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "store_purchase",
+          "target": 5,
+          "reward": {
+            "itemId": 201,
+            "amount": 5
+          }
+        },
+        {
+          "id": "weapon_master",
+          "title": "百炼成钢",
+          "description": "成功强化武器10次。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "weapon_enhance",
+          "target": 10,
+          "reward": {
+            "itemId": 201,
+            "amount": 10
           }
         }
       ]

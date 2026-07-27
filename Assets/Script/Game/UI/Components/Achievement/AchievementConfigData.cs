@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Newtonsoft.Json;
 
 [Serializable]
 public sealed class AchievementConfigData
@@ -25,6 +26,8 @@ public sealed class AchievementDefinition
     public string title;
     public string description;
     public string iconAddress;
+    [JsonProperty]
+    internal string progressKey;
     public int target;
     public AchievementRewardConfigData reward;
 }

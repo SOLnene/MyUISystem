@@ -60,6 +60,9 @@ class StorePurchaseService
 
         AddPurchasedItem(itemDefinition, storeItem.Count * purchaseCount);
         purchaseRepository.AddPurchasedCount(storeItem.StoreItemId, purchaseCount);
+        AchievementProgressService.Instance.AddProgress(
+            AchievementProgressKeys.StorePurchase,
+            purchaseCount);
         GameSaveCoordinator.Instance.MarkDirty();
         return true;
     }

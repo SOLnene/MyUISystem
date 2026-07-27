@@ -6,6 +6,8 @@ using UnityEngine;
 public partial class AchievementView : UIView
 {
     [SerializeField]
+    AchievementTopView topView;
+    [SerializeField]
     AchievementListView achievementListView;
 
     AchievementViewModel viewModel;
@@ -22,6 +24,7 @@ public partial class AchievementView : UIView
 
         viewModel?.Dispose();
         viewModel = new AchievementViewModel(GameDatabase.ItemDatabase);
+        topView.Bind(viewModel.CountInfo, OnCancel);
         LoadItemsAsync(openCancellation.Token).Forget();
     }
 

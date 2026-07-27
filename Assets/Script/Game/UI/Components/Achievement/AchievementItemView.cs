@@ -1,6 +1,7 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using TMPro;
+using UniRx;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -22,14 +23,25 @@ public sealed class AchievementItemView : MonoBehaviour
     TextMeshProUGUI buttonText;
 
     readonly VersionedAssetLoader<Sprite> iconLoader = new();
+    readonly CompositeDisposable bindDisposables = new();
 
     public void Bind(AchievementItemViewModel viewModel)
     {
+        bindDisposables.Clear();
         titleText.text = viewModel.Title;
         descriptionText.text = viewModel.Description;
-        progressText.text = viewModel.ProgressText;
         buttonText.text = viewModel.ButtonText;
-        claimButton.interactable = viewModel.CanClaim;
+        viewModel.ProgressText
+            .Subscribe(progress => progressText.text = progress)
+            .AddTo(bindDisposables);
+        viewModel.CanClaim
+            .Subscribe(canClaim =>
+            {
+                progressText.gameObject.SetActive(!canClaim);
+                claimButton.gameObject.SetActive(canClaim);
+                claimButton.interactable = canClaim;
+            })
+            .AddTo(bindDisposables);
         rewardSlot.Bind(viewModel.RewardSlot);
 
         icon.sprite = null;
@@ -38,6 +50,7 @@ public sealed class AchievementItemView : MonoBehaviour
 
     public void Unbind()
     {
+        bindDisposables.Clear();
         iconLoader.Cancel();
         icon.sprite = null;
         rewardSlot.ResetState();
@@ -56,6 +69,7 @@ public sealed class AchievementItemView : MonoBehaviour
 
     void OnDestroy()
     {
+        bindDisposables.Dispose();
         iconLoader.Dispose();
         claimButton.onClick.RemoveAllListeners();
     }

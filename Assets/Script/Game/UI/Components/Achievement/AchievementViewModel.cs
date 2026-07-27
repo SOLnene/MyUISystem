@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
+using UniRx;
 using UnityEngine;
 
 public sealed class AchievementViewModel : IDisposable
@@ -12,8 +13,11 @@ public sealed class AchievementViewModel : IDisposable
     readonly ItemDatabase itemDatabase;
     readonly List<AchievementItemViewModel> items = new();
     readonly VersionedAssetLoader<TextAsset> configLoader = new();
+    readonly CompositeDisposable itemStateSubscriptions = new();
+    readonly ReactiveProperty<AchievementCountInfo> countInfo = new();
 
     public IReadOnlyList<AchievementItemViewModel> Items => items;
+    public IReadOnlyReactiveProperty<AchievementCountInfo> CountInfo => countInfo;
 
     public AchievementViewModel(ItemDatabase itemDatabase)
     {
@@ -76,21 +80,53 @@ public sealed class AchievementViewModel : IDisposable
                     definition.reward.amount));
             }
         }
+
+        BindItemState();
+        RefreshCountInfo();
     }
 
     public void Dispose()
     {
         configLoader.Dispose();
         ClearItems();
+        itemStateSubscriptions.Dispose();
+        countInfo.Dispose();
     }
 
     void ClearItems()
     {
+        itemStateSubscriptions.Clear();
         foreach (AchievementItemViewModel item in items)
         {
             item.Dispose();
         }
 
         items.Clear();
+        RefreshCountInfo();
+    }
+
+    void BindItemState()
+    {
+        foreach (AchievementItemViewModel item in items)
+        {
+            item.IsCompleted
+                .Skip(1)
+                .Subscribe(_ => RefreshCountInfo())
+                .AddTo(itemStateSubscriptions);
+        }
+    }
+
+    void RefreshCountInfo()
+    {
+        int completedCount = 0;
+        foreach (AchievementItemViewModel item in items)
+        {
+            if (item.IsCompleted.Value)
+            {
+                completedCount++;
+            }
+        }
+
+        countInfo.Value = new AchievementCountInfo(completedCount, items.Count);
     }
 }

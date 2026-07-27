@@ -89,6 +89,8 @@ public class EquipDetailViewModel: IDisposable
                 bool needSwitchContent = weapon.needBreak.Value;
                 Color rarityColor = RarityConfig.GetColor(weapon.Model.ItemRarity);
                 requestPlayEnhanceResult.OnNext(new EnhanceResultData(oldLevel, newLevel, oldProgress, newProgress, levelUpCount, needSwitchContent, rarityColor));
+                AchievementProgressService.Instance.AddProgress(
+                    AchievementProgressKeys.WeaponEnhance);
                 enhanceVM.ClearSelectedMaterials();
                 requestCloseItemSelectPanel.OnNext(Unit.Default);
                 GameSaveCoordinator.Instance.MarkDirty();

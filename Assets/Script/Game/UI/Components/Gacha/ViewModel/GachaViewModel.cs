@@ -109,6 +109,9 @@ public class GachaViewModel : IDisposable
             lastDrawnItems.Add(vm);
         }
 
+        AchievementProgressService.Instance.AddProgress(
+            AchievementProgressKeys.GachaDraw,
+            count);
         GameSaveCoordinator.Instance.MarkDirty();
         
         currentSession?.Dispose();
