@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using Game.Domain.Character;
 using SkierFramework;
@@ -41,6 +42,8 @@ namespace Game.UI.Components.CharacterDetail
         CharacterPromoteView promotePanelView;
         [SerializeField]
         CharacterDetailTopView topView;
+        [SerializeField]
+        CameraPreset equipEnhancePushPreset;
     
         
         private const float TOP_BAR_HEIGHT = 150f;   
@@ -63,7 +66,9 @@ namespace Game.UI.Components.CharacterDetail
         bool isSwitchingTab;
         bool isPlayingResultFlow;
         bool isClosing;
+        bool isNavigatingToEquipDetail;
         bool isTalentDetailMode;
+        CancellationTokenSource equipEnhanceTransitionCancellation;
         CompositeDisposable disposable = new CompositeDisposable();
         CompositeDisposable characterDisposable = new CompositeDisposable();
         public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
@@ -74,8 +79,10 @@ namespace Game.UI.Components.CharacterDetail
         public override void OnOpen(object data)
         {
             base.OnOpen(data);
+            CancelEquipEnhanceTransition();
             ModelViewer.Instance.PlayStarFieldParticles();
             isClosing = false;
+            isNavigatingToEquipDetail = false;
             vm = data as CharacterDetailViewModel;
             Bind(vm);
             ShowInitialCharacterPreviewAsync(vm.model).Forget();
@@ -87,6 +94,12 @@ namespace Game.UI.Components.CharacterDetail
             if (vm != null && !isClosing)
             {
                 ShowInitialCharacterPreviewAsync(vm.model).Forget();
+            }
+
+            if (isNavigatingToEquipDetail)
+            {
+                isNavigatingToEquipDetail = false;
+                ShowMainPanels(false).Forget();
             }
         }
 
@@ -468,10 +481,64 @@ namespace Game.UI.Components.CharacterDetail
 
         public override void OnCancel()
         {
-            if (isClosing)
+            if (isClosing || isNavigatingToEquipDetail)
                 return;
 
             CloseWithTransition().Forget();
+        }
+
+        internal void OpenEquipEnhance(EquipItemViewModel weapon)
+        {
+            if (weapon == null || isClosing || isNavigatingToEquipDetail)
+                return;
+
+            CancelEquipEnhanceTransition();
+            var transitionCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+                this.GetCancellationTokenOnDestroy());
+            equipEnhanceTransitionCancellation = transitionCancellation;
+            OpenEquipEnhanceAsync(weapon, transitionCancellation).Forget();
+        }
+
+        async UniTask OpenEquipEnhanceAsync(
+            EquipItemViewModel weapon,
+            CancellationTokenSource transitionCancellation)
+        {
+            isNavigatingToEquipDetail = true;
+            CancellationToken cancellationToken = transitionCancellation.Token;
+
+            try
+            {
+                await UniTask.WhenAll(
+                    HideMainPanels(false).AttachExternalCancellation(cancellationToken),
+                    ModelViewer.Instance.PlayCameraTransitionAsync(
+                        equipEnhancePushPreset,
+                        cancellationToken));
+                cancellationToken.ThrowIfCancellationRequested();
+
+                UIManager.Instance.Open(
+                    UIType.EquipDetailView,
+                    new EquipDetailOpenParams(weapon, WeaponDetailTab.Enhance));
+            }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                isNavigatingToEquipDetail = false;
+            }
+            finally
+            {
+                if (equipEnhanceTransitionCancellation == transitionCancellation)
+                {
+                    equipEnhanceTransitionCancellation = null;
+                    transitionCancellation.Dispose();
+                }
+            }
+        }
+
+        void CancelEquipEnhanceTransition()
+        {
+            var transitionCancellation = equipEnhanceTransitionCancellation;
+            equipEnhanceTransitionCancellation = null;
+            transitionCancellation?.Cancel();
+            transitionCancellation?.Dispose();
         }
 
         async UniTask CloseWithTransition()
@@ -493,8 +560,10 @@ namespace Game.UI.Components.CharacterDetail
         
         public override void OnClose()
         {
+            CancelEquipEnhanceTransition();
             ModelViewer.Instance.CancelPendingPreviewLoad();
             ModelViewer.Instance.StopStarFieldParticles();
+            isNavigatingToEquipDetail = false;
             base.OnClose();
             // 子 ViewModel 的生命周期由 CharacterDetailViewModel 统一管理
             characterDisposable.Clear();
@@ -506,6 +575,7 @@ namespace Game.UI.Components.CharacterDetail
 
         public override void OnRelease()
         {
+            CancelEquipEnhanceTransition();
             base.OnRelease();
             characterDisposable.Dispose();
             disposable.Dispose();

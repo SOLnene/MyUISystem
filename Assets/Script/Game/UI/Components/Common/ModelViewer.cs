@@ -1,4 +1,5 @@
 using System;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using DG.Tweening;
 using UnityEngine;
@@ -50,6 +51,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
     bool canDrag;
     //是否正在切换镜头/播放动画
     bool isInTransition;
+    bool isCameraOnlyTransition;
     bool cameraTransitionPending;
     bool animationTransitionPending;
     bool faceTransitionPending;
@@ -66,7 +68,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     const string PlaneReflectionKeyword = "_PLANE_REFLECTION";
 
-    public bool IsInTransition => isInTransition;
+    public bool IsInTransition => isInTransition || isCameraOnlyTransition;
     public event Action OnPreviewTransitionCompleted;
     void Start()
     {
@@ -282,6 +284,97 @@ public class ModelViewer : SingletonMono<ModelViewer>
         StartAnimationTransition(preset, immediate);
         faceTransitionPending = false;
         TryCompleteTransition();
+    }
+
+    internal async UniTask PlayCameraTransitionAsync(
+        CameraPreset preset,
+        CancellationToken cancellationToken)
+    {
+        if (preset == null)
+        {
+            return;
+        }
+
+        await UniTask.WaitWhile(
+            () => isInTransition,
+            cancellationToken: cancellationToken);
+        cancellationToken.ThrowIfCancellationRequested();
+
+        isCameraOnlyTransition = true;
+        bool previousCanDrag = canDrag;
+        bool completed = false;
+        Sequence cameraSequence = null;
+
+        try
+        {
+            canDrag = false;
+            float duration = Mathf.Max(0f, preset.transitionDuration);
+
+            cameraSequence = DOTween.Sequence()
+                .Join(DOTween.To(
+                        () => currentPos,
+                        value => targetPos = currentPos = value,
+                        preset.cameraLocalPosition,
+                        duration)
+                    .SetEase(Ease.OutCubic))
+                .Join(DOTween.To(
+                        () => currentPitch,
+                        value => targetPitch = currentPitch = value,
+                        preset.pitch,
+                        duration)
+                    .SetEase(Ease.OutCubic))
+                .Join(DOTween.To(
+                        () => currentYaw,
+                        value => targetYaw = currentYaw = value,
+                        preset.yaw,
+                        duration)
+                    .SetEase(Ease.OutCubic));
+
+            if (displayCamera != null)
+            {
+                cameraSequence.Join(
+                    displayCamera.DOFieldOfView(preset.fov, duration)
+                        .SetEase(Ease.OutCubic));
+            }
+
+            seq = cameraSequence;
+            await cameraSequence
+                .AsyncWaitForCompletion()
+                .AsUniTask()
+                .AttachExternalCancellation(cancellationToken);
+
+            targetPos = currentPos = preset.cameraLocalPosition;
+            targetPitch = currentPitch = preset.pitch;
+            targetYaw = currentYaw = preset.yaw;
+            ApplyTransforms();
+            if (displayCamera != null)
+            {
+                displayCamera.transform.localPosition = currentPos;
+                displayCamera.fieldOfView = preset.fov;
+            }
+
+            canDrag = preset.allowDrag;
+            completed = true;
+        }
+        finally
+        {
+            if (cameraSequence != null && cameraSequence.IsActive())
+            {
+                cameraSequence.Kill();
+            }
+
+            if (seq == cameraSequence)
+            {
+                seq = null;
+            }
+
+            if (!completed)
+            {
+                canDrag = previousCanDrag;
+            }
+
+            isCameraOnlyTransition = false;
+        }
     }
 
     void BeginTransition(bool allowDrag)

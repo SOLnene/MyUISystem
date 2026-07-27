@@ -62,7 +62,7 @@ public class UIViewHandle
         isLoading = true;
         if (shouldOpen)
         {
-            uiLayerLogic.AllocateOrderAndPush(this);
+            order = uiLayerLogic.AllocateOrderAndPush(this);
         }
         return ResourceManager.Instance.InstantiateAsync(address, (go) =>
         {
@@ -141,11 +141,7 @@ public class UIViewHandle
         }
         else
         {
-            if(!firstOpen && shouldOpen)
-            {
-                InternalClose(callback);
-            }
-            InternalOpen(data);
+            InternalOpen(data, callback);
         }
       
         

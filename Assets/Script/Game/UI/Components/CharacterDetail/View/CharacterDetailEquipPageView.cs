@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Game.UI.Components.CharacterDetail;
 using TMPro;
 using UniRx;
 using UnityEngine;
@@ -183,7 +184,7 @@ public class CharacterDetailEquipPageView : MonoBehaviour
             return;
         }
         
-        UIManager.Instance.Open(UIType.EquipDetailView,new EquipDetailOpenParams(weapon,WeaponDetailTab.Enhance));
+        GetComponentInParent<CharacterDetailView>().OpenEquipEnhance(weapon);
     }
     
     void OnDestroy()
