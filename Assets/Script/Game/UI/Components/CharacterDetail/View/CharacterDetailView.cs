@@ -42,10 +42,6 @@ namespace Game.UI.Components.CharacterDetail
         CharacterPromoteView promotePanelView;
         [SerializeField]
         CharacterDetailTopView topView;
-        [SerializeField]
-        CameraPreset equipEnhancePushPreset;
-    
-        
         private const float TOP_BAR_HEIGHT = 150f;   
         private const float BOTTOM_BAR_HEIGHT = 140f;
 
@@ -496,10 +492,10 @@ namespace Game.UI.Components.CharacterDetail
             var transitionCancellation = CancellationTokenSource.CreateLinkedTokenSource(
                 this.GetCancellationTokenOnDestroy());
             equipEnhanceTransitionCancellation = transitionCancellation;
-            OpenEquipEnhanceAsync(weapon, transitionCancellation).Forget();
+            NavigateToEquipEnhanceAsync(weapon, transitionCancellation).Forget(Debug.LogException);
         }
 
-        async UniTask OpenEquipEnhanceAsync(
+        async UniTask NavigateToEquipEnhanceAsync(
             EquipItemViewModel weapon,
             CancellationTokenSource transitionCancellation)
         {
@@ -508,11 +504,8 @@ namespace Game.UI.Components.CharacterDetail
 
             try
             {
-                await UniTask.WhenAll(
-                    HideMainPanels(false).AttachExternalCancellation(cancellationToken),
-                    ModelViewer.Instance.PlayCameraTransitionAsync(
-                        equipEnhancePushPreset,
-                        cancellationToken));
+                ModelViewer.Instance.PrepareEquipPreview(weapon.Model.Key);
+                await HideMainPanels(false).AttachExternalCancellation(cancellationToken);
                 cancellationToken.ThrowIfCancellationRequested();
 
                 UIManager.Instance.Open(
@@ -521,6 +514,7 @@ namespace Game.UI.Components.CharacterDetail
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
+                ModelViewer.Instance.CancelPendingPreviewLoad();
                 isNavigatingToEquipDetail = false;
             }
             finally

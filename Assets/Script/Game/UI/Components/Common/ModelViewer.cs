@@ -312,30 +312,15 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
             cameraSequence = DOTween.Sequence()
                 .Join(DOTween.To(
-                        () => currentPos,
-                        value => targetPos = currentPos = value,
-                        preset.cameraLocalPosition,
+                        () => currentPos.z,
+                        value =>
+                        {
+                            currentPos.z = value;
+                            targetPos.z = value;
+                        },
+                        preset.cameraLocalPosition.z,
                         duration)
-                    .SetEase(Ease.OutCubic))
-                .Join(DOTween.To(
-                        () => currentPitch,
-                        value => targetPitch = currentPitch = value,
-                        preset.pitch,
-                        duration)
-                    .SetEase(Ease.OutCubic))
-                .Join(DOTween.To(
-                        () => currentYaw,
-                        value => targetYaw = currentYaw = value,
-                        preset.yaw,
-                        duration)
-                    .SetEase(Ease.OutCubic));
-
-            if (displayCamera != null)
-            {
-                cameraSequence.Join(
-                    displayCamera.DOFieldOfView(preset.fov, duration)
-                        .SetEase(Ease.OutCubic));
-            }
+                    .SetEase(Ease.Linear));
 
             seq = cameraSequence;
             await cameraSequence
@@ -343,14 +328,12 @@ public class ModelViewer : SingletonMono<ModelViewer>
                 .AsUniTask()
                 .AttachExternalCancellation(cancellationToken);
 
-            targetPos = currentPos = preset.cameraLocalPosition;
-            targetPitch = currentPitch = preset.pitch;
-            targetYaw = currentYaw = preset.yaw;
+            currentPos.z = preset.cameraLocalPosition.z;
+            targetPos.z = currentPos.z;
             ApplyTransforms();
             if (displayCamera != null)
             {
                 displayCamera.transform.localPosition = currentPos;
-                displayCamera.fieldOfView = preset.fov;
             }
 
             canDrag = preset.allowDrag;
@@ -475,6 +458,34 @@ public class ModelViewer : SingletonMono<ModelViewer>
         return ShowPreviewAsync(ModelPreviewType.Equip, equipKey);
     }
 
+    internal void PrepareEquipPreview(string equipKey)
+    {
+        previewController.Preload(ModelPreviewType.Equip, equipKey);
+    }
+
+    internal async UniTask<bool> CommitPreparedEquipPreviewAsync(
+        string equipKey,
+        CancellationToken cancellationToken)
+    {
+        ModelPreviewDefinition definition =
+            await previewController.EnsurePreloadedAsync(
+                ModelPreviewType.Equip,
+                equipKey,
+                cancellationToken);
+        if (definition == null
+            || !previewController.TryActivatePreloaded(
+                ModelPreviewType.Equip,
+                equipKey,
+                out _))
+        {
+            return false;
+        }
+
+        SetPlaneReflection(false);
+        ApplyPreviewCamera(definition.CameraPreset);
+        return true;
+    }
+
     public async UniTask ShowPreviewAsync(ModelPreviewType previewType, string targetKey)
     {
         await TryShowPreviewAsync(previewType, targetKey);
@@ -557,6 +568,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
         }
 
         CameraPreset preset = presets[currentPresetIndex];
+        ApplyPreviewCamera(preset);
         previewController.ApplyAnimationPreset(preset, true, null);
 
         FaceExpressionPreset facePreset =

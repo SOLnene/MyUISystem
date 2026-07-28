@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using SkierFramework;
 using UnityEngine;
@@ -39,6 +40,8 @@ public partial class EquipDetailView : UIView
     [SerializeField]
     UITransitionGroup pageTransition;
     [SerializeField]
+    CameraPreset equipEnhancePushPreset;
+    [SerializeField]
     ItemSelectPanelView itemSelectPanelView;
     [Header("输入锁")]
     [SerializeField]
@@ -55,7 +58,9 @@ public partial class EquipDetailView : UIView
     bool isSwitchingTab;
     bool isPlayingResultFlow;
     bool isClosing;
+    bool isOpenTransitionRunning;
     int inputBlockCount;
+    CancellationTokenSource openTransitionCancellation;
 
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -65,8 +70,10 @@ public partial class EquipDetailView : UIView
     public override void OnOpen(object data)
     {
         base.OnOpen(data);
+        CancelOpenTransition();
         ModelViewer.Instance.PlayStarFieldParticles();
         isClosing = false;
+        isOpenTransitionRunning = true;
         inputBlockCount = 0;
         SetInputBlocked(false);
         //todo:view中不允许创建vm，放到类似context的地方
@@ -108,7 +115,82 @@ public partial class EquipDetailView : UIView
             itemSelectPanelView.Hide();
         }
 
-        pageTransition?.Show().Forget();
+        BeginOpenTransition(equipItemVm.Model.Key, param.InitialTab);
+    }
+
+    void BeginOpenTransition(string equipKey, WeaponDetailTab initialTab)
+    {
+        ModelViewer.Instance.PrepareEquipPreview(equipKey);
+        LockInput();
+
+        var transitionCancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            this.GetCancellationTokenOnDestroy());
+        openTransitionCancellation = transitionCancellation;
+
+        RunOpenTransitionAsync(
+            equipKey,
+            initialTab,
+            transitionCancellation).Forget(Debug.LogException);
+    }
+
+    async UniTask RunOpenTransitionAsync(
+        string equipKey,
+        WeaponDetailTab initialTab,
+        CancellationTokenSource transitionCancellation)
+    {
+        CancellationToken cancellationToken = transitionCancellation.Token;
+
+        try
+        {
+            await PlayPageEnterTransitionAsync(initialTab, cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (!isClosing)
+            {
+                await ModelViewer.Instance.CommitPreparedEquipPreviewAsync(
+                    equipKey,
+                    cancellationToken);
+            }
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+        }
+        finally
+        {
+            if (openTransitionCancellation == transitionCancellation)
+            {
+                openTransitionCancellation = null;
+                transitionCancellation.Dispose();
+                isOpenTransitionRunning = false;
+                UnlockInput();
+            }
+        }
+    }
+
+    UniTask PlayPageEnterTransitionAsync(
+        WeaponDetailTab initialTab,
+        CancellationToken cancellationToken)
+    {
+        UniTask pageEnterTask =
+            pageTransition.Show().AttachExternalCancellation(cancellationToken);
+
+        if (initialTab != WeaponDetailTab.Enhance)
+        {
+            return pageEnterTask;
+        }
+
+        return UniTask.WhenAll(
+            pageEnterTask,
+            ModelViewer.Instance.PlayCameraTransitionAsync(
+                equipEnhancePushPreset,
+                cancellationToken));
+    }
+
+    void CancelOpenTransition()
+    {
+        var transitionCancellation = openTransitionCancellation;
+        openTransitionCancellation = null;
+        transitionCancellation?.Cancel();
+        transitionCancellation?.Dispose();
     }
 
     public void Bind(EquipDetailViewModel viewModel)
@@ -361,6 +443,11 @@ public partial class EquipDetailView : UIView
             return;
         }
 
+        if (isOpenTransitionRunning)
+        {
+            return;
+        }
+
         ModelViewer.Instance.ShowEquipPreviewAsync(viewModel.Model.Key).Forget(Debug.LogException);
         //TopHub.SetTitle(viewModel.Model.ItemName);
     }
@@ -413,6 +500,8 @@ public partial class EquipDetailView : UIView
 
     public override void OnClose()
     {
+        CancelOpenTransition();
+        ModelViewer.Instance.CancelPendingPreviewLoad();
         ModelViewer.Instance.StopStarFieldParticles();
         base.OnClose();
         disposable.Clear();
@@ -422,12 +511,14 @@ public partial class EquipDetailView : UIView
         isSwitchingTab = false;
         isPlayingResultFlow = false;
         isClosing = false;
+        isOpenTransitionRunning = false;
         inputBlockCount = 0;
         SetInputBlocked(false);
     }
 
     public override void OnRelease()
     {
+        CancelOpenTransition();
         base.OnRelease();
     }
 }

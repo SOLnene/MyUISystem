@@ -21,77 +21,171 @@ public sealed class ModelPreviewController : MonoBehaviour
     [SerializeField]
     FaceController faceController;
 
-    CancellationTokenSource loadCancellation;
-    GameObject loadedPreviewObject;
-    ModelPreviewType? currentPreviewType;
+    enum PreviewPreparationState
+    {
+        Loading,
+        Ready,
+        Cancelled,
+        Failed,
+        Activated
+    }
+
+    enum ActivePreviewState
+    {
+        DefaultCharacter,
+        Character,
+        Equip
+    }
+
+    sealed class PreviewPreparation
+    {
+        public readonly ModelPreviewType PreviewType;
+        public readonly string TargetKey;
+        public readonly ModelPreviewDefinition Definition;
+        public readonly CancellationTokenSource Cancellation = new();
+        public readonly UniTaskCompletionSource<ModelPreviewDefinition> Completion = new();
+
+        public PreviewPreparationState State = PreviewPreparationState.Loading;
+        public GameObject PreviewObject;
+
+        public PreviewPreparation(
+            ModelPreviewType previewType,
+            string targetKey,
+            ModelPreviewDefinition definition)
+        {
+            PreviewType = previewType;
+            TargetKey = targetKey;
+            Definition = definition;
+        }
+
+        public bool Matches(ModelPreviewType previewType, string targetKey)
+        {
+            return PreviewType == previewType
+                   && string.Equals(TargetKey, targetKey, StringComparison.Ordinal);
+        }
+    }
+
+    PreviewPreparation pendingPreview;
+    GameObject activePreviewObject;
+    ActivePreviewState activePreviewState = ActivePreviewState.DefaultCharacter;
 
     public bool IsCharacterPreviewActive =>
-        (currentPreviewType == ModelPreviewType.Character
-         || currentPreviewType == null)
+        activePreviewState != ActivePreviewState.Equip
         && characterRoot.gameObject.activeInHierarchy;
 
     public async UniTask<ModelPreviewDefinition> ShowAsync(
         ModelPreviewType previewType,
         string targetKey)
     {
+        ModelPreviewDefinition definition = await EnsurePreloadedAsync(
+            previewType,
+            targetKey,
+            CancellationToken.None);
+        return definition != null
+               && TryActivatePreloaded(previewType, targetKey, out _)
+            ? definition
+            : null;
+    }
+
+    internal void Preload(
+        ModelPreviewType previewType,
+        string targetKey)
+    {
+        if (pendingPreview != null
+            && pendingPreview.Matches(previewType, targetKey))
+        {
+            return;
+        }
+
         ModelPreviewDefinition definition = modelPreviewDatabase.Get(previewType, targetKey);
         if (definition == null)
         {
             Debug.LogWarning(
                 $"Model preview definition not found: {previewType}/{targetKey}",
                 this);
-            return null;
+            return;
         }
 
         CancelPendingLoad();
 
-        Transform previewRoot = previewType == ModelPreviewType.Character
-            ? characterRoot
-            : equipRoot;
-        var cancellation = new CancellationTokenSource();
-        loadCancellation = cancellation;
-        if (previewType == ModelPreviewType.Character)
+        pendingPreview = new PreviewPreparation(previewType, targetKey, definition);
+        LoadPreviewAsync(pendingPreview).Forget(Debug.LogException);
+    }
+
+    internal async UniTask<ModelPreviewDefinition> EnsurePreloadedAsync(
+        ModelPreviewType previewType,
+        string targetKey,
+        CancellationToken cancellationToken)
+    {
+        Preload(previewType, targetKey);
+        PreviewPreparation preparation = pendingPreview;
+        if (preparation == null
+            || !preparation.Matches(previewType, targetKey))
         {
-            equipRoot.gameObject.SetActive(false);
-        }
-        else
-        {
-            characterRoot.gameObject.SetActive(false);
+            return null;
         }
 
+        await preparation.Completion.Task.AttachExternalCancellation(cancellationToken);
+        return pendingPreview == preparation
+               && preparation.State == PreviewPreparationState.Ready
+            ? preparation.Definition
+            : null;
+    }
+
+    internal bool TryActivatePreloaded(
+        ModelPreviewType previewType,
+        string targetKey,
+        out ModelPreviewDefinition definition)
+    {
+        definition = null;
+        PreviewPreparation preparation = pendingPreview;
+        if (preparation == null
+            || preparation.State != PreviewPreparationState.Ready
+            || !preparation.Matches(previewType, targetKey))
+        {
+            return false;
+        }
+
+        pendingPreview = null;
+        preparation.State = PreviewPreparationState.Activated;
+        definition = preparation.Definition;
+        GameObject previewObject = preparation.PreviewObject;
+        preparation.PreviewObject = null;
+        ActivatePreview(previewType, previewObject);
+        return true;
+    }
+
+    async UniTask LoadPreviewAsync(PreviewPreparation preparation)
+    {
+        Transform previewRoot = preparation.PreviewType == ModelPreviewType.Character
+            ? characterRoot
+            : equipRoot;
         GameObject previewObject = null;
 
         try
         {
             previewObject = await ResourceManager.Instance.InstantiateItemAsync(
-                definition.ModelAddress,
+                preparation.Definition.ModelAddress,
                 previewRoot,
                 false,
-                cancellation.Token);
-
-            if (previewObject == null)
+                preparation.Cancellation.Token);
+            if (previewObject == null
+                || pendingPreview != preparation
+                || preparation.Cancellation.IsCancellationRequested)
             {
-                return null;
+                return;
             }
 
-            if (loadCancellation != cancellation || cancellation.IsCancellationRequested)
-            {
-                return null;
-            }
-
-            ConfigurePreview(previewObject, definition);
-            if (previewType == ModelPreviewType.Character)
-            {
-                BindCharacter(previewObject);
-            }
-
-            CommitPreview(previewType, previewRoot, previewObject);
+            ConfigurePreview(previewObject, preparation.Definition);
+            preparation.PreviewObject = previewObject;
+            preparation.State = PreviewPreparationState.Ready;
             previewObject = null;
-            return definition;
+            preparation.Cancellation.Dispose();
+            preparation.Completion.TrySetResult(preparation.Definition);
         }
         catch (OperationCanceledException)
+            when (preparation.Cancellation.IsCancellationRequested)
         {
-            return null;
         }
         finally
         {
@@ -100,24 +194,34 @@ public sealed class ModelPreviewController : MonoBehaviour
                 ResourceManager.Instance.Recycle(previewObject);
             }
 
-            if (loadCancellation == cancellation)
+            if (preparation.State == PreviewPreparationState.Loading)
             {
-                loadCancellation = null;
+                preparation.State = PreviewPreparationState.Failed;
             }
 
-            cancellation.Dispose();
+            if (preparation.State == PreviewPreparationState.Failed
+                || preparation.State == PreviewPreparationState.Cancelled)
+            {
+                if (pendingPreview == preparation)
+                {
+                    pendingPreview = null;
+                }
+
+                preparation.Completion.TrySetResult(null);
+                preparation.Cancellation.Dispose();
+            }
         }
     }
 
     public void ShowDefaultCharacter()
     {
         CancelPendingLoad();
-        ReleaseLoadedPreview();
+        ReleaseActivePreview();
 
         equipRoot.gameObject.SetActive(false);
         characterRoot.gameObject.SetActive(true);
         SetDirectChildrenActive(characterRoot, true);
-        currentPreviewType = ModelPreviewType.Character;
+        activePreviewState = ActivePreviewState.DefaultCharacter;
         BindFirstCharacter();
     }
 
@@ -152,9 +256,23 @@ public sealed class ModelPreviewController : MonoBehaviour
 
     public void CancelPendingLoad()
     {
-        CancellationTokenSource cancellation = loadCancellation;
-        loadCancellation = null;
-        cancellation?.Cancel();
+        PreviewPreparation preparation = pendingPreview;
+        pendingPreview = null;
+        if (preparation == null)
+        {
+            return;
+        }
+
+        preparation.State = PreviewPreparationState.Cancelled;
+        preparation.Completion.TrySetResult(null);
+        if (preparation.PreviewObject != null)
+        {
+            ResourceManager.Instance.Recycle(preparation.PreviewObject);
+            preparation.PreviewObject = null;
+            return;
+        }
+
+        preparation.Cancellation.Cancel();
     }
 
     void ConfigurePreview(
@@ -168,22 +286,28 @@ public sealed class ModelPreviewController : MonoBehaviour
         SetLayerRecursively(previewObject, LayerMask.NameToLayer("ModelDisplay"));
     }
 
-    void CommitPreview(
-        ModelPreviewType previewType,
-        Transform previewRoot,
-        GameObject previewObject)
+    void ActivatePreview(ModelPreviewType previewType, GameObject previewObject)
     {
-        GameObject previousPreviewObject = loadedPreviewObject;
+        GameObject previousPreviewObject = activePreviewObject;
+        Transform previewRoot = previewType == ModelPreviewType.Character
+            ? characterRoot
+            : equipRoot;
 
         characterRoot.gameObject.SetActive(previewType == ModelPreviewType.Character);
         equipRoot.gameObject.SetActive(previewType == ModelPreviewType.Equip);
         SetDirectChildrenActive(previewRoot, false);
 
-        loadedPreviewObject = previewObject;
-        currentPreviewType = previewType;
+        activePreviewObject = previewObject;
+        activePreviewState = previewType == ModelPreviewType.Character
+            ? ActivePreviewState.Character
+            : ActivePreviewState.Equip;
         previewObject.SetActive(true);
 
-        if (previewType == ModelPreviewType.Equip)
+        if (previewType == ModelPreviewType.Character)
+        {
+            BindCharacter(previewObject);
+        }
+        else
         {
             characterPreviewAnimator.Unbind();
             faceController.Unbind();
@@ -231,15 +355,15 @@ public sealed class ModelPreviewController : MonoBehaviour
             previewObject.GetComponentsInChildren<SkinnedMeshRenderer>(true));
     }
 
-    void ReleaseLoadedPreview()
+    void ReleaseActivePreview()
     {
-        if (loadedPreviewObject == null)
+        if (activePreviewObject == null)
         {
             return;
         }
 
-        ResourceManager.Instance.Recycle(loadedPreviewObject);
-        loadedPreviewObject = null;
+        ResourceManager.Instance.Recycle(activePreviewObject);
+        activePreviewObject = null;
     }
 
     static void SetDirectChildrenActive(Transform root, bool active)
