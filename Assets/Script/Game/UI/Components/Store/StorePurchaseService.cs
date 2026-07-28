@@ -58,7 +58,14 @@ class StorePurchaseService
             return false;
         }
 
-        AddPurchasedItem(itemDefinition, storeItem.Count * purchaseCount);
+        if (!ItemGrantService.TryGrant(
+                itemDefinition,
+                storeItem.Count * purchaseCount))
+        {
+            GameEconomy.Instance.AddCurrency(storeItem.CostItemId, totalPrice);
+            return false;
+        }
+
         purchaseRepository.AddPurchasedCount(storeItem.StoreItemId, purchaseCount);
         AchievementProgressService.Instance.AddProgress(
             AchievementProgressKeys.StorePurchase,
@@ -75,40 +82,5 @@ class StorePurchaseService
     public void ImportSaveData(StorePurchaseSaveData saveData)
     {
         purchaseRepository.ImportSaveData(saveData);
-    }
-
-    void AddPurchasedItem(ItemDefinition itemDefinition, int amount)
-    {
-        if (itemDefinition.category == ItemCategory.Currency)
-        {
-            GameEconomy.Instance.AddCurrency(itemDefinition.id, amount);
-            return;
-        }
-
-        InventoryRepository inventoryRepository = GameContext.Instance.InventoryRepository;
-        switch (itemDefinition.category)
-        {
-            case ItemCategory.Consumable:
-                inventoryRepository.AddItem(new ConsumableItem(itemDefinition, amount));
-                break;
-            case ItemCategory.Material:
-            case ItemCategory.ExpBook:
-                inventoryRepository.AddItem(new MaterialItem(itemDefinition, amount));
-                break;
-            case ItemCategory.Equip:
-                for (int i = 0; i < amount; i++)
-                {
-                    inventoryRepository.AddItem(new EquipItem(itemDefinition as EquipDefinition));
-                }
-
-                break;
-            default:
-                for (int i = 0; i < amount; i++)
-                {
-                    inventoryRepository.AddItem(new InventoryItem(itemDefinition));
-                }
-
-                break;
-        }
     }
 }
