@@ -28,7 +28,10 @@ internal sealed class AchievementProgressService
 
     readonly Dictionary<string, int> progressValues =
         new(StringComparer.Ordinal);
+    readonly HashSet<string> claimedAchievementIds =
+        new(StringComparer.Ordinal);
     readonly Subject<AchievementProgressChange> progressChanged = new();
+    readonly Subject<string> claimedChanged = new();
 
     internal int GetProgress(string progressKey)
     {
@@ -64,5 +67,31 @@ internal sealed class AchievementProgressService
         int progress = currentProgress + amount;
         progressValues[progressKey] = progress;
         progressChanged.OnNext(new AchievementProgressChange(progressKey, progress));
+    }
+
+    internal IObservable<bool> ObserveClaimed(string achievementId)
+    {
+        return claimedChanged
+            .Where(claimedId => string.Equals(
+                claimedId,
+                achievementId,
+                StringComparison.Ordinal))
+            .Select(_ => true)
+            .StartWith(claimedAchievementIds.Contains(achievementId));
+    }
+
+    internal bool TryClaim(string achievementId, Func<bool> grantReward)
+    {
+        if (string.IsNullOrWhiteSpace(achievementId) ||
+            grantReward == null ||
+            claimedAchievementIds.Contains(achievementId) ||
+            !grantReward())
+        {
+            return false;
+        }
+
+        claimedAchievementIds.Add(achievementId);
+        claimedChanged.OnNext(achievementId);
+        return true;
     }
 }

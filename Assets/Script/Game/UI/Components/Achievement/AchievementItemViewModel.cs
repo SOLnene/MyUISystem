@@ -12,10 +12,15 @@ public sealed class AchievementItemViewModel : IDisposable
     public IReadOnlyReactiveProperty<string> ProgressText { get; }
     public IReadOnlyReactiveProperty<bool> IsCompleted { get; }
     public string ButtonText => "领取";
-    public IReadOnlyReactiveProperty<bool> CanClaim => IsCompleted;
+    public IReadOnlyReactiveProperty<bool> CanClaim { get; }
     public ItemSlotViewModel RewardSlot { get; }
 
     readonly CompositeDisposable disposable = new();
+    readonly ItemDefinition rewardItem;
+    readonly int rewardAmount;
+
+    internal IReadOnlyReactiveProperty<bool> IsClaimed { get; }
+    internal ReactiveCommand ClaimCommand { get; }
 
     public AchievementItemViewModel(
         AchievementDefinition definition,
@@ -27,6 +32,8 @@ public sealed class AchievementItemViewModel : IDisposable
         Description = definition.description;
         IconAddress = definition.iconAddress;
         TargetProgress = Math.Max(1, definition.target);
+        this.rewardItem = rewardItem;
+        this.rewardAmount = rewardAmount;
         CurrentProgress = AchievementProgressService.Instance
             .ObserveProgress(definition.progressKey)
             .Select(progress => Math.Min(TargetProgress, progress))
@@ -41,6 +48,23 @@ public sealed class AchievementItemViewModel : IDisposable
             .DistinctUntilChanged()
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
+        IsClaimed = AchievementProgressService.Instance
+            .ObserveClaimed(Id)
+            .ToReadOnlyReactiveProperty()
+            .AddTo(disposable);
+        CanClaim = IsCompleted
+            .CombineLatest(
+                IsClaimed,
+                (isCompleted, isClaimed) => isCompleted && !isClaimed)
+            .DistinctUntilChanged()
+            .ToReadOnlyReactiveProperty()
+            .AddTo(disposable);
+        ClaimCommand = CanClaim
+            .ToReactiveCommand()
+            .AddTo(disposable);
+        ClaimCommand
+            .Subscribe(_ => ClaimReward())
+            .AddTo(disposable);
 
         RewardSlot = new ItemSlotViewModel();
         RewardSlot.isEmpty.Value = false;
@@ -48,6 +72,19 @@ public sealed class AchievementItemViewModel : IDisposable
         RewardSlot.count.Value = rewardAmount.ToString();
         RewardSlot.star.Value = rewardItem.stars;
         RewardSlot.color.Value = RarityConfig.GetColor(rewardItem.itemRarity);
+    }
+
+    void ClaimReward()
+    {
+        if (!IsCompleted.Value ||
+            !AchievementProgressService.Instance.TryClaim(
+                Id,
+                () => ItemGrantService.TryGrant(rewardItem, rewardAmount)))
+        {
+            return;
+        }
+
+        GameSaveCoordinator.Instance.MarkDirty();
     }
 
     public void Dispose()

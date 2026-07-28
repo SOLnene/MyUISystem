@@ -31,16 +31,22 @@ public sealed class AchievementItemView : MonoBehaviour
         titleText.text = viewModel.Title;
         descriptionText.text = viewModel.Description;
         buttonText.text = viewModel.ButtonText;
+        viewModel.ClaimCommand
+            .BindTo(claimButton)
+            .AddTo(bindDisposables);
         viewModel.ProgressText
             .Subscribe(progress => progressText.text = progress)
             .AddTo(bindDisposables);
-        viewModel.CanClaim
-            .Subscribe(canClaim =>
+        viewModel.IsCompleted
+            .Subscribe(isCompleted =>
             {
-                progressText.gameObject.SetActive(!canClaim);
-                claimButton.gameObject.SetActive(canClaim);
-                claimButton.interactable = canClaim;
+                progressText.gameObject.SetActive(!isCompleted);
+                claimButton.gameObject.SetActive(isCompleted);
             })
+            .AddTo(bindDisposables);
+        viewModel.IsClaimed
+            .Subscribe(isClaimed =>
+                buttonText.text = isClaimed ? "已领取" : viewModel.ButtonText)
             .AddTo(bindDisposables);
         rewardSlot.Bind(viewModel.RewardSlot);
 
