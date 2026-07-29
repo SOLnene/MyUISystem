@@ -11,6 +11,12 @@ namespace Game.UI.Components.CharacterDetail
 {
     public partial class CharacterDetailView : UIView
     {
+        enum CameraPushStartAnchor
+        {
+            EquipEnterStart,
+            CharacterExitEnd
+        }
+
         //UIControlData
     #region 控件绑定变量声明，自动生成请勿手改
 		#pragma warning disable 0649
@@ -42,6 +48,13 @@ namespace Game.UI.Components.CharacterDetail
         CharacterPromoteView promotePanelView;
         [SerializeField]
         CharacterDetailTopView topView;
+        [SerializeField]
+        CameraPreset equipEnhancePushPreset;
+        [SerializeField]
+        CameraPushStartAnchor cameraPushStartAnchor;
+        [SerializeField]
+        [Tooltip("负数提前，正数延后，单位为秒")]
+        float cameraPushStartOffsetSeconds;
         private const float TOP_BAR_HEIGHT = 150f;   
         private const float BOTTOM_BAR_HEIGHT = 140f;
 
@@ -505,12 +518,14 @@ namespace Game.UI.Components.CharacterDetail
             try
             {
                 ModelViewer.Instance.PrepareEquipPreview(weapon.Model.Key);
-                await HideMainPanels(false).AttachExternalCancellation(cancellationToken);
-                cancellationToken.ThrowIfCancellationRequested();
-
-                UIManager.Instance.Open(
-                    UIType.EquipDetailView,
-                    new EquipDetailOpenParams(weapon, WeaponDetailTab.Enhance));
+                if (cameraPushStartAnchor == CameraPushStartAnchor.CharacterExitEnd)
+                {
+                    await PlayCharacterExitAnchoredTransitionAsync(weapon, cancellationToken);
+                }
+                else
+                {
+                    await PlayEquipEnterAnchoredTransitionAsync(weapon, cancellationToken);
+                }
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
@@ -525,6 +540,87 @@ namespace Game.UI.Components.CharacterDetail
                     transitionCancellation.Dispose();
                 }
             }
+        }
+
+        async UniTask PlayCharacterExitAnchoredTransitionAsync(
+            EquipItemViewModel weapon,
+            CancellationToken cancellationToken)
+        {
+            UniTask hideTask =
+                HideMainPanels(false).AttachExternalCancellation(cancellationToken);
+            UniTask cameraPushTask;
+
+            if (cameraPushStartOffsetSeconds < 0f)
+            {
+                float startDelay = Mathf.Max(
+                    0f,
+                    GetMainPanelTransitionDuration() + cameraPushStartOffsetSeconds);
+                await UniTask.Delay(
+                    TimeSpan.FromSeconds(startDelay),
+                    cancellationToken: cancellationToken);
+                cameraPushTask = ModelViewer.Instance.PlayCameraTransitionAsync(
+                    equipEnhancePushPreset,
+                    0f,
+                    cancellationToken);
+                await hideTask;
+            }
+            else
+            {
+                await hideTask;
+                cameraPushTask = ModelViewer.Instance.PlayCameraTransitionAsync(
+                    equipEnhancePushPreset,
+                    cameraPushStartOffsetSeconds,
+                    cancellationToken);
+            }
+
+            cancellationToken.ThrowIfCancellationRequested();
+            UIManager.Instance.Open(
+                UIType.EquipDetailView,
+                new EquipDetailOpenParams(weapon, WeaponDetailTab.Enhance));
+            await cameraPushTask;
+        }
+
+        async UniTask PlayEquipEnterAnchoredTransitionAsync(
+            EquipItemViewModel weapon,
+            CancellationToken cancellationToken)
+        {
+            await HideMainPanels(false).AttachExternalCancellation(cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+
+            UniTask cameraPushTask;
+            if (cameraPushStartOffsetSeconds < 0f)
+            {
+                cameraPushTask = ModelViewer.Instance.PlayCameraTransitionAsync(
+                    equipEnhancePushPreset,
+                    0f,
+                    cancellationToken);
+                await UniTask.Delay(
+                    TimeSpan.FromSeconds(-cameraPushStartOffsetSeconds),
+                    cancellationToken: cancellationToken);
+                UIManager.Instance.Open(
+                    UIType.EquipDetailView,
+                    new EquipDetailOpenParams(weapon, WeaponDetailTab.Enhance));
+            }
+            else
+            {
+                UIManager.Instance.Open(
+                    UIType.EquipDetailView,
+                    new EquipDetailOpenParams(weapon, WeaponDetailTab.Enhance));
+                cameraPushTask = ModelViewer.Instance.PlayCameraTransitionAsync(
+                    equipEnhancePushPreset,
+                    cameraPushStartOffsetSeconds,
+                    cancellationToken);
+            }
+
+            await cameraPushTask;
+        }
+
+        float GetMainPanelTransitionDuration()
+        {
+            return Mathf.Max(
+                topPanel.TransitionDuration,
+                tabPanel.TransitionDuration,
+                infoPanel.TransitionDuration);
         }
 
         void CancelEquipEnhanceTransition()

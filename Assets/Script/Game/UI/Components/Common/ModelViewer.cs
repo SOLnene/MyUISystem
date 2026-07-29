@@ -1,12 +1,68 @@
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using DG.Tweening;
 using UnityEngine;
 using UnityEngine.Serialization;
 
 public class ModelViewer : SingletonMono<ModelViewer>
 {
+    enum CameraTransitionMotion
+    {
+        Linear,
+        ConstantDeceleration
+    }
+
+    struct CameraPose
+    {
+        public Vector3 Position;
+        public float Pitch;
+        public float Yaw;
+        public float FieldOfView;
+
+        public static CameraPose Lerp(CameraPose start, CameraPose end, float progress)
+        {
+            return new CameraPose
+            {
+                Position = Vector3.Lerp(start.Position, end.Position, progress),
+                Pitch = Mathf.Lerp(start.Pitch, end.Pitch, progress),
+                Yaw = Mathf.Lerp(start.Yaw, end.Yaw, progress),
+                FieldOfView = Mathf.Lerp(start.FieldOfView, end.FieldOfView, progress)
+            };
+        }
+    }
+
+    sealed class CameraTransition
+    {
+        public readonly CameraPose StartPose;
+        public readonly CameraPose EndPose;
+        public readonly float Duration;
+        public readonly CameraTransitionMotion Motion;
+        public readonly Action OnCompleted;
+        public readonly UniTaskCompletionSource Completion = new();
+
+        public float Elapsed;
+        public bool WasCancelled;
+
+        public CameraTransition(
+            CameraPose startPose,
+            CameraPose endPose,
+            float duration,
+            CameraTransitionMotion motion,
+            Action onCompleted)
+        {
+            StartPose = startPose;
+            EndPose = endPose;
+            Duration = duration;
+            Motion = motion;
+            OnCompleted = onCompleted;
+        }
+    }
+
+    sealed class CameraPushOperation
+    {
+        public readonly UniTaskCompletionSource Completion = new();
+    }
+
     [Header("Transforms")]
     [SerializeField] Transform modelRoot;
     [SerializeField] ModelPreviewController previewController;
@@ -17,6 +73,10 @@ public class ModelViewer : SingletonMono<ModelViewer>
     [SerializeField] Transform planeTransform;
     [SerializeField] Renderer planeRenderer;
     [SerializeField] PlanarReflectionManager reflectionManager;
+
+    [Header("Equip Camera Handoff")]
+    [SerializeField] float equipCameraDecelerationStartZ = 2.65f;
+    [SerializeField, Min(0f)] float equipCameraDecelerationDuration = 0.16f;
 
     [Header("Background Effects")]
     [SerializeField] ParticleSystem starSphere;
@@ -34,30 +94,26 @@ public class ModelViewer : SingletonMono<ModelViewer>
     [SerializeField] float heightLimit = 0.05f; // 相机最低高度，防止穿地面
     [SerializeField] float resetSpeed = 0.5f; //相机后移复位速度
     // 目标值（输入直接修改这些）
-    float targetYaw;
-    float targetPitch;
+    CameraPose targetCameraPose;
     float moveAmount;
 
-    Vector3 targetPos;
-    Vector3 currentPos;
     // 记录初始的相机局部位置，用于 ResetView
     private Vector3 initialCameraLocalPos;
     Vector3 initialCameraWorldPos;
     // 当前值（用于插值平滑）
-    float currentYaw;
-    float currentPitch;
+    CameraPose renderedCameraPose;
     
     // 是否在默认界面（可以手动控制视角）
     bool canDrag;
     //是否正在切换镜头/播放动画
     bool isInTransition;
-    bool isCameraOnlyTransition;
     bool cameraTransitionPending;
     bool animationTransitionPending;
     bool faceTransitionPending;
     bool transitionAllowDrag;
 
-    Sequence seq;
+    CameraTransition activeCameraTransition;
+    CameraPushOperation cameraPushOperation;
     //todo:动态获取/更新
     int currentPresetIndex;
     //先这样测试
@@ -68,18 +124,24 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     const string PlaneReflectionKeyword = "_PLANE_REFLECTION";
 
-    public bool IsInTransition => isInTransition || isCameraOnlyTransition;
+    public bool IsInTransition => isInTransition || cameraPushOperation != null;
     public event Action OnPreviewTransitionCompleted;
     void Start()
     {
         // 初始化，防止启动时猛烈旋转
-        currentYaw = targetYaw = 0;
-        currentPitch = targetPitch = 0;
         
         if (displayCamera)
         {
             initialCameraLocalPos = displayCamera.transform.localPosition;
-            currentPos = targetPos = initialCameraLocalPos;
+            CameraPose initialPose = new()
+            {
+                Position = initialCameraLocalPos,
+                Pitch = 0f,
+                Yaw = 0f,
+                FieldOfView = displayCamera.fieldOfView
+            };
+            targetCameraPose = initialPose;
+            SetRenderedCameraPose(initialPose);
         }
 
         SetPlaneReflection(previewController.IsCharacterPreviewActive);
@@ -90,18 +152,25 @@ public class ModelViewer : SingletonMono<ModelViewer>
     {
     
         // 1. 平滑插值 (Lerp)
-        targetPitch = ClampPitchAbovePlane(targetPitch, targetYaw, targetPos);
-        currentYaw = Mathf.Lerp(currentYaw, targetYaw, Time.deltaTime * smoothSpeed);
-        currentPitch = Mathf.Lerp(currentPitch, targetPitch, Time.deltaTime * smoothSpeed);
-        currentPos = Vector3.Lerp(currentPos, targetPos, Time.deltaTime * smoothSpeed);
-        currentPitch = ClampPitchAbovePlane(currentPitch, currentYaw, currentPos);
-
-        ApplyTransforms();
-        // 实际相机控制 Z 轴偏移
-        if (displayCamera)
+        targetCameraPose.Pitch = ClampPitchAbovePlane(
+            targetCameraPose.Pitch,
+            targetCameraPose.Yaw,
+            targetCameraPose.Position);
+        if (activeCameraTransition != null)
         {
-            displayCamera.transform.localPosition = currentPos;
+            AdvanceCameraTransition(Time.deltaTime);
+            return;
         }
+
+        CameraPose nextPose = CameraPose.Lerp(
+            renderedCameraPose,
+            targetCameraPose,
+            Time.deltaTime * smoothSpeed);
+        nextPose.Pitch = ClampPitchAbovePlane(
+            nextPose.Pitch,
+            nextPose.Yaw,
+            nextPose.Position);
+        SetRenderedCameraPose(nextPose);
     }
     void LateUpdate()
     {
@@ -112,7 +181,10 @@ public class ModelViewer : SingletonMono<ModelViewer>
     {
         // 相机父节点只绕 X 轴转（抬头/低头）
         if (cameraPivot)
-            cameraPivot.localRotation = Quaternion.Euler(currentPitch, currentYaw, 0);
+            cameraPivot.localRotation = Quaternion.Euler(
+                renderedCameraPose.Pitch,
+                renderedCameraPose.Yaw,
+                0);
     }
 
     // 由 PreviewDragController 调用
@@ -123,11 +195,17 @@ public class ModelViewer : SingletonMono<ModelViewer>
             return;
         }
         // 水平滑动 -> 修改模型旋转
-        targetYaw += delta.x * rotateSensitivity; 
+        targetCameraPose.Yaw += delta.x * rotateSensitivity;
         
         // 垂直滑动 -> 修改相机俯仰
-        float desiredPitch = Mathf.Clamp(targetPitch + delta.y * rotateSensitivity, minPitch, maxPitch);
-        targetPitch = ClampPitchAbovePlane(desiredPitch, targetYaw, targetPos);
+        float desiredPitch = Mathf.Clamp(
+            targetCameraPose.Pitch + delta.y * rotateSensitivity,
+            minPitch,
+            maxPitch);
+        targetCameraPose.Pitch = ClampPitchAbovePlane(
+            desiredPitch,
+            targetCameraPose.Yaw,
+            targetCameraPose.Position);
     }
 
     public void Scroll(float scrollDelta, Vector2 viewportPos)
@@ -152,22 +230,31 @@ public class ModelViewer : SingletonMono<ModelViewer>
                 return;
             }
             Vector3 candidateTargetPos = displayCamera.transform.parent.InverseTransformPoint(expectedWorldPos);
-            if (!IsCameraAbovePlane(targetPitch, targetYaw, candidateTargetPos))
+            if (!IsCameraAbovePlane(
+                    targetCameraPose.Pitch,
+                    targetCameraPose.Yaw,
+                    candidateTargetPos))
             {
                 return;
             }
-            targetPos = candidateTargetPos;
+            targetCameraPose.Position = candidateTargetPos;
         }
         else
         {
             float t = Mathf.Abs(step) * resetSpeed ; // 0.8f 可调，控制复位速度
-            Vector3 candidateTargetPos = Vector3.Lerp(targetPos, initialCameraLocalPos, t);
-            if (!IsCameraAbovePlane(targetPitch, targetYaw, candidateTargetPos))
+            Vector3 candidateTargetPos = Vector3.Lerp(
+                targetCameraPose.Position,
+                initialCameraLocalPos,
+                t);
+            if (!IsCameraAbovePlane(
+                    targetCameraPose.Pitch,
+                    targetCameraPose.Yaw,
+                    candidateTargetPos))
             {
                 return;
             }
-            targetPos = candidateTargetPos;
-            Debug.Log("After scroll: " + targetPos);
+            targetCameraPose.Position = candidateTargetPos;
+            Debug.Log("After scroll: " + targetCameraPose.Position);
         }
     }
 
@@ -216,7 +303,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
         if (displayCamera == null || planeTransform == null) return;
         
         Transform parentTransform = displayCamera.transform.parent;
-        Vector3 predictedWorldPos = parentTransform.TransformPoint(targetPos);
+        Vector3 predictedWorldPos = parentTransform.TransformPoint(targetCameraPose.Position);
         
         float camY =predictedWorldPos.y;
         float minY = planeTransform.position.y + heightLimit;
@@ -238,13 +325,13 @@ public class ModelViewer : SingletonMono<ModelViewer>
         float maxAllowedDist = (minY - pivotPos.y) / dirY;
         maxAllowedDist = Mathf.Max(maxAllowedDist, minDistance); // 不能比最小距离还近
 
-        float currentDist = targetPos.magnitude;
+        float currentDist = targetCameraPose.Position.magnitude;
         if (currentDist > maxAllowedDist)
         {
             // 保持当前方向，强制缩短距离（这就是“缩小 localPosZ”的效果）
-            Vector3 unitLocal = targetPos.normalized;
-            targetPos = unitLocal * maxAllowedDist;
-            Debug.Log("After Clamp: " + targetPos);
+            Vector3 unitLocal = targetCameraPose.Position.normalized;
+            targetCameraPose.Position = unitLocal * maxAllowedDist;
+            Debug.Log("After Clamp: " + targetCameraPose.Position);
         }
     }
     
@@ -288,6 +375,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     internal async UniTask PlayCameraTransitionAsync(
         CameraPreset preset,
+        float startDelaySeconds,
         CancellationToken cancellationToken)
     {
         if (preset == null)
@@ -295,45 +383,46 @@ public class ModelViewer : SingletonMono<ModelViewer>
             return;
         }
 
-        await UniTask.WaitWhile(
-            () => isInTransition,
-            cancellationToken: cancellationToken);
-        cancellationToken.ThrowIfCancellationRequested();
+        CameraPushOperation activePush = cameraPushOperation;
+        if (activePush != null)
+        {
+            await activePush.Completion.Task.AttachExternalCancellation(cancellationToken);
+            return;
+        }
 
-        isCameraOnlyTransition = true;
+        CameraPushOperation pushOperation = new();
+        cameraPushOperation = pushOperation;
         bool previousCanDrag = canDrag;
         bool completed = false;
-        Sequence cameraSequence = null;
+        CameraTransition transition = null;
 
         try
         {
+            await UniTask.WaitWhile(
+                () => isInTransition,
+                cancellationToken: cancellationToken);
+            cancellationToken.ThrowIfCancellationRequested();
+            if (startDelaySeconds > 0f)
+            {
+                await UniTask.Delay(
+                    TimeSpan.FromSeconds(startDelaySeconds),
+                    cancellationToken: cancellationToken);
+            }
+
+            previousCanDrag = canDrag;
             canDrag = false;
             float duration = Mathf.Max(0f, preset.transitionDuration);
 
-            cameraSequence = DOTween.Sequence()
-                .Join(DOTween.To(
-                        () => currentPos.z,
-                        value =>
-                        {
-                            currentPos.z = value;
-                            targetPos.z = value;
-                        },
-                        preset.cameraLocalPosition.z,
-                        duration)
-                    .SetEase(Ease.Linear));
-
-            seq = cameraSequence;
-            await cameraSequence
-                .AsyncWaitForCompletion()
-                .AsUniTask()
-                .AttachExternalCancellation(cancellationToken);
-
-            currentPos.z = preset.cameraLocalPosition.z;
-            targetPos.z = currentPos.z;
-            ApplyTransforms();
-            if (displayCamera != null)
+            CameraPose destination = renderedCameraPose;
+            destination.Position.z = preset.cameraLocalPosition.z;
+            transition = BeginCameraTransition(
+                destination,
+                duration,
+                null);
+            await transition.Completion.Task.AttachExternalCancellation(cancellationToken);
+            if (transition.WasCancelled)
             {
-                displayCamera.transform.localPosition = currentPos;
+                return;
             }
 
             canDrag = preset.allowDrag;
@@ -341,14 +430,9 @@ public class ModelViewer : SingletonMono<ModelViewer>
         }
         finally
         {
-            if (cameraSequence != null && cameraSequence.IsActive())
+            if (!completed && transition != null)
             {
-                cameraSequence.Kill();
-            }
-
-            if (seq == cameraSequence)
-            {
-                seq = null;
+                CancelCameraTransition(transition);
             }
 
             if (!completed)
@@ -356,7 +440,11 @@ public class ModelViewer : SingletonMono<ModelViewer>
                 canDrag = previousCanDrag;
             }
 
-            isCameraOnlyTransition = false;
+            if (cameraPushOperation == pushOperation)
+            {
+                cameraPushOperation = null;
+                pushOperation.Completion.TrySetResult();
+            }
         }
     }
 
@@ -373,35 +461,120 @@ public class ModelViewer : SingletonMono<ModelViewer>
     void StartCameraTransition(CameraPreset preset, bool immediate)
     {
         // Kill旧动画
-        if (seq != null && seq.IsActive())
-        {
-            seq.Kill();
-        }
+        CancelCameraTransition(activeCameraTransition);
+
+        CameraPose destination = CreateCameraPose(preset);
 
         if (immediate)
         {
-            targetPos = currentPos = preset.cameraLocalPosition;
-            targetPitch = currentPitch = preset.pitch;
-            targetYaw = currentYaw = preset.yaw;
-            ApplyTransforms();
-
-            if (displayCamera)
-            {
-                displayCamera.transform.localPosition = currentPos;
-            }
-
+            targetCameraPose = destination;
+            SetRenderedCameraPose(destination);
             MarkCameraTransitionComplete();
             return;
         }
 
-        seq = DOTween.Sequence();
-        seq.Join(DOTween.To(() => targetPos, x => targetPos = x, preset.cameraLocalPosition, preset.transitionDuration));
-        seq.Join(DOTween.To(() => targetPitch, x => targetPitch = x, preset.pitch, preset.transitionDuration));
-        seq.Join(DOTween.To(() => targetYaw, y => targetYaw = y, preset.yaw, preset.transitionDuration));
-        seq.OnComplete(() =>
+        BeginCameraTransition(
+            destination,
+            Mathf.Max(0f, preset.transitionDuration),
+            MarkCameraTransitionComplete);
+    }
+
+    CameraTransition BeginCameraTransition(
+        CameraPose destination,
+        float duration,
+        Action onCompleted,
+        CameraTransitionMotion motion = CameraTransitionMotion.Linear)
+    {
+        CancelCameraTransition(activeCameraTransition);
+        destination.Pitch = ClampPitchAbovePlane(
+            destination.Pitch,
+            destination.Yaw,
+            destination.Position);
+        targetCameraPose = destination;
+
+        CameraTransition transition = new(
+            renderedCameraPose,
+            destination,
+            duration,
+            motion,
+            onCompleted);
+        activeCameraTransition = transition;
+        if (duration <= 0f)
         {
-            MarkCameraTransitionComplete();
-        });
+            CompleteCameraTransition(transition);
+        }
+
+        return transition;
+    }
+
+    void AdvanceCameraTransition(float deltaTime)
+    {
+        CameraTransition transition = activeCameraTransition;
+        transition.Elapsed += deltaTime;
+        float progress = Mathf.Clamp01(transition.Elapsed / transition.Duration);
+        float poseProgress = transition.Motion == CameraTransitionMotion.ConstantDeceleration
+            ? 1f - (1f - progress) * (1f - progress)
+            : progress;
+        CameraPose nextPose = CameraPose.Lerp(
+            transition.StartPose,
+            transition.EndPose,
+            poseProgress);
+        nextPose.Pitch = ClampPitchAbovePlane(
+            nextPose.Pitch,
+            nextPose.Yaw,
+            nextPose.Position);
+        SetRenderedCameraPose(nextPose);
+
+        if (progress >= 1f)
+        {
+            CompleteCameraTransition(transition);
+        }
+    }
+
+    void CompleteCameraTransition(CameraTransition transition)
+    {
+        if (activeCameraTransition != transition)
+        {
+            return;
+        }
+
+        SetRenderedCameraPose(transition.EndPose);
+        activeCameraTransition = null;
+        transition.OnCompleted?.Invoke();
+        transition.Completion.TrySetResult();
+    }
+
+    void CancelCameraTransition(CameraTransition transition)
+    {
+        if (transition == null || activeCameraTransition != transition)
+        {
+            return;
+        }
+
+        activeCameraTransition = null;
+        targetCameraPose = renderedCameraPose;
+        transition.WasCancelled = true;
+        transition.Completion.TrySetResult();
+    }
+
+    CameraPose CreateCameraPose(CameraPreset preset)
+    {
+        return new CameraPose
+        {
+            Position = preset.cameraLocalPosition,
+            Pitch = preset.pitch,
+            Yaw = preset.yaw,
+            FieldOfView = preset.fov
+        };
+    }
+
+    void SetRenderedCameraPose(CameraPose pose)
+    {
+        // 镜头姿态只在这里写入实际 Transform，避免交互、preset 和过渡动画互相覆盖。
+        renderedCameraPose = pose;
+        displayCamera.transform.localPosition = pose.Position;
+        displayCamera.fieldOfView = pose.FieldOfView;
+        ApplyTransforms();
     }
 
     void StartAnimationTransition(CameraPreset preset, bool immediate)
@@ -472,8 +645,19 @@ public class ModelViewer : SingletonMono<ModelViewer>
                 ModelPreviewType.Equip,
                 equipKey,
                 cancellationToken);
-        if (definition == null
-            || !previewController.TryActivatePreloaded(
+        if (definition == null)
+        {
+            return false;
+        }
+
+        // 武器 preset 必须在推镜停止写入后应用，保证它是最终镜头状态。
+        CameraPushOperation pushOperation = cameraPushOperation;
+        if (pushOperation != null)
+        {
+            await pushOperation.Completion.Task.AttachExternalCancellation(cancellationToken);
+        }
+
+        if (!previewController.TryActivatePreloaded(
                 ModelPreviewType.Equip,
                 equipKey,
                 out _))
@@ -482,8 +666,38 @@ public class ModelViewer : SingletonMono<ModelViewer>
         }
 
         SetPlaneReflection(false);
-        ApplyPreviewCamera(definition.CameraPreset);
-        return true;
+        CancelCameraTransition(activeCameraTransition);
+        CameraPose equipPose = CreateCameraPose(definition.CameraPreset);
+        CameraPose decelerationStartPose = equipPose;
+        decelerationStartPose.Position.z = equipCameraDecelerationStartZ;
+        targetCameraPose = decelerationStartPose;
+        SetRenderedCameraPose(decelerationStartPose);
+
+        CameraTransition decelerationTransition = BeginCameraTransition(
+            equipPose,
+            equipCameraDecelerationDuration,
+            null,
+            CameraTransitionMotion.ConstantDeceleration);
+        bool completed = false;
+        try
+        {
+            await decelerationTransition.Completion.Task
+                .AttachExternalCancellation(cancellationToken);
+            completed = !decelerationTransition.WasCancelled;
+            if (completed)
+            {
+                canDrag = definition.CameraPreset.allowDrag;
+            }
+
+            return completed;
+        }
+        finally
+        {
+            if (!completed)
+            {
+                CancelCameraTransition(decelerationTransition);
+            }
+        }
     }
 
     public async UniTask ShowPreviewAsync(ModelPreviewType previewType, string targetKey)
@@ -540,17 +754,10 @@ public class ModelViewer : SingletonMono<ModelViewer>
             return;
         }
 
-        if (seq != null && seq.IsActive())
-        {
-            seq.Kill();
-        }
-
-        targetPos = currentPos = preset.cameraLocalPosition;
-        targetPitch = currentPitch = preset.pitch;
-        targetYaw = currentYaw = preset.yaw;
-        displayCamera.transform.localPosition = currentPos;
-        displayCamera.fieldOfView = preset.fov;
-        ApplyTransforms();
+        CancelCameraTransition(activeCameraTransition);
+        CameraPose pose = CreateCameraPose(preset);
+        targetCameraPose = pose;
+        SetRenderedCameraPose(pose);
         isInTransition = false;
         cameraTransitionPending = false;
         animationTransitionPending = false;
@@ -594,10 +801,10 @@ public class ModelViewer : SingletonMono<ModelViewer>
     
     public void ResetView()
     {
-        targetYaw = 0;
-        targetPitch = 0;
+        targetCameraPose.Yaw = 0;
+        targetCameraPose.Pitch = 0;
         // 直接回到最开始记录的本地坐标
-        targetPos = initialCameraLocalPos;
+        targetCameraPose.Position = initialCameraLocalPos;
     }
 
     internal void PlayStarFieldParticles()

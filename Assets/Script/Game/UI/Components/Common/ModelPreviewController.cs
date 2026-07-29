@@ -21,6 +21,7 @@ public sealed class ModelPreviewController : MonoBehaviour
     [SerializeField]
     FaceController faceController;
 
+    // 描述一次预览请求从后台加载到接管画面的完整生命周期。
     enum PreviewPreparationState
     {
         Loading,
@@ -30,6 +31,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         Activated
     }
 
+    // 当前实际显示的内容独立于后台准备状态，加载期间不会提前隐藏现有模型。
     enum ActivePreviewState
     {
         DefaultCharacter,
@@ -37,6 +39,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         Equip
     }
 
+    // 将一次加载请求的身份、资源、取消和完成信号收束在同一个状态对象中。
     sealed class PreviewPreparation
     {
         public readonly ModelPreviewType PreviewType;
@@ -77,6 +80,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         ModelPreviewType previewType,
         string targetKey)
     {
+        // 普通显示同样走“准备后激活”，避免维护另一套加载和回收流程。
         ModelPreviewDefinition definition = await EnsurePreloadedAsync(
             previewType,
             targetKey,
@@ -91,6 +95,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         ModelPreviewType previewType,
         string targetKey)
     {
+        // 同一目标只保留一个准备任务；重复请求复用正在加载或已经就绪的结果。
         if (pendingPreview != null
             && pendingPreview.Matches(previewType, targetKey))
         {
@@ -117,6 +122,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         string targetKey,
         CancellationToken cancellationToken)
     {
+        // 调用方可以直接等待；目标尚未开始准备时会在这里自动启动。
         Preload(previewType, targetKey);
         PreviewPreparation preparation = pendingPreview;
         if (preparation == null
@@ -137,6 +143,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         string targetKey,
         out ModelPreviewDefinition definition)
     {
+        // 只有 Ready 状态允许切换 Root，保证旧模型一直显示到新模型可用。
         definition = null;
         PreviewPreparation preparation = pendingPreview;
         if (preparation == null
@@ -157,6 +164,7 @@ public sealed class ModelPreviewController : MonoBehaviour
 
     async UniTask LoadPreviewAsync(PreviewPreparation preparation)
     {
+        // 资源加载是唯一异步边界；配置完成前，实例始终保持隐藏。
         Transform previewRoot = preparation.PreviewType == ModelPreviewType.Character
             ? characterRoot
             : equipRoot;
@@ -256,6 +264,7 @@ public sealed class ModelPreviewController : MonoBehaviour
 
     public void CancelPendingLoad()
     {
+        // Ready 对象直接回收；Loading 对象由加载任务在收到取消后统一回收。
         PreviewPreparation preparation = pendingPreview;
         pendingPreview = null;
         if (preparation == null)
@@ -288,6 +297,7 @@ public sealed class ModelPreviewController : MonoBehaviour
 
     void ActivatePreview(ModelPreviewType previewType, GameObject previewObject)
     {
+        // 所有 Root 切换、人物绑定和旧对象回收都集中在这一处完成。
         GameObject previousPreviewObject = activePreviewObject;
         Transform previewRoot = previewType == ModelPreviewType.Character
             ? characterRoot

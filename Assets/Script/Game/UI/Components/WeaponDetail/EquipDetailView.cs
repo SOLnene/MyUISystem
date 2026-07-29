@@ -40,8 +40,6 @@ public partial class EquipDetailView : UIView
     [SerializeField]
     UITransitionGroup pageTransition;
     [SerializeField]
-    CameraPreset equipEnhancePushPreset;
-    [SerializeField]
     ItemSelectPanelView itemSelectPanelView;
     [Header("输入锁")]
     [SerializeField]
@@ -115,10 +113,10 @@ public partial class EquipDetailView : UIView
             itemSelectPanelView.Hide();
         }
 
-        BeginOpenTransition(equipItemVm.Model.Key, param.InitialTab);
+        BeginOpenTransition(equipItemVm.Model.Key);
     }
 
-    void BeginOpenTransition(string equipKey, WeaponDetailTab initialTab)
+    void BeginOpenTransition(string equipKey)
     {
         ModelViewer.Instance.PrepareEquipPreview(equipKey);
         LockInput();
@@ -129,20 +127,18 @@ public partial class EquipDetailView : UIView
 
         RunOpenTransitionAsync(
             equipKey,
-            initialTab,
             transitionCancellation).Forget(Debug.LogException);
     }
 
     async UniTask RunOpenTransitionAsync(
         string equipKey,
-        WeaponDetailTab initialTab,
         CancellationTokenSource transitionCancellation)
     {
         CancellationToken cancellationToken = transitionCancellation.Token;
 
         try
         {
-            await PlayPageEnterTransitionAsync(initialTab, cancellationToken);
+            await pageTransition.Show().AttachExternalCancellation(cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             if (!isClosing)
             {
@@ -164,25 +160,6 @@ public partial class EquipDetailView : UIView
                 UnlockInput();
             }
         }
-    }
-
-    UniTask PlayPageEnterTransitionAsync(
-        WeaponDetailTab initialTab,
-        CancellationToken cancellationToken)
-    {
-        UniTask pageEnterTask =
-            pageTransition.Show().AttachExternalCancellation(cancellationToken);
-
-        if (initialTab != WeaponDetailTab.Enhance)
-        {
-            return pageEnterTask;
-        }
-
-        return UniTask.WhenAll(
-            pageEnterTask,
-            ModelViewer.Instance.PlayCameraTransitionAsync(
-                equipEnhancePushPreset,
-                cancellationToken));
     }
 
     void CancelOpenTransition()
