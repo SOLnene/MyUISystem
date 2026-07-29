@@ -1,4 +1,4 @@
-using TMPro;
+using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,10 +6,6 @@ public class RewardPopupView : UIView
 {
     [SerializeField]
     Button closeHandle;
-    [SerializeField]
-    TextMeshProUGUI titleText;
-    [SerializeField]
-    TextMeshProUGUI sectionTitleText;
     [SerializeField]
     RewardListView rewardListView;
 
@@ -28,30 +24,23 @@ public class RewardPopupView : UIView
     {
         base.OnOpen(data);
 
-        if (data is not RewardPopupDisplayData displayData)
+        if (data is not IReadOnlyList<RewardItemData> rewards)
         {
             rewardListView.Clear();
             return;
         }
 
-        titleText.text = displayData.Title;
-        sectionTitleText.text = displayData.SectionTitle;
-        rewardListView.Bind(displayData.Items);
+        rewardListView.Bind(rewards, GameDatabase.ItemDatabase);
     }
 
     public override void OnRelease()
     {
         rewardListView.Clear();
+        base.OnRelease();
     }
 
     void HandleClose()
     {
-        if (Handle == null)
-        {
-            gameObject.SetActive(false);
-            return;
-        }
-
         OnCancel();
     }
 }

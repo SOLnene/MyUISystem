@@ -9,35 +9,68 @@ public class RewardListView : MonoBehaviour
     RewardItemView itemPrefab;
 
     readonly List<RewardItemView> itemViews = new();
-    bool initialized;
+    readonly List<ItemSlotViewModel> itemSlotViewModels = new();
 
-    public void Bind(IReadOnlyList<RewardItemDisplayData> items)
+    void Awake()
     {
-        Initialize();
-
-        int itemCount = items?.Count ?? 0;
-        EnsureCapacity(itemCount);
-
+        content.GetComponentsInChildren(true, itemViews);
         for (int i = 0; i < itemViews.Count; i++)
         {
-            bool shouldShow = i < itemCount;
-            itemViews[i].gameObject.SetActive(shouldShow);
+            itemSlotViewModels.Add(new ItemSlotViewModel());
+        }
+    }
 
-            if (shouldShow)
+    public void Bind(
+        IReadOnlyList<RewardItemData> rewards,
+        ItemDatabase itemDatabase)
+    {
+        Clear();
+        if (rewards == null || itemDatabase == null)
+        {
+            return;
+        }
+
+        int visibleItemCount = 0;
+        foreach (RewardItemData reward in rewards)
+        {
+            if (reward.Count <= 0)
             {
-                itemViews[i].Bind(items[i]);
+                continue;
             }
-            else
+
+            ItemDefinition itemDefinition =
+                itemDatabase.GetItemByID(reward.ItemId);
+            if (itemDefinition == null)
             {
-                itemViews[i].Clear();
+                Debug.LogWarning(
+                    $"Reward item definition is missing: itemId={reward.ItemId}");
+                continue;
             }
+
+            if (visibleItemCount == itemViews.Count)
+            {
+                itemViews.Add(Instantiate(itemPrefab, content));
+                itemSlotViewModels.Add(new ItemSlotViewModel());
+            }
+
+            ItemSlotViewModel itemSlotViewModel =
+                itemSlotViewModels[visibleItemCount];
+            itemSlotViewModel.isEmpty.Value = false;
+            itemSlotViewModel.iconPath.Value = itemDefinition.iconPath;
+            itemSlotViewModel.count.Value = reward.Count.ToString();
+            itemSlotViewModel.color.Value =
+                RarityConfig.GetColor(itemDefinition.itemRarity);
+            itemSlotViewModel.star.Value = itemDefinition.stars;
+
+            RewardItemView itemView = itemViews[visibleItemCount];
+            itemView.gameObject.SetActive(true);
+            itemView.Bind(itemDefinition, itemSlotViewModel);
+            visibleItemCount++;
         }
     }
 
     public void Clear()
     {
-        Initialize();
-
         foreach (RewardItemView itemView in itemViews)
         {
             itemView.Clear();
@@ -45,23 +78,11 @@ public class RewardListView : MonoBehaviour
         }
     }
 
-    void Initialize()
+    void OnDestroy()
     {
-        if (initialized)
+        foreach (ItemSlotViewModel itemSlotViewModel in itemSlotViewModels)
         {
-            return;
-        }
-
-        content.GetComponentsInChildren(true, itemViews);
-        initialized = true;
-    }
-
-    void EnsureCapacity(int itemCount)
-    {
-        while (itemViews.Count < itemCount)
-        {
-            RewardItemView itemView = Instantiate(itemPrefab, content);
-            itemViews.Add(itemView);
+            itemSlotViewModel.Dispose();
         }
     }
 }

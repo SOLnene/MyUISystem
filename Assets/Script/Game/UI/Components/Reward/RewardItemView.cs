@@ -8,31 +8,17 @@ public class RewardItemView : MonoBehaviour
     [SerializeField]
     TextMeshProUGUI itemNameText;
 
-    ItemSlotViewModel itemSlotViewModel;
-
-    public void Bind(RewardItemDisplayData data)
+    public void Bind(
+        ItemDefinition itemDefinition,
+        ItemSlotViewModel itemSlotViewModel)
     {
-        itemSlotViewModel ??= new ItemSlotViewModel();
-        itemSlotViewModel.isEmpty.Value = false;
-        itemSlotViewModel.iconPath.Value = data.IconAddress;
-        itemSlotViewModel.count.Value = data.Amount.ToString();
-        itemSlotViewModel.color.Value = RarityConfig.GetColor(data.Rarity);
-        itemSlotViewModel.star.Value = data.Star;
-
-        itemNameText.text = data.ItemName;
+        itemNameText.text = itemDefinition.itemName;
         itemSlot.Bind(itemSlotViewModel);
     }
 
     public void Clear()
     {
         itemSlot.ResetState();
-        itemSlotViewModel?.Dispose();
-        itemSlotViewModel = null;
         itemNameText.text = string.Empty;
-    }
-
-    void OnDestroy()
-    {
-        Clear();
     }
 }

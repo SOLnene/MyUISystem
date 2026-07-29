@@ -22,6 +22,11 @@ public sealed class AchievementListView : MonoBehaviour
             return;
         }
 
+        Refresh(items);
+    }
+
+    internal void Refresh(IReadOnlyList<AchievementItemViewModel> items)
+    {
         for (int i = 0; i < itemViews.Count; i++)
         {
             bool active = i < items.Count;

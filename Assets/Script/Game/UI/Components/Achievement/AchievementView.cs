@@ -1,5 +1,6 @@
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using UniRx;
 using UnityEngine;
 
 
@@ -12,6 +13,7 @@ public partial class AchievementView : UIView
 
     AchievementViewModel viewModel;
     CancellationTokenSource openCancellation;
+    readonly CompositeDisposable viewBindings = new();
 
     public override void OnOpen(object data)
     {
@@ -19,6 +21,7 @@ public partial class AchievementView : UIView
 
         openCancellation?.Cancel();
         openCancellation?.Dispose();
+        viewBindings.Clear();
         openCancellation = CancellationTokenSource.CreateLinkedTokenSource(
             this.GetCancellationTokenOnDestroy());
 
@@ -48,6 +51,9 @@ public partial class AchievementView : UIView
             return;
         }
 
+        viewModel.ItemOrderChanged
+            .Subscribe(_ => achievementListView.Refresh(viewModel.Items))
+            .AddTo(viewBindings);
         await achievementListView.BindAsync(viewModel.Items, cancellationToken);
     }
 
@@ -57,6 +63,7 @@ public partial class AchievementView : UIView
         openCancellation?.Dispose();
         openCancellation = null;
 
+        viewBindings.Clear();
         achievementListView.Clear();
         viewModel?.Dispose();
         viewModel = null;

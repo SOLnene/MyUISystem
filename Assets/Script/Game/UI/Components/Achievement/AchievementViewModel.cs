@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Newtonsoft.Json;
@@ -12,12 +13,15 @@ public sealed class AchievementViewModel : IDisposable
 
     readonly ItemDatabase itemDatabase;
     readonly List<AchievementItemViewModel> items = new();
+    readonly List<AchievementItemViewModel> orderedItems = new();
     readonly VersionedAssetLoader<TextAsset> configLoader = new();
     readonly CompositeDisposable itemStateSubscriptions = new();
     readonly ReactiveProperty<AchievementCountInfo> countInfo = new();
+    readonly Subject<Unit> itemOrderChanged = new();
 
-    public IReadOnlyList<AchievementItemViewModel> Items => items;
+    public IReadOnlyList<AchievementItemViewModel> Items => orderedItems;
     public IReadOnlyReactiveProperty<AchievementCountInfo> CountInfo => countInfo;
+    internal IObservable<Unit> ItemOrderChanged => itemOrderChanged;
 
     public AchievementViewModel(ItemDatabase itemDatabase)
     {
@@ -82,6 +86,7 @@ public sealed class AchievementViewModel : IDisposable
         }
 
         BindItemState();
+        RefreshItemOrder();
         RefreshCountInfo();
     }
 
@@ -91,6 +96,7 @@ public sealed class AchievementViewModel : IDisposable
         ClearItems();
         itemStateSubscriptions.Dispose();
         countInfo.Dispose();
+        itemOrderChanged.Dispose();
     }
 
     void ClearItems()
@@ -102,6 +108,7 @@ public sealed class AchievementViewModel : IDisposable
         }
 
         items.Clear();
+        orderedItems.Clear();
         RefreshCountInfo();
     }
 
@@ -111,9 +118,34 @@ public sealed class AchievementViewModel : IDisposable
         {
             item.IsCompleted
                 .Skip(1)
-                .Subscribe(_ => RefreshCountInfo())
+                .Subscribe(_ =>
+                {
+                    RefreshItemOrder();
+                    RefreshCountInfo();
+                })
+                .AddTo(itemStateSubscriptions);
+            item.IsClaimed
+                .Skip(1)
+                .Subscribe(_ => RefreshItemOrder())
                 .AddTo(itemStateSubscriptions);
         }
+    }
+
+    void RefreshItemOrder()
+    {
+        orderedItems.Clear();
+        orderedItems.AddRange(items.OrderBy(GetDisplayPriority));
+        itemOrderChanged.OnNext(Unit.Default);
+    }
+
+    static int GetDisplayPriority(AchievementItemViewModel item)
+    {
+        if (item.IsClaimed.Value)
+        {
+            return 2;
+        }
+
+        return item.IsCompleted.Value ? 0 : 1;
     }
 
     void RefreshCountInfo()

@@ -79,7 +79,9 @@ public sealed class AchievementItemViewModel : IDisposable
         if (!IsCompleted.Value ||
             !AchievementProgressService.Instance.TryClaim(
                 Id,
-                () => ItemGrantService.TryGrant(rewardItem, rewardAmount)))
+                () => RewardService.TryGrantAndShow(
+                    rewardItem,
+                    rewardAmount)))
         {
             return;
         }

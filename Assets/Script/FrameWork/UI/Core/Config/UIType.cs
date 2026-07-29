@@ -23,5 +23,6 @@ public enum UIType
 		StoreView,
 		InfoPanelPopup,
 		AchievementView,
+		RewardPopupView,
 		Max,
 }
