@@ -15,7 +15,7 @@ internal class MainMenuNavigator
             { MainMenuAction.Gacha, OpenGacha },
             { MainMenuAction.Weapon, OpenWeapon },
             { MainMenuAction.Backpack, OpenBackpack },
-            { MainMenuAction.Team, () => ShowUnavailable(MainMenuAction.Team) },
+            { MainMenuAction.Team, OpenTeam },
             { MainMenuAction.Map, () => ShowUnavailable(MainMenuAction.Map) },
             { MainMenuAction.Quest, () => ShowUnavailable(MainMenuAction.Quest) },
             { MainMenuAction.Shop, OpenStore },
@@ -107,6 +107,11 @@ internal class MainMenuNavigator
     private void OpenBackpack()
     {
         UIManager.Instance.Open(UIType.BackpackView);
+    }
+
+    private void OpenTeam()
+    {
+        UIManager.Instance.Open(UIType.TeamEditView);
     }
 
     private void OpenStore()

@@ -24,5 +24,6 @@ public enum UIType
 		InfoPanelPopup,
 		AchievementView,
 		RewardPopupView,
+		TeamEditView,
 		Max,
 }
