@@ -466,10 +466,17 @@ public partial class EquipDetailView : UIView
     async UniTask CloseWithTransition()
     {
         isClosing = true;
+        bool returnToCharacter =
+            ModelViewer.Instance.BeginEquipReturnToCharacter();
 
         if (pageTransition != null)
         {
             await pageTransition.Hide();
+        }
+
+        if (returnToCharacter)
+        {
+            ModelViewer.Instance.CommitEquipReturnToCharacter();
         }
 
         base.OnCancel();

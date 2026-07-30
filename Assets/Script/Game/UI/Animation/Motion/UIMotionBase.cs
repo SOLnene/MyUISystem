@@ -14,6 +14,9 @@ public abstract class UIMotionBase : MonoBehaviour
     int requestVersion;
     CancellationTokenSource motionCts;
     protected Sequence seq;
+
+    internal abstract float TransitionDuration { get; }
+
     public UniTask PlayEnter(bool instant = false)
     {
         return PlayToState(true, instant,true);

@@ -39,6 +39,21 @@ public class SlideFadeMotion : UIMotionBase
     [SerializeField]
     Ease fadeEase = Ease.Linear;
 
+    internal override float TransitionDuration
+    {
+        get
+        {
+            if (mode == SlideFadeMotionMode.Preset)
+            {
+                return preset != null
+                    ? Mathf.Max(preset.MoveDuration, preset.FadeDuration)
+                    : 0f;
+            }
+
+            return Mathf.Max(moveDuration, fadeDuration);
+        }
+    }
+
     void Reset()
     {
         AutoBindReferences();

@@ -9,7 +9,22 @@ public class ModelViewer : SingletonMono<ModelViewer>
     enum CameraTransitionMotion
     {
         Linear,
+        ConstantAcceleration,
         ConstantDeceleration
+    }
+
+    enum EquipPreviewFlowState
+    {
+        None,
+        Entering,
+        EquipActive,
+        Returning
+    }
+
+    enum CharacterReturnAnimationMode
+    {
+        None,
+        ReplayEquipTransition
     }
 
     struct CameraPose
@@ -77,6 +92,9 @@ public class ModelViewer : SingletonMono<ModelViewer>
     [Header("Equip Camera Handoff")]
     [SerializeField] float equipCameraDecelerationStartZ = 2.65f;
     [SerializeField, Min(0f)] float equipCameraDecelerationDuration = 0.16f;
+    [SerializeField, Min(0f)] float equipCameraReturnFirstPhaseDuration = 0.4f;
+    [SerializeField] CharacterReturnAnimationMode characterReturnAnimationMode =
+        CharacterReturnAnimationMode.ReplayEquipTransition;
 
     [Header("Background Effects")]
     [SerializeField] ParticleSystem starSphere;
@@ -114,6 +132,11 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     CameraTransition activeCameraTransition;
     CameraPushOperation cameraPushOperation;
+    EquipPreviewFlowState equipPreviewFlowState;
+    CameraPose characterEquipHandoffPose;
+    CameraPose equipReturnWeaponHandoffPose;
+    float characterEquipReturnDuration;
+    bool hasCharacterEquipHandoffPose;
     //todo:动态获取/更新
     int currentPresetIndex;
     //先这样测试
@@ -124,7 +147,11 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     const string PlaneReflectionKeyword = "_PLANE_REFLECTION";
 
-    public bool IsInTransition => isInTransition || cameraPushOperation != null;
+    public bool IsInTransition =>
+        isInTransition
+        || activeCameraTransition != null
+        || cameraPushOperation != null;
+    internal bool IsCharacterPreviewActive => previewController.IsCharacterPreviewActive;
     public event Action OnPreviewTransitionCompleted;
     void Start()
     {
@@ -425,6 +452,13 @@ public class ModelViewer : SingletonMono<ModelViewer>
                 return;
             }
 
+            if (equipPreviewFlowState == EquipPreviewFlowState.Entering)
+            {
+                characterEquipHandoffPose = transition.EndPose;
+                characterEquipReturnDuration = duration;
+                hasCharacterEquipHandoffPose = true;
+            }
+
             canDrag = preset.allowDrag;
             completed = true;
         }
@@ -512,9 +546,9 @@ public class ModelViewer : SingletonMono<ModelViewer>
         CameraTransition transition = activeCameraTransition;
         transition.Elapsed += deltaTime;
         float progress = Mathf.Clamp01(transition.Elapsed / transition.Duration);
-        float poseProgress = transition.Motion == CameraTransitionMotion.ConstantDeceleration
-            ? 1f - (1f - progress) * (1f - progress)
-            : progress;
+        float poseProgress = EvaluateCameraTransitionProgress(
+            transition.Motion,
+            progress);
         CameraPose nextPose = CameraPose.Lerp(
             transition.StartPose,
             transition.EndPose,
@@ -528,6 +562,21 @@ public class ModelViewer : SingletonMono<ModelViewer>
         if (progress >= 1f)
         {
             CompleteCameraTransition(transition);
+        }
+    }
+
+    static float EvaluateCameraTransitionProgress(
+        CameraTransitionMotion motion,
+        float progress)
+    {
+        switch (motion)
+        {
+            case CameraTransitionMotion.ConstantAcceleration:
+                return progress * progress;
+            case CameraTransitionMotion.ConstantDeceleration:
+                return 1f - (1f - progress) * (1f - progress);
+            default:
+                return progress;
         }
     }
 
@@ -555,6 +604,12 @@ public class ModelViewer : SingletonMono<ModelViewer>
         targetCameraPose = renderedCameraPose;
         transition.WasCancelled = true;
         transition.Completion.TrySetResult();
+        if (equipPreviewFlowState == EquipPreviewFlowState.Returning
+            && previewController.IsCharacterPreviewActive)
+        {
+            equipPreviewFlowState = EquipPreviewFlowState.None;
+            hasCharacterEquipHandoffPose = false;
+        }
     }
 
     CameraPose CreateCameraPose(CameraPreset preset)
@@ -636,6 +691,14 @@ public class ModelViewer : SingletonMono<ModelViewer>
         previewController.Preload(ModelPreviewType.Equip, equipKey);
     }
 
+    internal void PrepareEquipPreviewForCharacterReturn(string equipKey)
+    {
+        equipPreviewFlowState = EquipPreviewFlowState.Entering;
+        hasCharacterEquipHandoffPose = false;
+        previewController.PreserveActiveCharacterForEquipReturn();
+        previewController.Preload(ModelPreviewType.Equip, equipKey);
+    }
+
     internal async UniTask<bool> CommitPreparedEquipPreviewAsync(
         string equipKey,
         CancellationToken cancellationToken)
@@ -687,6 +750,10 @@ public class ModelViewer : SingletonMono<ModelViewer>
             if (completed)
             {
                 canDrag = definition.CameraPreset.allowDrag;
+                if (previewController.HasSuspendedCharacter)
+                {
+                    equipPreviewFlowState = EquipPreviewFlowState.EquipActive;
+                }
             }
 
             return completed;
@@ -698,6 +765,69 @@ public class ModelViewer : SingletonMono<ModelViewer>
                 CancelCameraTransition(decelerationTransition);
             }
         }
+    }
+
+    internal bool BeginEquipReturnToCharacter()
+    {
+        if (equipPreviewFlowState != EquipPreviewFlowState.EquipActive
+            || !previewController.HasSuspendedCharacter
+            || !hasCharacterEquipHandoffPose)
+        {
+            return false;
+        }
+
+        equipPreviewFlowState = EquipPreviewFlowState.Returning;
+        canDrag = false;
+        equipReturnWeaponHandoffPose = renderedCameraPose;
+        equipReturnWeaponHandoffPose.Position.z = equipCameraDecelerationStartZ;
+        BeginCameraTransition(
+            equipReturnWeaponHandoffPose,
+            equipCameraReturnFirstPhaseDuration,
+            null,
+            CameraTransitionMotion.ConstantAcceleration);
+        return true;
+    }
+
+    internal bool CommitEquipReturnToCharacter()
+    {
+        if (equipPreviewFlowState != EquipPreviewFlowState.Returning)
+        {
+            return false;
+        }
+
+        CancelCameraTransition(activeCameraTransition);
+        targetCameraPose = equipReturnWeaponHandoffPose;
+        SetRenderedCameraPose(equipReturnWeaponHandoffPose);
+        CameraPreset characterPreset = GetCurrentCharacterPreset();
+        if (characterPreset == null)
+        {
+            equipPreviewFlowState = EquipPreviewFlowState.None;
+            hasCharacterEquipHandoffPose = false;
+            return false;
+        }
+
+        if (!previewController.TryRestoreSuspendedCharacter())
+        {
+            equipPreviewFlowState = EquipPreviewFlowState.None;
+            hasCharacterEquipHandoffPose = false;
+            return false;
+        }
+
+        SetPlaneReflection(true);
+        targetCameraPose = characterEquipHandoffPose;
+        SetRenderedCameraPose(characterEquipHandoffPose);
+        ApplyCharacterReturnPreset(characterPreset);
+        BeginCameraTransition(
+            CreateCameraPose(characterPreset),
+            characterEquipReturnDuration,
+            () =>
+            {
+                canDrag = characterPreset.allowDrag;
+                equipPreviewFlowState = EquipPreviewFlowState.None;
+                hasCharacterEquipHandoffPose = false;
+            },
+            CameraTransitionMotion.ConstantDeceleration);
+        return true;
     }
 
     public async UniTask ShowPreviewAsync(ModelPreviewType previewType, string targetKey)
@@ -727,6 +857,12 @@ public class ModelViewer : SingletonMono<ModelViewer>
     internal void CancelPendingPreviewLoad()
     {
         previewController.CancelPendingLoad();
+        previewController.CancelCharacterPreservation();
+        if (equipPreviewFlowState == EquipPreviewFlowState.Entering)
+        {
+            equipPreviewFlowState = EquipPreviewFlowState.None;
+            hasCharacterEquipHandoffPose = false;
+        }
     }
 
     public void ShowCharacterPreview()
@@ -767,17 +903,39 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
     void ApplyCurrentCharacterPresetImmediate()
     {
-        if (presets == null
-            || currentPresetIndex < 0
-            || currentPresetIndex >= presets.Length)
+        CameraPreset preset = GetCurrentCharacterPreset();
+        if (preset == null)
         {
             return;
         }
 
-        CameraPreset preset = presets[currentPresetIndex];
         ApplyPreviewCamera(preset);
         previewController.ApplyAnimationPreset(preset, true, null);
+        ApplyCurrentCharacterFacePreset();
+    }
 
+    CameraPreset GetCurrentCharacterPreset()
+    {
+        return presets != null
+               && currentPresetIndex >= 0
+               && currentPresetIndex < presets.Length
+            ? presets[currentPresetIndex]
+            : null;
+    }
+
+    void ApplyCharacterReturnPreset(CameraPreset preset)
+    {
+        if (characterReturnAnimationMode
+            == CharacterReturnAnimationMode.ReplayEquipTransition)
+        {
+            previewController.ApplyAnimationPreset(preset, false, null);
+        }
+
+        ApplyCurrentCharacterFacePreset();
+    }
+
+    void ApplyCurrentCharacterFacePreset()
+    {
         FaceExpressionPreset facePreset =
             facePresets != null && currentPresetIndex < facePresets.Length
                 ? facePresets[currentPresetIndex]

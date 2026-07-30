@@ -100,7 +100,10 @@ namespace Game.UI.Components.CharacterDetail
         public override void OnResume()
         {
             base.OnResume();
-            if (vm != null && !isClosing)
+            bool restoredFromEquip =
+                isNavigatingToEquipDetail
+                && ModelViewer.Instance.IsCharacterPreviewActive;
+            if (!restoredFromEquip && vm != null && !isClosing)
             {
                 ShowInitialCharacterPreviewAsync(vm.model).Forget();
             }
@@ -517,7 +520,8 @@ namespace Game.UI.Components.CharacterDetail
 
             try
             {
-                ModelViewer.Instance.PrepareEquipPreview(weapon.Model.Key);
+                ModelViewer.Instance.PrepareEquipPreviewForCharacterReturn(
+                    weapon.Model.Key);
                 if (cameraPushStartAnchor == CameraPushStartAnchor.CharacterExitEnd)
                 {
                     await PlayCharacterExitAnchoredTransitionAsync(weapon, cancellationToken);

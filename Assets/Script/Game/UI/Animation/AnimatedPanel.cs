@@ -21,6 +21,9 @@ public class AnimatedPanel : MonoBehaviour
 
     int requestVersion;
 
+    internal float TransitionDuration =>
+        motion != null ? motion.TransitionDuration : 0f;
+
     void Awake()
     {
         if (panelRoot == null)

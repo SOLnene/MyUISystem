@@ -70,11 +70,14 @@ public sealed class ModelPreviewController : MonoBehaviour
 
     PreviewPreparation pendingPreview;
     GameObject activePreviewObject;
+    GameObject suspendedCharacterPreviewObject;
     ActivePreviewState activePreviewState = ActivePreviewState.DefaultCharacter;
+    bool preserveCharacterOnNextEquipActivation;
 
     public bool IsCharacterPreviewActive =>
         activePreviewState != ActivePreviewState.Equip
         && characterRoot.gameObject.activeInHierarchy;
+    internal bool HasSuspendedCharacter => suspendedCharacterPreviewObject != null;
 
     public async UniTask<ModelPreviewDefinition> ShowAsync(
         ModelPreviewType previewType,
@@ -225,6 +228,7 @@ public sealed class ModelPreviewController : MonoBehaviour
     {
         CancelPendingLoad();
         ReleaseActivePreview();
+        ReleaseSuspendedCharacter();
 
         equipRoot.gameObject.SetActive(false);
         characterRoot.gameObject.SetActive(true);
@@ -284,6 +288,46 @@ public sealed class ModelPreviewController : MonoBehaviour
         preparation.Cancellation.Cancel();
     }
 
+    internal void PreserveActiveCharacterForEquipReturn()
+    {
+        preserveCharacterOnNextEquipActivation =
+            activePreviewState == ActivePreviewState.Character
+            && activePreviewObject != null;
+    }
+
+    internal void CancelCharacterPreservation()
+    {
+        preserveCharacterOnNextEquipActivation = false;
+    }
+
+    internal bool TryRestoreSuspendedCharacter()
+    {
+        if (suspendedCharacterPreviewObject == null)
+        {
+            return false;
+        }
+
+        GameObject equipPreviewObject = activePreviewObject;
+        GameObject characterPreviewObject = suspendedCharacterPreviewObject;
+        suspendedCharacterPreviewObject = null;
+
+        equipRoot.gameObject.SetActive(false);
+        characterRoot.gameObject.SetActive(true);
+        SetDirectChildrenActive(characterRoot, false);
+
+        activePreviewObject = characterPreviewObject;
+        activePreviewState = ActivePreviewState.Character;
+        characterPreviewObject.SetActive(true);
+        BindCharacter(characterPreviewObject);
+
+        if (equipPreviewObject != null)
+        {
+            ResourceManager.Instance.Recycle(equipPreviewObject);
+        }
+
+        return true;
+    }
+
     void ConfigurePreview(
         GameObject previewObject,
         ModelPreviewDefinition definition)
@@ -299,6 +343,23 @@ public sealed class ModelPreviewController : MonoBehaviour
     {
         // 所有 Root 切换、人物绑定和旧对象回收都集中在这一处完成。
         GameObject previousPreviewObject = activePreviewObject;
+        bool suspendCharacter =
+            previewType == ModelPreviewType.Equip
+            && preserveCharacterOnNextEquipActivation
+            && activePreviewState == ActivePreviewState.Character
+            && previousPreviewObject != null;
+        preserveCharacterOnNextEquipActivation = false;
+        if (suspendCharacter)
+        {
+            ReleaseSuspendedCharacter();
+            suspendedCharacterPreviewObject = previousPreviewObject;
+            previousPreviewObject = null;
+        }
+        else if (previewType == ModelPreviewType.Character)
+        {
+            ReleaseSuspendedCharacter();
+        }
+
         Transform previewRoot = previewType == ModelPreviewType.Character
             ? characterRoot
             : equipRoot;
@@ -376,6 +437,17 @@ public sealed class ModelPreviewController : MonoBehaviour
         activePreviewObject = null;
     }
 
+    void ReleaseSuspendedCharacter()
+    {
+        if (suspendedCharacterPreviewObject == null)
+        {
+            return;
+        }
+
+        ResourceManager.Instance.Recycle(suspendedCharacterPreviewObject);
+        suspendedCharacterPreviewObject = null;
+    }
+
     static void SetDirectChildrenActive(Transform root, bool active)
     {
         for (int i = 0; i < root.childCount; i++)
@@ -395,5 +467,6 @@ public sealed class ModelPreviewController : MonoBehaviour
     void OnDestroy()
     {
         CancelPendingLoad();
+        ReleaseSuspendedCharacter();
     }
 }
