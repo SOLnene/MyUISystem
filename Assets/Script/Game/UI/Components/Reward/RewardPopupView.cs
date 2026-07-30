@@ -39,6 +39,13 @@ public class RewardPopupView : UIView
         base.OnRelease();
     }
 
+    public override void OnClose()
+    {
+        rewardListView.Clear();
+        base.OnClose();
+        EventBus<RewardPopupClosedEvent>.Raise(default);
+    }
+
     void HandleClose()
     {
         OnCancel();

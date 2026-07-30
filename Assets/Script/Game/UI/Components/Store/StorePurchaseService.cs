@@ -58,7 +58,7 @@ class StorePurchaseService
             return false;
         }
 
-        if (!ItemGrantService.TryGrant(
+        if (!RewardService.TryGrant(
                 itemDefinition,
                 storeItem.Count * purchaseCount))
         {

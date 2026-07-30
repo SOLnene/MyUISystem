@@ -1,6 +1,6 @@
 internal static class RewardService
 {
-    internal static bool TryGrantAndShow(
+    internal static bool TryGrant(
         ItemDefinition itemDefinition,
         int amount)
     {
@@ -13,7 +13,7 @@ internal static class RewardService
         {
             new(itemDefinition.id, amount)
         };
-        UIManager.Instance.Open(UIType.RewardPopupView, rewards);
+        EventBus<RewardGrantedEvent>.Raise(new RewardGrantedEvent(rewards));
         return true;
     }
 }
