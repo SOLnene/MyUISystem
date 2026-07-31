@@ -20,6 +20,7 @@ internal static class AchievementProgressKeys
     internal const string WeaponEnhance = "weapon_enhance";
     internal const string CharacterEnhance = "character_enhance";
     internal const string StorePurchase = "store_purchase";
+    internal const string AchievementViewOpen = "achievement_view_open";
 }
 
 internal sealed class AchievementProgressService

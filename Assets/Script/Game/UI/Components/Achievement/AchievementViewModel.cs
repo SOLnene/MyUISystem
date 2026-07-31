@@ -54,6 +54,9 @@ public sealed class AchievementViewModel : IDisposable
             return;
         }
 
+        AchievementProgressService.Instance.AddProgress(
+            AchievementProgressKeys.AchievementViewOpen);
+
         foreach (AchievementCategoryConfigData category in config.categories)
         {
             if (category?.achievements == null)

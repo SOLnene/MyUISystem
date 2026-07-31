@@ -7,16 +7,16 @@ public sealed class AchievementListView : MonoBehaviour
 {
     const string ItemPrefabAddress = "ui/achievement/item";
 
+    [SerializeField]
+    RectTransform content;
+
     readonly List<AchievementItemView> itemViews = new();
     readonly VersionedAssetLoader<GameObject> itemPrefabLoader = new();
-
-    bool initialItemsCollected;
 
     public async UniTask BindAsync(
         IReadOnlyList<AchievementItemViewModel> items,
         CancellationToken cancellationToken)
     {
-        CollectInitialItems();
         if (!await EnsureItemCountAsync(items.Count, cancellationToken))
         {
             return;
@@ -79,21 +79,10 @@ public sealed class AchievementListView : MonoBehaviour
 
         while (itemViews.Count < count)
         {
-            itemViews.Add(Instantiate(itemPrefab, transform));
+            itemViews.Add(Instantiate(itemPrefab, content));
         }
 
         return true;
-    }
-
-    void CollectInitialItems()
-    {
-        if (initialItemsCollected)
-        {
-            return;
-        }
-
-        initialItemsCollected = true;
-        GetComponentsInChildren(true, itemViews);
     }
 
     void OnDestroy()

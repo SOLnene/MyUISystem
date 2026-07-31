@@ -78,6 +78,174 @@
             "itemId": 201,
             "amount": 10
           }
+        },
+        {
+          "id": "first_enhance",
+          "title": "初试锋芒",
+          "description": "成功强化武器1次。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "weapon_enhance",
+          "target": 1,
+          "reward": {
+            "itemId": 202,
+            "amount": 2
+          }
+        },
+        {
+          "id": "weapon_expert",
+          "title": "铸器能手",
+          "description": "成功强化武器5次。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "weapon_enhance",
+          "target": 5,
+          "reward": {
+            "itemId": 202,
+            "amount": 5
+          }
+        }
+      ]
+    },
+    {
+      "id": "character_growth",
+      "name": "角色培养",
+      "iconAddress": "Assets/Art/Sprite/Icon/UI_AchievementIcon_A001.png",
+      "order": 1,
+      "achievements": [
+        {
+          "id": "first_character_enhance",
+          "title": "迈出第一步",
+          "description": "成功强化角色1次。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "character_enhance",
+          "target": 1,
+          "reward": {
+            "itemId": 203,
+            "amount": 2
+          }
+        },
+        {
+          "id": "character_growth_beginner",
+          "title": "日益精进",
+          "description": "成功强化角色5次。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "character_enhance",
+          "target": 5,
+          "reward": {
+            "itemId": 203,
+            "amount": 5
+          }
+        },
+        {
+          "id": "character_growth_master",
+          "title": "养成大师",
+          "description": "成功强化角色20次。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "character_enhance",
+          "target": 20,
+          "reward": {
+            "itemId": 201,
+            "amount": 20
+          }
+        }
+      ]
+    },
+    {
+      "id": "shop_and_wish",
+      "name": "旅途收获",
+      "iconAddress": "Assets/Art/Sprite/Icon/UI_AchievementIcon_A001.png",
+      "order": 2,
+      "achievements": [
+        {
+          "id": "first_purchase",
+          "title": "初次采购",
+          "description": "累计购买1件商品。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "store_purchase",
+          "target": 1,
+          "reward": {
+            "itemId": 201,
+            "amount": 2
+          }
+        },
+        {
+          "id": "shop_regular",
+          "title": "精打细算",
+          "description": "累计购买10件商品。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "store_purchase",
+          "target": 10,
+          "reward": {
+            "itemId": 201,
+            "amount": 15
+          }
+        },
+        {
+          "id": "wish_three_times",
+          "title": "愿望启程",
+          "description": "累计完成3次祈愿。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "gacha_draw",
+          "target": 3,
+          "reward": {
+            "itemId": 201,
+            "amount": 5
+          }
+        },
+        {
+          "id": "wish_veteran",
+          "title": "久经祈愿",
+          "description": "累计完成20次祈愿。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "gacha_draw",
+          "target": 20,
+          "reward": {
+            "itemId": 201,
+            "amount": 20
+          }
+        }
+      ]
+    },
+    {
+      "id": "ui_test",
+      "name": "成就界面测试",
+      "iconAddress": "Assets/Art/Sprite/Icon/UI_AchievementIcon_A001.png",
+      "order": 99,
+      "achievements": [
+        {
+          "id": "achievement_view_first_open",
+          "title": "初见成就",
+          "description": "打开成就界面即可完成。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "achievement_view_open",
+          "target": 1,
+          "reward": {
+            "itemId": 201,
+            "amount": 1
+          }
+        },
+        {
+          "id": "achievement_view_test_ready",
+          "title": "成就启程",
+          "description": "打开成就界面即可完成。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "achievement_view_open",
+          "target": 1,
+          "reward": {
+            "itemId": 201,
+            "amount": 1
+          }
+        },
+        {
+          "id": "achievement_view_claim_test",
+          "title": "领取测试",
+          "description": "打开成就界面即可完成，用于测试领取流程。",
+          "iconAddress": "ui/achievement/icon/zoo-tycoon",
+          "progressKey": "achievement_view_open",
+          "target": 1,
+          "reward": {
+            "itemId": 201,
+            "amount": 1
+          }
         }
       ]
     }
