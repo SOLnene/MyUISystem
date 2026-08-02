@@ -58,9 +58,13 @@ class StorePurchaseService
             return false;
         }
 
-        if (!RewardService.TryGrant(
-                itemDefinition,
-                storeItem.Count * purchaseCount))
+        if (!RewardGrantService.TryGrant(
+                new[]
+                {
+                    new RewardItemData(
+                        itemDefinition.id,
+                        storeItem.Count * purchaseCount)
+                }))
         {
             GameEconomy.Instance.AddCurrency(storeItem.CostItemId, totalPrice);
             return false;

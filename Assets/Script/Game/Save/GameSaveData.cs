@@ -11,6 +11,7 @@ public class GameSaveData
     public CharacterRepositorySaveData characters = new CharacterRepositorySaveData();
     public GachaSaveData gacha = new GachaSaveData();
     public StorePurchaseSaveData store = new StorePurchaseSaveData();
+    public AchievementSaveData achievements = new AchievementSaveData();
 }
 
 [Serializable]
@@ -163,5 +164,29 @@ public class StorePurchaseRecordSaveData
         this.storeItemId = storeItemId;
         this.periodKey = periodKey;
         this.purchasedCount = purchasedCount;
+    }
+}
+
+[Serializable]
+public class AchievementSaveData
+{
+    public List<AchievementProgressSaveData> progress = new List<AchievementProgressSaveData>();
+    public List<string> claimedIds = new List<string>();
+}
+
+[Serializable]
+public class AchievementProgressSaveData
+{
+    public string progressKey;
+    public int value;
+
+    public AchievementProgressSaveData()
+    {
+    }
+
+    public AchievementProgressSaveData(string progressKey, int value)
+    {
+        this.progressKey = progressKey;
+        this.value = value;
     }
 }

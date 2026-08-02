@@ -1,16 +1,11 @@
 internal static class ItemGrantService
 {
-    internal static bool TryGrant(ItemDefinition itemDefinition, int amount)
+    internal static void Grant(ItemDefinition itemDefinition, int amount)
     {
-        if (itemDefinition == null || amount <= 0)
-        {
-            return false;
-        }
-
         if (itemDefinition.category == ItemCategory.Currency)
         {
             GameEconomy.Instance.AddCurrency(itemDefinition.id, amount);
-            return true;
+            return;
         }
 
         InventoryRepository inventoryRepository =
@@ -27,10 +22,7 @@ internal static class ItemGrantService
                     new MaterialItem(itemDefinition, amount));
                 break;
             case ItemCategory.Equip:
-                if (itemDefinition is not EquipDefinition equipDefinition)
-                {
-                    return false;
-                }
+                EquipDefinition equipDefinition = (EquipDefinition)itemDefinition;
 
                 for (int i = 0; i < amount; i++)
                 {
@@ -46,7 +38,5 @@ internal static class ItemGrantService
 
                 break;
         }
-
-        return true;
     }
 }

@@ -121,7 +121,11 @@ internal class MainMenuNavigator
 
     private void OpenAchievement()
     {
-        UIManager.Instance.Open(UIType.AchievementView);
+        UIManager.Instance.Open(
+            UIType.AchievementView,
+            null,
+            () => AchievementProgressService.Instance.AddProgress(
+                AchievementProgressKeys.AchievementViewOpen));
     }
 
     private void ShowUnavailable(MainMenuAction action)

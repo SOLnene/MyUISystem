@@ -1,11 +1,11 @@
 public readonly struct AchievementCountInfo
 {
-    public int CompletedCount { get; }
+    public int ClaimedCount { get; }
     public int TotalCount { get; }
 
-    public AchievementCountInfo(int completedCount, int totalCount)
+    public AchievementCountInfo(int claimedCount, int totalCount)
     {
-        CompletedCount = completedCount;
+        ClaimedCount = claimedCount;
         TotalCount = totalCount;
     }
 }

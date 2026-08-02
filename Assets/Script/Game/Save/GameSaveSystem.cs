@@ -15,7 +15,7 @@ public enum SaveLoadResult
 
 public static class GameSaveSystem
 {
-    const int CurrentVersion = 2;
+    const int CurrentVersion = 3;
     const string SaveFileName = "save.json";
     const string BackupFileName = "save.backup.json";
     const string TempFileName = "save.tmp";
@@ -80,7 +80,8 @@ public static class GameSaveSystem
             gacha = gachaService != null ? gachaService.ExportSaveData() : new GachaSaveData(),
             store = storePurchaseService != null
                 ? storePurchaseService.ExportSaveData()
-                : new StorePurchaseSaveData()
+                : new StorePurchaseSaveData(),
+            achievements = AchievementProgressService.Instance.ExportSaveData()
         };
 
         try
@@ -242,6 +243,9 @@ public static class GameSaveSystem
         saveData.characters ??= new CharacterRepositorySaveData();
         saveData.gacha ??= new GachaSaveData();
         saveData.store ??= new StorePurchaseSaveData();
+        saveData.achievements ??= new AchievementSaveData();
+        saveData.achievements.progress ??= new List<AchievementProgressSaveData>();
+        saveData.achievements.claimedIds ??= new List<string>();
     }
 
     static bool ValidateSaveData(GameSaveData saveData)
@@ -352,6 +356,28 @@ public static class GameSaveSystem
             }
         }
 
+        var achievementProgressKeys = new HashSet<string>();
+        foreach (AchievementProgressSaveData progress in saveData.achievements.progress)
+        {
+            if (progress == null ||
+                string.IsNullOrWhiteSpace(progress.progressKey) ||
+                progress.value < 0 ||
+                !achievementProgressKeys.Add(progress.progressKey))
+            {
+                return false;
+            }
+        }
+
+        var claimedAchievementIds = new HashSet<string>();
+        foreach (string achievementId in saveData.achievements.claimedIds)
+        {
+            if (string.IsNullOrWhiteSpace(achievementId) ||
+                !claimedAchievementIds.Add(achievementId))
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -370,6 +396,7 @@ public static class GameSaveSystem
             characterRepository.ImportSaveData(saveData.characters, inventoryRepository);
             gachaService?.ImportSaveData(saveData.gacha);
             storePurchaseService?.ImportSaveData(saveData.store);
+            AchievementProgressService.Instance.ImportSaveData(saveData.achievements);
             return true;
         }
         catch (Exception exception)

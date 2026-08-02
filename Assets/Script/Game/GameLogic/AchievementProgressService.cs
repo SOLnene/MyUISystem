@@ -68,6 +68,7 @@ internal sealed class AchievementProgressService
         int progress = currentProgress + amount;
         progressValues[progressKey] = progress;
         progressChanged.OnNext(new AchievementProgressChange(progressKey, progress));
+        GameSaveCoordinator.Instance.MarkDirty();
     }
 
     internal IObservable<bool> ObserveClaimed(string achievementId)
@@ -93,6 +94,64 @@ internal sealed class AchievementProgressService
 
         claimedAchievementIds.Add(achievementId);
         claimedChanged.OnNext(achievementId);
+        GameSaveCoordinator.Instance.MarkDirty();
         return true;
+    }
+
+    internal AchievementSaveData ExportSaveData()
+    {
+        AchievementSaveData saveData = new AchievementSaveData();
+        foreach (KeyValuePair<string, int> pair in progressValues)
+        {
+            saveData.progress.Add(new AchievementProgressSaveData(pair.Key, pair.Value));
+        }
+
+        saveData.progress.Sort((left, right) =>
+            string.CompareOrdinal(left.progressKey, right.progressKey));
+        foreach (string achievementId in claimedAchievementIds)
+        {
+            saveData.claimedIds.Add(achievementId);
+        }
+
+        saveData.claimedIds.Sort(StringComparer.Ordinal);
+        return saveData;
+    }
+
+    internal void ImportSaveData(AchievementSaveData saveData)
+    {
+        progressValues.Clear();
+        claimedAchievementIds.Clear();
+        if (saveData == null)
+        {
+            return;
+        }
+
+        if (saveData.progress != null)
+        {
+            foreach (AchievementProgressSaveData progressData in saveData.progress)
+            {
+                if (progressData == null ||
+                    string.IsNullOrWhiteSpace(progressData.progressKey) ||
+                    progressData.value < 0)
+                {
+                    continue;
+                }
+
+                progressValues[progressData.progressKey] = progressData.value;
+            }
+        }
+
+        if (saveData.claimedIds == null)
+        {
+            return;
+        }
+
+        foreach (string achievementId in saveData.claimedIds)
+        {
+            if (!string.IsNullOrWhiteSpace(achievementId))
+            {
+                claimedAchievementIds.Add(achievementId);
+            }
+        }
     }
 }

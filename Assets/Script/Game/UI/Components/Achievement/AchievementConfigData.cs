@@ -12,6 +12,7 @@ public sealed class AchievementConfigData
 [Serializable]
 public sealed class AchievementCategoryConfigData
 {
+    // id 是运行时选中状态和进度归属的稳定标识，order 只负责显示顺序。
     public string id;
     public string name;
     public string iconAddress;
@@ -22,6 +23,7 @@ public sealed class AchievementCategoryConfigData
 [Serializable]
 public sealed class AchievementDefinition
 {
+    // progressKey 连接统一进度服务；target 表示该成就自己的完成阈值。
     public string id;
     public string title;
     public string description;

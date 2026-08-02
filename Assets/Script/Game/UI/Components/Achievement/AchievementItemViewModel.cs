@@ -31,9 +31,10 @@ public sealed class AchievementItemViewModel : IDisposable
         Title = definition.title;
         Description = definition.description;
         IconAddress = definition.iconAddress;
-        TargetProgress = Math.Max(1, definition.target);
+        TargetProgress = definition.target;
         this.rewardItem = rewardItem;
         this.rewardAmount = rewardAmount;
+        // 当前进度来自统一成就进度服务，界面只订阅 RP；超过目标值时在展示层截断。
         CurrentProgress = AchievementProgressService.Instance
             .ObserveProgress(definition.progressKey)
             .Select(progress => Math.Min(TargetProgress, progress))
@@ -48,6 +49,7 @@ public sealed class AchievementItemViewModel : IDisposable
             .DistinctUntilChanged()
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
+        // 领取状态与完成进度分离，确保重开页面或读取存档后仍能显示“已领取”。
         IsClaimed = AchievementProgressService.Instance
             .ObserveClaimed(Id)
             .ToReadOnlyReactiveProperty()
@@ -76,17 +78,18 @@ public sealed class AchievementItemViewModel : IDisposable
 
     void ClaimReward()
     {
+        // TryClaim 负责一次性领取校验，奖励发放成功后再标记存档脏状态。
         if (!IsCompleted.Value ||
             !AchievementProgressService.Instance.TryClaim(
                 Id,
-                () => RewardService.TryGrant(
-                    rewardItem,
-                    rewardAmount)))
+                () => RewardGrantService.TryGrant(
+                    new[]
+                    {
+                        new RewardItemData(rewardItem.id, rewardAmount)
+                    })))
         {
             return;
         }
-
-        GameSaveCoordinator.Instance.MarkDirty();
     }
 
     public void Dispose()

@@ -27,6 +27,7 @@ public sealed class AchievementItemView : MonoBehaviour
 
     public void Bind(AchievementItemViewModel viewModel)
     {
+        // Item View 只绑定当前 VM；列表排序或分类切换时可复用同一个 GameObject。
         bindDisposables.Clear();
         titleText.text = viewModel.Title;
         descriptionText.text = viewModel.Description;
@@ -65,6 +66,7 @@ public sealed class AchievementItemView : MonoBehaviour
 
     async UniTask LoadIconAsync(string iconAddress, CancellationToken cancellationToken)
     {
+        // 图标加载使用版本化 Loader，避免快速切换列表时旧请求覆盖新绑定。
         VersionedAssetLoadResult<Sprite> result =
             await iconLoader.LoadAsync(iconAddress, cancellationToken);
         if (result.IsCurrent)

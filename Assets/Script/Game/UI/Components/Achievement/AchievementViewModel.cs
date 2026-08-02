@@ -12,20 +12,29 @@ public sealed class AchievementViewModel : IDisposable
     const string ConfigAddress = "config/achievement";
 
     readonly ItemDatabase itemDatabase;
-    readonly List<AchievementItemViewModel> items = new();
-    readonly List<AchievementItemViewModel> orderedItems = new();
+    // 分类 VM 独占分类内的成就 VM，页面 VM 只负责分类选择和跨分类统计。
+    readonly List<AchievementCategoryTabViewModel> categories = new();
+    // 这是当前分类的投影列表，不重复持有成就 VM 的所有权。
+    readonly List<AchievementItemViewModel> visibleItems = new();
     readonly VersionedAssetLoader<TextAsset> configLoader = new();
-    readonly CompositeDisposable itemStateSubscriptions = new();
+    readonly CompositeDisposable categoryStateSubscriptions = new();
+    readonly CompositeDisposable disposable = new();
+    readonly ReactiveProperty<string> selectedCategoryId = new();
     readonly ReactiveProperty<AchievementCountInfo> countInfo = new();
-    readonly Subject<Unit> itemOrderChanged = new();
+    readonly Subject<Unit> visibleItemsChanged = new();
 
-    public IReadOnlyList<AchievementItemViewModel> Items => orderedItems;
+    public IReadOnlyList<AchievementCategoryTabViewModel> Categories => categories;
+    public IReadOnlyList<AchievementItemViewModel> VisibleItems => visibleItems;
+    public IReadOnlyReactiveProperty<string> SelectedCategoryId => selectedCategoryId;
     public IReadOnlyReactiveProperty<AchievementCountInfo> CountInfo => countInfo;
-    internal IObservable<Unit> ItemOrderChanged => itemOrderChanged;
+    internal IObservable<Unit> VisibleItemsChanged => visibleItemsChanged;
 
     public AchievementViewModel(ItemDatabase itemDatabase)
     {
         this.itemDatabase = itemDatabase;
+        selectedCategoryId
+            .Subscribe(_ => RefreshVisibleItems())
+            .AddTo(disposable);
     }
 
     public async UniTask LoadAsync(CancellationToken cancellationToken)
@@ -48,101 +57,109 @@ public sealed class AchievementViewModel : IDisposable
             return;
         }
 
-        ClearItems();
-        if (config?.categories == null)
+        if (!AchievementConfigValidator.TryValidate(config, itemDatabase))
         {
             return;
         }
 
-        AchievementProgressService.Instance.AddProgress(
-            AchievementProgressKeys.AchievementViewOpen);
+        ClearCategories();
 
-        foreach (AchievementCategoryConfigData category in config.categories)
+        // 配表顺序只决定左侧分类顺序，右侧成就顺序由完成状态统一计算。
+        foreach (AchievementCategoryConfigData category in config.categories.OrderBy(category => category.order))
         {
-            if (category?.achievements == null)
-            {
-                continue;
-            }
-
+            List<AchievementItemViewModel> categoryItems = new();
             foreach (AchievementDefinition definition in category.achievements)
             {
-                if (definition?.reward == null)
-                {
-                    Debug.LogWarning($"Achievement reward is missing: {definition?.id}");
-                    continue;
-                }
-
                 ItemDefinition rewardItem =
                     itemDatabase.GetItemByID(definition.reward.itemId);
-                if (rewardItem == null)
-                {
-                    Debug.LogWarning(
-                        $"Achievement reward item is missing: {definition.id}, itemId={definition.reward.itemId}");
-                    continue;
-                }
-
-                items.Add(new AchievementItemViewModel(
+                categoryItems.Add(new AchievementItemViewModel(
                     definition,
                     rewardItem,
                     definition.reward.amount));
             }
+
+            // 分类 VM 接管 categoryItems 的生命周期，页面 VM 不再单独 Dispose 成就项。
+            AchievementCategoryTabViewModel categoryViewModel = new(
+                category.id,
+                category.name,
+                categoryItems);
+            categories.Add(categoryViewModel);
+            categoryViewModel.ItemsChanged
+                .Subscribe(_ => RefreshCategoryState(categoryViewModel))
+                .AddTo(categoryStateSubscriptions);
         }
 
-        BindItemState();
-        RefreshItemOrder();
+        if (categories.Count > 0)
+        {
+            selectedCategoryId.Value = categories[0].Id;
+        }
+
+        RefreshVisibleItems();
         RefreshCountInfo();
+    }
+
+    public void SelectCategory(string categoryId)
+    {
+        // 使用稳定的分类 ID 而不是数组下标，避免配表排序变化导致选中项错位。
+        if (categories.Any(category => category.Id == categoryId))
+        {
+            selectedCategoryId.Value = categoryId;
+        }
     }
 
     public void Dispose()
     {
         configLoader.Dispose();
-        ClearItems();
-        itemStateSubscriptions.Dispose();
+        ClearCategories();
+        categoryStateSubscriptions.Dispose();
+        disposable.Dispose();
+        selectedCategoryId.Dispose();
         countInfo.Dispose();
-        itemOrderChanged.Dispose();
+        visibleItemsChanged.Dispose();
     }
 
-    void ClearItems()
+    void ClearCategories()
     {
-        itemStateSubscriptions.Clear();
-        foreach (AchievementItemViewModel item in items)
+        // 清理旧分类前先解除订阅，避免旧 VM 在新页面加载期间继续刷新列表。
+        categoryStateSubscriptions.Clear();
+        selectedCategoryId.Value = null;
+        foreach (AchievementCategoryTabViewModel category in categories)
         {
-            item.Dispose();
+            category.Dispose();
         }
 
-        items.Clear();
-        orderedItems.Clear();
+        categories.Clear();
+        visibleItems.Clear();
         RefreshCountInfo();
     }
 
-    void BindItemState()
+    void RefreshCategoryState(AchievementCategoryTabViewModel category)
     {
-        foreach (AchievementItemViewModel item in items)
+        // 顶部统计跨所有分类；右侧列表只在变化来自当前分类时重排。
+        RefreshCountInfo();
+        if (selectedCategoryId.Value == category.Id)
         {
-            item.IsCompleted
-                .Skip(1)
-                .Subscribe(_ =>
-                {
-                    RefreshItemOrder();
-                    RefreshCountInfo();
-                })
-                .AddTo(itemStateSubscriptions);
-            item.IsClaimed
-                .Skip(1)
-                .Subscribe(_ => RefreshItemOrder())
-                .AddTo(itemStateSubscriptions);
+            RefreshVisibleItems();
         }
     }
 
-    void RefreshItemOrder()
+    void RefreshVisibleItems()
     {
-        orderedItems.Clear();
-        orderedItems.AddRange(items.OrderBy(GetDisplayPriority));
-        itemOrderChanged.OnNext(Unit.Default);
+        // 右侧只绑定当前分类，并把可领取项排在未完成项之前，已领取项最后。
+        visibleItems.Clear();
+        AchievementCategoryTabViewModel selectedCategory = categories
+            .FirstOrDefault(category => category.Id == selectedCategoryId.Value);
+        if (selectedCategory != null)
+        {
+            visibleItems.AddRange(selectedCategory.Items.OrderBy(GetDisplayPriority));
+        }
+
+        visibleItemsChanged.OnNext(Unit.Default);
     }
 
     static int GetDisplayPriority(AchievementItemViewModel item)
     {
+        // 数值越小越靠前：未领取的完成项、未完成项、已领取项。
         if (item.IsClaimed.Value)
         {
             return 2;
@@ -153,15 +170,20 @@ public sealed class AchievementViewModel : IDisposable
 
     void RefreshCountInfo()
     {
-        int completedCount = 0;
-        foreach (AchievementItemViewModel item in items)
+        int claimedCount = 0;
+        int totalCount = 0;
+        foreach (AchievementCategoryTabViewModel category in categories)
         {
-            if (item.IsCompleted.Value)
+            totalCount += category.Items.Count;
+            foreach (AchievementItemViewModel item in category.Items)
             {
-                completedCount++;
+                if (item.IsClaimed.Value)
+                {
+                    claimedCount++;
+                }
             }
         }
 
-        countInfo.Value = new AchievementCountInfo(completedCount, items.Count);
+        countInfo.Value = new AchievementCountInfo(claimedCount, totalCount);
     }
 }

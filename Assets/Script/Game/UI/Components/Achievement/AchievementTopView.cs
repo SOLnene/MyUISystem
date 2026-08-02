@@ -17,12 +17,13 @@ public class AchievementTopView : MonoBehaviour
         IReadOnlyReactiveProperty<AchievementCountInfo> countInfo,
         Action onClose)
     {
+        // 顶部只订阅跨分类已领取总数，具体分类进度由左侧 Tab 自己展示。
         bindDisposables.Clear();
         countInfo
             .Subscribe(info =>
             {
                 completionText.text =
-                    $"已完成成就 {info.CompletedCount} / {info.TotalCount}";
+                    $"已完成成就 {info.ClaimedCount} / {info.TotalCount}";
             })
             .AddTo(bindDisposables);
         closeButton

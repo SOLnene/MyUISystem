@@ -13,18 +13,6 @@ public sealed class AchievementListView : MonoBehaviour
     readonly List<AchievementItemView> itemViews = new();
     readonly VersionedAssetLoader<GameObject> itemPrefabLoader = new();
 
-    public async UniTask BindAsync(
-        IReadOnlyList<AchievementItemViewModel> items,
-        CancellationToken cancellationToken)
-    {
-        if (!await EnsureItemCountAsync(items.Count, cancellationToken))
-        {
-            return;
-        }
-
-        Refresh(items);
-    }
-
     internal void Refresh(IReadOnlyList<AchievementItemViewModel> items)
     {
         for (int i = 0; i < itemViews.Count; i++)
@@ -47,6 +35,7 @@ public sealed class AchievementListView : MonoBehaviour
     public void Clear()
     {
         itemPrefabLoader.Cancel();
+        // 只隐藏池内对象，避免反复创建右侧成就项和重复加载 Addressable。
         foreach (AchievementItemView itemView in itemViews)
         {
             itemView.Unbind();
@@ -54,15 +43,17 @@ public sealed class AchievementListView : MonoBehaviour
         }
     }
 
-    async UniTask<bool> EnsureItemCountAsync(
-        int count,
+    public async UniTask<bool> PrepareAsync(
+        int capacity,
         CancellationToken cancellationToken)
     {
-        if (itemViews.Count >= count)
+        // 页面打开时按最大分类容量扩容，之后切换分类只做同步绑定。
+        if (itemViews.Count >= capacity)
         {
             return true;
         }
 
+        // Addressable 提供可实例化原型，具体实例由当前列表持有并复用。
         VersionedAssetLoadResult<GameObject> result =
             await itemPrefabLoader.LoadAsync(ItemPrefabAddress, cancellationToken);
         if (!result.IsCurrent)
@@ -77,7 +68,7 @@ public sealed class AchievementListView : MonoBehaviour
             return false;
         }
 
-        while (itemViews.Count < count)
+        while (itemViews.Count < capacity)
         {
             itemViews.Add(Instantiate(itemPrefab, content));
         }
