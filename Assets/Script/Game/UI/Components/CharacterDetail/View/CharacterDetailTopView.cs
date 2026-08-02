@@ -16,9 +16,9 @@ namespace Game.UI.Components.CharacterDetail
         [SerializeField]
         RectTransform characterButtonRoot;
         [SerializeField]
-        Button characterButtonPrefab;
+        CharacterIconButton characterButtonPrefab;
 
-        readonly List<Button> characterButtons = new List<Button>();
+        readonly List<CharacterIconButton> characterButtons = new List<CharacterIconButton>();
 
         public void Bind(
             string name,
@@ -57,18 +57,13 @@ namespace Game.UI.Components.CharacterDetail
             for (int i = 0; i < characters.Count; i++)
             {
                 CharacterModel character = characters[i];
-                Button button = Instantiate(characterButtonPrefab, characterButtonRoot);
+                CharacterIconButton button = Instantiate(characterButtonPrefab, characterButtonRoot);
                 button.gameObject.SetActive(true);
-                button.interactable = character != currentCharacter;
+                button.SetInteractable(character != currentCharacter);
+                button.LoadIcon(character.Definition.key);
 
-                TextMeshProUGUI label = button.GetComponentInChildren<TextMeshProUGUI>();
-                if (label != null)
-                {
-                    label.text = character.Name.Value;
-                }
-
-                button.onClick.RemoveAllListeners();
-                button.onClick.AddListener(() => onCharacterClick?.Invoke(character));
+                button.Button.onClick.RemoveAllListeners();
+                button.Button.onClick.AddListener(() => onCharacterClick?.Invoke(character));
                 characterButtons.Add(button);
             }
         }
