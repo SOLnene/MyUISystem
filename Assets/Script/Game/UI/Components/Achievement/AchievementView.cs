@@ -73,6 +73,23 @@ public partial class AchievementView : UIView
             viewModel.SelectedCategoryId,
             viewModel.SelectCategory,
             cancellationToken);
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        await UniTask.WhenAll(
+            categoryTabListView.ShowItems(),
+            achievementListView.ShowItems());
+        if (cancellationToken.IsCancellationRequested)
+        {
+            return;
+        }
+
+        viewModel.SelectedCategoryId
+            .Skip(1)
+            .Subscribe(_ => achievementListView.ShowItems().Forget())
+            .AddTo(viewBindings);
     }
 
     void ReleaseViewState()

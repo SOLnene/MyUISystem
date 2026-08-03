@@ -21,9 +21,13 @@ public sealed class AchievementItemView : MonoBehaviour
     Button claimButton;
     [SerializeField]
     TextMeshProUGUI buttonText;
+    [SerializeField]
+    AnimatedPanel anim;
 
     readonly VersionedAssetLoader<Sprite> iconLoader = new();
     readonly CompositeDisposable bindDisposables = new();
+
+    internal AnimatedPanel Anim => anim;
 
     public void Bind(AchievementItemViewModel viewModel)
     {

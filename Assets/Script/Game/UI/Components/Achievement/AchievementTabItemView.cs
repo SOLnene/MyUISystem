@@ -22,6 +22,8 @@ public class AchievementTabItemView : UIThreeStateSelectable
     [SerializeField]
     RectTransform visualRoot;
     [SerializeField]
+    AnimatedPanel anim;
+    [SerializeField]
     float selectedScale = 1.05f;
     [SerializeField]
     float scaleDuration = 0.12f;
@@ -36,6 +38,7 @@ public class AchievementTabItemView : UIThreeStateSelectable
     Action<string> onSelected;
 
     public string CategoryId => categoryId;
+    internal AnimatedPanel Anim => anim;
 
     public void Bind(AchievementCategoryTabViewModel viewModel, Action<string> selectHandler)
     {

@@ -9,8 +9,11 @@ public sealed class AchievementListView : MonoBehaviour
 
     [SerializeField]
     RectTransform content;
+    [SerializeField]
+    AnimatedPanelGroup anim;
 
     readonly List<AchievementItemView> itemViews = new();
+    readonly List<AnimatedPanel> activePanels = new();
     readonly VersionedAssetLoader<GameObject> itemPrefabLoader = new();
 
     internal void Refresh(IReadOnlyList<AchievementItemViewModel> items)
@@ -34,6 +37,7 @@ public sealed class AchievementListView : MonoBehaviour
 
     public void Clear()
     {
+        anim.HideAllImmediate();
         itemPrefabLoader.Cancel();
         // 只隐藏池内对象，避免反复创建右侧成就项和重复加载 Addressable。
         foreach (AchievementItemView itemView in itemViews)
@@ -41,6 +45,20 @@ public sealed class AchievementListView : MonoBehaviour
             itemView.Unbind();
             itemView.gameObject.SetActive(false);
         }
+    }
+
+    internal UniTask ShowItems()
+    {
+        activePanels.Clear();
+        foreach (var itemView in itemViews)
+        {
+            if (itemView.gameObject.activeSelf)
+            {
+                activePanels.Add(itemView.Anim);
+            }
+        }
+
+        return anim.Show(activePanels);
     }
 
     public async UniTask<bool> PrepareAsync(
@@ -70,7 +88,9 @@ public sealed class AchievementListView : MonoBehaviour
 
         while (itemViews.Count < capacity)
         {
-            itemViews.Add(Instantiate(itemPrefab, content));
+            AchievementItemView itemView = Instantiate(itemPrefab, content);
+            anim.HideImmediate(itemView.Anim);
+            itemViews.Add(itemView);
         }
 
         return true;

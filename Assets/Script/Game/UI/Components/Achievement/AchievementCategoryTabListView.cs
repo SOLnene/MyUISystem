@@ -11,8 +11,11 @@ public sealed class AchievementCategoryTabListView : MonoBehaviour
 
     [SerializeField]
     RectTransform content;
+    [SerializeField]
+    AnimatedPanelGroup anim;
 
     readonly List<AchievementTabItemView> itemViews = new();
+    readonly List<AnimatedPanel> activePanels = new();
     readonly VersionedAssetLoader<GameObject> itemPrefabLoader = new();
     readonly CompositeDisposable bindDisposables = new();
 
@@ -53,6 +56,7 @@ public sealed class AchievementCategoryTabListView : MonoBehaviour
 
     public void Clear()
     {
+        anim.HideAllImmediate();
         itemPrefabLoader.Cancel();
         bindDisposables.Clear();
         // 隐藏而不是销毁实例，避免每次打开成就页重复加载和实例化 prefab。
@@ -61,6 +65,20 @@ public sealed class AchievementCategoryTabListView : MonoBehaviour
             itemView.Unbind();
             itemView.gameObject.SetActive(false);
         }
+    }
+
+    internal UniTask ShowItems()
+    {
+        activePanels.Clear();
+        foreach (var itemView in itemViews)
+        {
+            if (itemView.gameObject.activeSelf)
+            {
+                activePanels.Add(itemView.Anim);
+            }
+        }
+
+        return anim.Show(activePanels);
     }
 
     async UniTask<bool> EnsureItemCountAsync(
@@ -89,7 +107,9 @@ public sealed class AchievementCategoryTabListView : MonoBehaviour
 
         while (itemViews.Count < count)
         {
-            itemViews.Add(Instantiate(itemPrefab, content));
+            AchievementTabItemView itemView = Instantiate(itemPrefab, content);
+            anim.HideImmediate(itemView.Anim);
+            itemViews.Add(itemView);
         }
 
         return true;
