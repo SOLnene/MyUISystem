@@ -125,6 +125,8 @@ public class UIManager : SingletonMono<UIManager>
         uiCamera.transform.SetParent(uiRoot);
         uiCamera.orthographic = true;
         uiCamera.clearFlags = CameraClearFlags.Depth;
+        uiCamera.depth = worldCamera.depth + 1;
+        UIBackdropCaptureService.Instance.Configure(uiCamera);
         
         var layersArray = Enum.GetValues(typeof(UILayer));
         foreach (UILayer layer in layersArray)
