@@ -10,6 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 6922027601565171616}
   - component: {fileID: 2439980640865706851}
+  - component: {fileID: 8629911576401350001}
+  - component: {fileID: 8629911576401350002}
   m_Layer: 0
   m_Name: PageRoot
   m_TagString: Untagged
@@ -30,6 +32,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3838416325111359733}
+  - {fileID: 758087367458238314}
   m_Father: {fileID: 4662767653146017092}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 0}
@@ -49,6 +52,44 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &8629911576401350001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 379880671995535434}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82e8af1c72efe834bb395144422b2b42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  motionGroup: {fileID: 2439980640865706851}
+  motionRoot: {fileID: 6922027601565171616}
+  mode: 1
+  preset: {fileID: 11400000, guid: e20c5a70c12e9d6439b495933e29959e, type: 2}
+  targetMove: {x: 0, y: 0}
+  originMove: {x: 0, y: 0}
+  moveDuration: 0.18
+  fadeDuration: 0.12
+  moveEase: 9
+  fadeEase: 1
+--- !u!114 &8629911576401350002
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 379880671995535434}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5d20f43324ef5240b901dd4dd7c8ae3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  panelRoot: {fileID: 379880671995535434}
+  motion: {fileID: 8629911576401350001}
+  inputGroup: {fileID: 2439980640865706851}
+  inputControlMode: 0
 --- !u!1 &543431999141461570
 GameObject:
   m_ObjectHideFlags: 0
@@ -79,7 +120,7 @@ RectTransform:
   m_Children:
   - {fileID: 7474824832422621923}
   - {fileID: 2414327497373633342}
-  m_Father: {fileID: 4662767653146017092}
+  m_Father: {fileID: 6922027601565171616}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
@@ -117,7 +158,6 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 6922027601565171616}
-  - {fileID: 758087367458238314}
   - {fileID: 6977928474744965269}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -148,6 +188,7 @@ MonoBehaviour:
   discountValue: {fileID: 758522767621326512}
   button: {fileID: 5205354391889904082}
   remainFormat: "\u672C\u6708\u5269\u4F59\u6570\u91CF:{0}"
+  anim: {fileID: 8629911576401350002}
 --- !u!114 &5205354391889904082
 MonoBehaviour:
   m_ObjectHideFlags: 0

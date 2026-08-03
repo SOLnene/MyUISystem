@@ -7,8 +7,7 @@ using UnityEngine;
 public class AnimatedPanelGroup : MonoBehaviour
 {
     [SerializeField]
-    [Min(0f)]
-    float staggerInterval = 0.04f;
+    AnimatedPanelGroupPreset preset;
 
     readonly HashSet<AnimatedPanel> trackedPanels = new();
     readonly Dictionary<AnimatedPanel, CancellationTokenSource> showSources = new();
@@ -91,7 +90,7 @@ public class AnimatedPanelGroup : MonoBehaviour
             if (displayOrder > 0)
             {
                 await UniTask.Delay(
-                    TimeSpan.FromSeconds(displayOrder * staggerInterval),
+                    TimeSpan.FromSeconds(displayOrder * preset.StaggerInterval),
                     cancellationToken: currentCts.Token);
             }
 

@@ -78,11 +78,15 @@ public class StoreItemView : MonoBehaviour
     Button button;
     [SerializeField]
     string remainFormat = "本月剩余数量:{0}";
+    [SerializeField]
+    AnimatedPanel anim;
 
     StoreItemViewModel viewModel;
     Action<StoreItemViewModel> onClicked;
     readonly CompositeDisposable bindDisposables = new();
     CancellationTokenSource itemIconRequestCts;
+
+    internal AnimatedPanel Anim => anim;
 
     public void Bind(StoreItemViewModel itemViewModel, Action<StoreItemViewModel> clickHandler)
     {

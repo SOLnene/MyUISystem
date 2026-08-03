@@ -69,6 +69,21 @@ public class StoreView : UIView
     {
         inputBlock.SetActive(true);
         await UniTask.WhenAll(topPanel.Show(), tabPanel.Show(), itemAreaPanel.Show());
+        if (isClosing)
+        {
+            return;
+        }
+
+        await itemListView.ShowItems();
+        if (isClosing)
+        {
+            return;
+        }
+
+        viewModel.CurrentTab
+            .Skip(1)
+            .Subscribe(_ => itemListView.ShowItems().Forget())
+            .AddTo(disposable);
         inputBlock.SetActive(false);
     }
 

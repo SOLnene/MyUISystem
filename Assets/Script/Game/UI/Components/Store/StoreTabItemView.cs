@@ -5,6 +5,8 @@ using UnityEngine.UI;
 
 public class StoreTabItemView : UITabItemView
 {
+    const float ClickHighlightFadeDuration = 0.15f;
+
     [SerializeField]
     Button button;
     [SerializeField]
@@ -15,6 +17,10 @@ public class StoreTabItemView : UITabItemView
     Image icon;
     [SerializeField]
     TextMeshProUGUI label;
+    [SerializeField]
+    Image clickHighlight;
+    [SerializeField]
+    RectTransform visualRoot;
 
     [SerializeField]
     Color normalBgColor = new Color(0.341f, 0.392f, 0.482f, 0.58f);
@@ -28,8 +34,13 @@ public class StoreTabItemView : UITabItemView
     float selectFadeInDuration = 0.16f;
     [SerializeField]
     float selectFadeOutDuration = 0.12f;
+    [SerializeField]
+    float selectedScale = 1.05f;
+    [SerializeField]
+    float scaleDuration = 0.12f;
 
     Tween selectBgTween;
+    Tween clickHighlightTween;
 
     protected override void ApplyOption(UITabOption option)
     {
@@ -42,7 +53,9 @@ public class StoreTabItemView : UITabItemView
 
         button.transition = Selectable.Transition.None;
         button.onClick.RemoveAllListeners();
-        button.onClick.AddListener(SelectSelf);
+        button.onClick.AddListener(HandleClick);
+        clickHighlightTween?.Kill();
+        clickHighlight.gameObject.SetActive(false);
     }
 
     protected override void ApplyVisualState(VisualState state, bool instant, bool stateChanged)
@@ -56,6 +69,35 @@ public class StoreTabItemView : UITabItemView
         normalBg.color = hover ? hoverBgColor : normalBgColor;
         label.color = contentColor;
         icon.color = contentColor;
+
+        Vector3 targetScale = selected ? Vector3.one * selectedScale : Vector3.one;
+        visualRoot.DOKill();
+        if (instant)
+        {
+            visualRoot.localScale = targetScale;
+        }
+        else
+        {
+            visualRoot
+                .DOScale(targetScale, scaleDuration)
+                .SetEase(Ease.OutQuad);
+        }
+    }
+
+    void HandleClick()
+    {
+        clickHighlightTween?.Kill();
+        clickHighlight.gameObject.SetActive(true);
+
+        Color color = clickHighlight.color;
+        color.a = 1f;
+        clickHighlight.color = color;
+
+        clickHighlightTween = clickHighlight
+            .DOFade(0f, ClickHighlightFadeDuration)
+            .SetEase(Ease.OutQuad)
+            .OnComplete(() => clickHighlight.gameObject.SetActive(false));
+        SelectSelf();
     }
 
     void SetSelectBgVisible(bool visible, bool instant)
@@ -95,5 +137,7 @@ public class StoreTabItemView : UITabItemView
     void OnDestroy()
     {
         selectBgTween?.Kill();
+        clickHighlightTween?.Kill();
+        visualRoot.DOKill();
     }
 }
