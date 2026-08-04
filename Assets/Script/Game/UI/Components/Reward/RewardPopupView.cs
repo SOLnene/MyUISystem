@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -13,6 +14,8 @@ public class RewardPopupView : UIView
     Button closeHandle;
     [SerializeField]
     RewardListView rewardListView;
+    [SerializeField]
+    AnimatedPanel pageRootPanel;
 
     internal Material BackdropBlurMaterial => backdropBlurMaterial;
 
@@ -30,6 +33,7 @@ public class RewardPopupView : UIView
     public override void OnOpen(object data)
     {
         base.OnOpen(data);
+        pageRootPanel.Show().Forget();
 
         IReadOnlyList<RewardItemData> rewards;
         if (data is RewardPopupOpenParams openParams)
@@ -74,7 +78,15 @@ public class RewardPopupView : UIView
 
     void HandleClose()
     {
-        OnCancel();
+        CloseAfterAnimationAsync().Forget();
+    }
+
+    async UniTaskVoid CloseAfterAnimationAsync()
+    {
+        if (await pageRootPanel.Hide())
+        {
+            OnCancel();
+        }
     }
 
     void ApplyBackdrop(RenderTexture texture)

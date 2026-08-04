@@ -7,6 +7,10 @@ public class RewardItemView : MonoBehaviour
     ItemSlotView itemSlot;
     [SerializeField]
     TextMeshProUGUI itemNameText;
+    [SerializeField]
+    AnimatedPanel animatedPanel;
+
+    public AnimatedPanel AnimationPanel => animatedPanel;
 
     public void Bind(
         ItemDefinition itemDefinition,

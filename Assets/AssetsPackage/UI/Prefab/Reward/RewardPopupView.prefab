@@ -10,6 +10,8 @@ GameObject:
   m_Component:
   - component: {fileID: 4905684285150753826}
   - component: {fileID: 4739337009532680443}
+  - component: {fileID: 4460778830967365572}
+  - component: {fileID: 7998160624461140124}
   m_Layer: 5
   m_Name: PageRoot
   m_TagString: Untagged
@@ -52,6 +54,44 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &4460778830967365572
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 309948721303213922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82e8af1c72efe834bb395144422b2b42, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  motionGroup: {fileID: 4739337009532680443}
+  motionRoot: {fileID: 4905684285150753826}
+  mode: 1
+  preset: {fileID: 11400000, guid: 81bdf67e20bf3dd4f9a43fc72848a35d, type: 2}
+  targetMove: {x: 0, y: 0}
+  originMove: {x: 0, y: 0}
+  moveDuration: 0.18
+  fadeDuration: 0.12
+  moveEase: 9
+  fadeEase: 1
+--- !u!114 &7998160624461140124
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 309948721303213922}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5d20f43324ef5240b901dd4dd7c8ae3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  panelRoot: {fileID: 309948721303213922}
+  motion: {fileID: 4460778830967365572}
+  inputGroup: {fileID: 4739337009532680443}
+  inputControlMode: 0
 --- !u!1 &584488825806840896
 GameObject:
   m_ObjectHideFlags: 0
@@ -660,6 +700,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   content: {fileID: 1841608854459233076}
   itemPrefab: {fileID: 5751265289779329683, guid: 91c2b28cd9217204097182130fe56287, type: 3}
+  itemPanelGroup: {fileID: 2106367765594534650}
 --- !u!114 &1441355597749459990
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -928,6 +969,7 @@ MonoBehaviour:
   backdropBlurMaterial: {fileID: 2100000, guid: b518efdb5f1b96c46a6abe632442adc9, type: 2}
   closeHandle: {fileID: 4574779412657362457}
   rewardListView: {fileID: 7598038248496167625}
+  pageRootPanel: {fileID: 7998160624461140124}
 --- !u!1 &5728025475222739470
 GameObject:
   m_ObjectHideFlags: 0
@@ -1148,6 +1190,7 @@ GameObject:
   - component: {fileID: 1841608854459233076}
   - component: {fileID: 7932674409493496224}
   - component: {fileID: 4933821543816673061}
+  - component: {fileID: 2106367765594534650}
   m_Layer: 5
   m_Name: Content
   m_TagString: Untagged
@@ -1215,6 +1258,19 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   m_HorizontalFit: 2
   m_VerticalFit: 0
+--- !u!114 &2106367765594534650
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8200422311374321874}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6e391acd304342acb6e6a9782d32d05a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  preset: {fileID: 11400000, guid: 15ca9e6e5c8e4d1eb7c9a9e8bd3e8ea2, type: 2}
 --- !u!1 &8730576532315628260
 GameObject:
   m_ObjectHideFlags: 0

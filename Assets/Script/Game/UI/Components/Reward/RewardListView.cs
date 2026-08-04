@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 
 public class RewardListView : MonoBehaviour
@@ -7,9 +8,12 @@ public class RewardListView : MonoBehaviour
     RectTransform content;
     [SerializeField]
     RewardItemView itemPrefab;
+    [SerializeField]
+    AnimatedPanelGroup itemPanelGroup;
 
     readonly List<RewardItemView> itemViews = new();
     readonly List<ItemSlotViewModel> itemSlotViewModels = new();
+    readonly List<AnimatedPanel> visibleItemPanels = new();
 
     void Awake()
     {
@@ -65,12 +69,18 @@ public class RewardListView : MonoBehaviour
             RewardItemView itemView = itemViews[visibleItemCount];
             itemView.gameObject.SetActive(true);
             itemView.Bind(itemDefinition, itemSlotViewModel);
+            visibleItemPanels.Add(itemView.AnimationPanel);
             visibleItemCount++;
         }
+
+        itemPanelGroup.Show(visibleItemPanels).Forget();
     }
 
     public void Clear()
     {
+        itemPanelGroup.HideAllImmediate();
+        visibleItemPanels.Clear();
+
         foreach (RewardItemView itemView in itemViews)
         {
             itemView.Clear();

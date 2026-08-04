@@ -117,11 +117,12 @@ public class StoreView : UIView
 
     void OnPurchaseConfirmed(PurchasePopupViewData popupData, int count)
     {
+        purchasePopup.HideImmediate();
+
         if (!viewModel.TryPurchase(popupData.StoreItemId, count))
         {
+            purchasePopup.Show();
             return;
         }
-
-        purchasePopup.Hide();
     }
 }
