@@ -11,18 +11,19 @@ public class StoreViewModel : IDisposable
     const int StarglitterItemId = 221;
     const int StardustItemId = 222;
 
-    readonly StoreDatabase storeDatabase;
+    readonly StoreConfigDatabase storeDatabase;
     readonly ItemDatabase itemDatabase;
     readonly StorePurchaseService purchaseService;
     readonly CompositeDisposable disposables = new();
     readonly List<StoreItemViewModel> allItemViewModels = new();
     readonly Dictionary<int, StoreItemViewModel> itemViewModelsById = new();
+    readonly Dictionary<StoreCategory, List<StoreItemViewModel>> itemViewModelsByCategory = new();
     readonly Dictionary<int, List<StoreItemViewModel>> itemViewModelsByCostItemId = new();
 
     public readonly ReactiveProperty<StoreCategory> CurrentTab = new(StoreCategory.Primogem);
     public readonly ReactiveProperty<IReadOnlyList<StoreItemViewModel>> Items = new(new List<StoreItemViewModel>());
 
-    public StoreViewModel(StoreDatabase storeDatabase, ItemDatabase itemDatabase)
+    public StoreViewModel(StoreConfigDatabase storeDatabase, ItemDatabase itemDatabase)
     {
         this.storeDatabase = storeDatabase;
         this.itemDatabase = itemDatabase;
@@ -48,7 +49,7 @@ public class StoreViewModel : IDisposable
             return;
         }
 
-        foreach (StoreItemDefinition storeItem in storeDatabase.Items)
+        foreach (StoreConfigItemData storeItem in storeDatabase.Items)
         {
             ItemDefinition itemDefinition = itemDatabase.GetItemByID(storeItem.ItemId);
             if (itemDefinition == null)
@@ -74,6 +75,15 @@ public class StoreViewModel : IDisposable
                 purchaseService);
             allItemViewModels.Add(itemViewModel);
             itemViewModelsById[storeItem.StoreItemId] = itemViewModel;
+            if (!itemViewModelsByCategory.TryGetValue(
+                    itemViewModel.Category,
+                    out List<StoreItemViewModel> categoryItemViewModels))
+            {
+                categoryItemViewModels = new List<StoreItemViewModel>();
+                itemViewModelsByCategory.Add(itemViewModel.Category, categoryItemViewModels);
+            }
+
+            categoryItemViewModels.Add(itemViewModel);
             if (!itemViewModelsByCostItemId.TryGetValue(
                     itemViewModel.CostItemId,
                     out List<StoreItemViewModel> itemViewModels))
@@ -83,6 +93,11 @@ public class StoreViewModel : IDisposable
             }
 
             itemViewModels.Add(itemViewModel);
+        }
+
+        foreach (List<StoreItemViewModel> categoryItemViewModels in itemViewModelsByCategory.Values)
+        {
+            categoryItemViewModels.Sort(CompareItems);
         }
     }
 
@@ -132,8 +147,7 @@ public class StoreViewModel : IDisposable
             return false;
         }
 
-        StoreItemDefinition storeItem = FindStoreItem(storeItemId);
-        if (storeItem == null)
+        if (!storeDatabase.TryGetItem(storeItemId, out StoreConfigItemData storeItem))
         {
             Debug.LogWarning($"Cannot find store item id: {storeItemId}");
             return false;
@@ -176,8 +190,7 @@ public class StoreViewModel : IDisposable
             return false;
         }
 
-        StoreItemDefinition storeItem = FindStoreItem(storeItemId);
-        if (storeItem == null)
+        if (!storeDatabase.TryGetItem(storeItemId, out StoreConfigItemData storeItem))
         {
             Debug.LogWarning($"购买失败：找不到商品 {storeItemId}");
             return false;
@@ -193,20 +206,7 @@ public class StoreViewModel : IDisposable
         return purchaseService.TryPurchase(storeItem, itemDefinition, purchaseCount);
     }
 
-    StoreItemDefinition FindStoreItem(int storeItemId)
-    {
-        foreach (StoreItemDefinition storeItem in storeDatabase.Items)
-        {
-            if (storeItem.StoreItemId == storeItemId)
-            {
-                return storeItem;
-            }
-        }
-
-        return null;
-    }
-
-    static int CalculateBeforeValue(StoreItemDefinition storeItem)
+    static int CalculateBeforeValue(StoreConfigItemData storeItem)
     {
         if (!storeItem.HasDiscount || storeItem.DiscountPercent >= 100)
         {
@@ -217,23 +217,36 @@ public class StoreViewModel : IDisposable
         return Mathf.CeilToInt(storeItem.Price / discountRate);
     }
 
-    static bool MatchesCategory(StoreItemDefinition storeItem, StoreCategory category)
+    static bool MatchesCategory(StoreConfigItemData storeItem, StoreCategory category)
     {
         return storeItem.Category == category;
     }
 
     void RefreshVisibleItems()
     {
-        var visibleItems = new List<StoreItemViewModel>();
-        foreach (StoreItemViewModel itemViewModel in allItemViewModels)
+        if (itemViewModelsByCategory.TryGetValue(
+                CurrentTab.Value,
+                out List<StoreItemViewModel> itemViewModels))
         {
-            if (itemViewModel.Category == CurrentTab.Value)
-            {
-                visibleItems.Add(itemViewModel);
-            }
+            Items.Value = itemViewModels;
+            return;
         }
 
-        Items.Value = visibleItems;
+        Items.Value = Array.Empty<StoreItemViewModel>();
+    }
+
+    static int CompareItems(StoreItemViewModel left, StoreItemViewModel right)
+    {
+        int orderComparison = left.Order.CompareTo(right.Order);
+        if (orderComparison != 0)
+        {
+            return orderComparison;
+        }
+
+        int rarityComparison = right.Rarity.CompareTo(left.Rarity);
+        return rarityComparison != 0
+            ? rarityComparison
+            : left.StoreItemId.CompareTo(right.StoreItemId);
     }
 
     void RefreshStoreItemPreview(int storeItemId)

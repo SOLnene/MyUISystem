@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class StoreItemViewModel : IDisposable
 {
-    readonly StoreItemDefinition storeItem;
+    readonly StoreConfigItemData storeItem;
     readonly StorePurchaseService purchaseService;
 
     public readonly ReactiveProperty<StorePurchasePreview> PurchasePreview = new();
@@ -12,6 +12,8 @@ public class StoreItemViewModel : IDisposable
     public int StoreItemId => storeItem.StoreItemId;
     public int CostItemId => storeItem.CostItemId;
     public StoreCategory Category => storeItem.Category;
+    public int Order => storeItem.Order;
+    public ItemRarity Rarity => ItemDefinition.itemRarity;
     public ItemDefinition ItemDefinition { get; }
     public string Id { get; }
     public string Name { get; }
@@ -26,7 +28,7 @@ public class StoreItemViewModel : IDisposable
     public bool HasDiscount => storeItem.HasDiscount;
 
     internal StoreItemViewModel(
-        StoreItemDefinition storeItem,
+        StoreConfigItemData storeItem,
         ItemDefinition itemDefinition,
         string costIconPath,
         Color backgroundColor,
