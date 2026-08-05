@@ -3,6 +3,7 @@ using Game.Domain.Character;
 using TMPro;
 using UniRx;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class CharacterSlotView : MonoBehaviour
 {
@@ -10,13 +11,15 @@ public class CharacterSlotView : MonoBehaviour
     SelectionSlotView selectionSlot;
     [SerializeField]
     TMP_Text levelText;
+    [SerializeField]
+    Image checkedImage;
 
     readonly CompositeDisposable disposable = new();
     CharacterModel character;
 
     public void Bind(
         CharacterModel character,
-        bool selected,
+        bool isChecked,
         bool interactable,
         Action<CharacterModel> onClick)
     {
@@ -28,7 +31,7 @@ public class CharacterSlotView : MonoBehaviour
             CharacterVisualAddressResolver.ResolveIcon(character.Definition.key),
             RarityConfig.GetColor(character.Definition.rarity - 1));
         selectionSlot.SetInteractable(interactable);
-        selectionSlot.SetSelected(selected, true);
+        SetChecked(isChecked);
         selectionSlot.SetClickListener(() => onClick?.Invoke(this.character));
         
         character.LevelRP.Subscribe(level => levelText.text = $"Lv.{level}").AddTo(disposable);
@@ -37,6 +40,11 @@ public class CharacterSlotView : MonoBehaviour
     public void SetSelected(bool selected)
     {
         selectionSlot.SetSelected(selected);
+    }
+
+    public void SetChecked(bool isChecked)
+    {
+        checkedImage.gameObject.SetActive(isChecked);
     }
 
     void OnDestroy()

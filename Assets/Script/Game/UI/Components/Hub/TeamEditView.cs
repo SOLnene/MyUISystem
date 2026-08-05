@@ -1,4 +1,7 @@
+using Game.Domain.Character;
+using Cysharp.Threading.Tasks;
 using TMPro;
+using UniRx;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,6 +15,8 @@ public class TeamEditView : UIView
     [SerializeField] private TMP_Text[] memberLabels;
 
     private TeamStageView teamStageInstance;
+    private LimitedSelectionSet<CharacterModel> characterSelection;
+    private readonly CompositeDisposable characterSelectionDisposable = new();
     private Canvas uiCanvas;
     private Camera worldCamera;
     private bool worldCameraWasEnabled;
@@ -26,6 +31,22 @@ public class TeamEditView : UIView
 
         teamStageInstance = Instantiate(teamStagePrefab);
         teamStageInstance.DisplayCamera.depth = -10;
+        teamStageInstance.LoadInitialMembersAsync().Forget(Debug.LogException);
+        characterSelection = new LimitedSelectionSet<CharacterModel>(teamStageInstance.MemberCount);
+        for (int index = 0; index < teamStageInstance.MemberCount; index++)
+        {
+            CharacterModel character = GameContext.Instance.CharacterRepository.GetByKey(
+                teamStageInstance.GetMemberCharacterKey(index));
+            if (character != null)
+            {
+                characterSelection.TrySelect(character);
+            }
+        }
+
+        characterSelection.OnDelta
+            .Subscribe(OnCharacterSelectionChanged)
+            .AddTo(characterSelectionDisposable);
+
         characterSelectPanel.gameObject.SetActive(false);
         RefreshMemberLabels();
         Canvas.ForceUpdateCanvases();
@@ -60,12 +81,14 @@ public class TeamEditView : UIView
 
     public override void OnClose()
     {
+        ReleaseCharacterSelection();
         ReleaseTeamStage();
         base.OnClose();
     }
 
     public override void OnRelease()
     {
+        ReleaseCharacterSelection();
         ReleaseTeamStage();
         base.OnRelease();
     }
@@ -76,7 +99,10 @@ public class TeamEditView : UIView
         characterSelectPanel.Show(new CharacterSelectParams(
             GameContext.Instance.CharacterRepository.Characters,
             null,
-            null));
+            null)
+        {
+            selection = characterSelection
+        });
     }
 
     private void OnBackClicked()
@@ -90,6 +116,56 @@ public class TeamEditView : UIView
         OnCancel();
     }
 
+    private void OnCharacterSelectionChanged(SelectionDelta<CharacterModel> delta)
+    {
+        string characterKey = delta.Item.Definition.key;
+        int memberIndex = delta.Added
+            ? FindEmptyMemberIndex()
+            : FindMemberIndex(characterKey);
+        if (memberIndex < 0)
+        {
+            return;
+        }
+
+        if (delta.Added)
+        {
+            teamStageInstance.SetMemberAsync(memberIndex, characterKey)
+                .Forget(Debug.LogException);
+        }
+        else
+        {
+            teamStageInstance.ClearMember(memberIndex);
+        }
+
+        RefreshMemberLabels();
+    }
+
+    private int FindEmptyMemberIndex()
+    {
+        for (int index = 0; index < teamStageInstance.MemberCount; index++)
+        {
+            if (!teamStageInstance.TryGetMemberCharacterKey(index, out _))
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
+    private int FindMemberIndex(string characterKey)
+    {
+        for (int index = 0; index < teamStageInstance.MemberCount; index++)
+        {
+            if (teamStageInstance.GetMemberCharacterKey(index) == characterKey)
+            {
+                return index;
+            }
+        }
+
+        return -1;
+    }
+
     private void RefreshMemberLabels()
     {
         int memberCount = Mathf.Min(teamStageInstance.MemberCount, memberLabels.Length);
@@ -101,8 +177,13 @@ public class TeamEditView : UIView
                 continue;
             }
 
-            var character = GameContext.Instance.CharacterRepository.GetByKey(
-                teamStageInstance.GetMemberCharacterKey(i));
+            if (!teamStageInstance.TryGetMemberCharacterKey(i, out string characterKey))
+            {
+                memberLabels[i].gameObject.SetActive(false);
+                continue;
+            }
+
+            var character = GameContext.Instance.CharacterRepository.GetByKey(characterKey);
             memberLabels[i].gameObject.SetActive(character != null);
             if (character != null)
             {
@@ -163,5 +244,12 @@ public class TeamEditView : UIView
             worldCamera.enabled = worldCameraWasEnabled;
             worldCamera = null;
         }
+    }
+
+    private void ReleaseCharacterSelection()
+    {
+        characterSelectionDisposable.Clear();
+        characterSelection?.Dispose();
+        characterSelection = null;
     }
 }
