@@ -9,7 +9,12 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3ac7b5e7823945fcb0df30e9c73a4c17, type: 3}
-  m_Name: ItemListAnimatedPanelGroupPreset
+  m_Script: {fileID: 11500000, guid: 5ebacc56ff9a4ce59fd5db154f3611df, type: 3}
+  m_Name: SelectPopupSlideFadePreset
   m_EditorClassIdentifier: 
-  staggerInterval: 0.06
+  targetMove: {x: 0, y: 0}
+  originMove: {x: 80, y: 0}
+  moveDuration: 0.18
+  fadeDuration: 0.12
+  moveEase: 9
+  fadeEase: 1

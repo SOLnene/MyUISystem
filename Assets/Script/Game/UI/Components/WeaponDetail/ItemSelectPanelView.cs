@@ -6,41 +6,28 @@ using UniRx;
 using UnityEngine.UI;
 
 //物品选择界面的内嵌版本
-public class ItemSelectPanelView : MonoBehaviour
+public class ItemSelectPanelView : SelectionPanelView
 {
     ItemSelectPopupViewModel vm;
     readonly List<ItemSlotView> activeItemSlots = new();
 
     [SerializeField]
-    Transform content;
-    [SerializeField]
     InfoPanelView infoPanelView;
-    // 全屏点击遮罩
-    [SerializeField]
-    Button clickHandler;
     //右侧信息面板的关闭遮罩
     [SerializeField]
     Button infoPanelCloseHandler;
-    [SerializeField]
-    AnimatedPanel animatedPanel;
     
     const string slotPrefabAddress = "ui/prefab/item_slot_itemselect";
 
     bool showInfopanel;
-    readonly CompositeDisposable disposable = new();
-    int slotCreateVersion;
 
     public ItemSelectPopupViewModel ViewModel => vm;
     
-    public void Show(object data)
+    protected override void OnShow(object data)
     {
-        gameObject.SetActive(true);
-        //transform.SetAsLastSibling();
-        disposable.Clear();
         vm?.Dispose();
 
         vm = new ItemSelectPopupViewModel();
-        slotCreateVersion++;
 
         if (data is SinglePickParams singlePickParams)
         {
@@ -59,57 +46,28 @@ public class ItemSelectPanelView : MonoBehaviour
             Debug.LogError("ItemSelectPopupView 参数错误");
         }
 
-        if (clickHandler != null)
-        {
-            clickHandler.onClick.RemoveAllListeners();
-            clickHandler.onClick.AddListener(OnClickHandlerClicked);
-        }
-        
         if(infoPanelCloseHandler != null)
         {
             infoPanelCloseHandler.onClick.RemoveAllListeners();
             infoPanelCloseHandler.onClick.AddListener(CloseInfoPanel);
         }
-        
-        if (animatedPanel != null)
-        {
-            animatedPanel.Show().Forget();
-        }
-    }
-
-    public void Hide()
-    {
-       HideAsync().Forget();
     }
 
     /*1. 先 slotCreateVersion++，阻止异步创建 slot 回来
     2. 先移除点击监听，避免关闭中重复点击
     3. 播 ItemSelectPanel 的退出动画
     4. 动画结束后再回收 slot / 清订阅 / 关子面板*/
-    async UniTask HideAsync()
+    protected override void OnBeforeHide()
     {
-        slotCreateVersion++;
-       
-       
-        if (clickHandler != null)
-        {
-            clickHandler.onClick.RemoveAllListeners();
-        }
-      
         if (infoPanelCloseHandler != null)
         {
             infoPanelCloseHandler.onClick.RemoveAllListeners();
             infoPanelCloseHandler.gameObject.SetActive(false);
         }
-        if (animatedPanel != null)
-        {
-            await animatedPanel.Hide();
-        }
-        else
-        {
-            gameObject.SetActive(false);
-        }
-        
+    }
+
+    protected override void OnHidden()
+    {
         foreach (var slot in activeItemSlots)
         {
             if (slot != null)
@@ -215,9 +173,8 @@ public class ItemSelectPanelView : MonoBehaviour
         }
     }
     
-    void OnClickHandlerClicked()
+    protected override void OnCancelRequested()
     {
         vm?.onCancel?.Invoke();
-        Hide();
     }
 }
