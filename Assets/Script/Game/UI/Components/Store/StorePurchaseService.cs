@@ -18,8 +18,6 @@ public readonly struct StorePurchasePreview
 
 class StorePurchaseService
 {
-    const int DailyPurchaseLimit = 10;
-
     readonly StorePurchaseRepository purchaseRepository;
     public IObservable<int> Changed => purchaseRepository.Changed;
 
@@ -28,9 +26,11 @@ class StorePurchaseService
         this.purchaseRepository = purchaseRepository;
     }
 
-    public StorePurchasePreview CreatePreview(StoreItemDefinition storeItem)
+    public StorePurchasePreview CreatePreview(StoreConfigItemData storeItem)
     {
-        int remainingLimit = purchaseRepository.GetRemainingCount(storeItem.StoreItemId, DailyPurchaseLimit);
+        int remainingLimit = purchaseRepository.GetRemainingCount(
+            storeItem.StoreItemId,
+            storeItem.DailyPurchaseLimit);
         int affordableCount = storeItem.Price <= 0
             ? remainingLimit
             : GameEconomy.Instance.GetCurrency(storeItem.CostItemId) / storeItem.Price;
@@ -39,7 +39,7 @@ class StorePurchaseService
         return new StorePurchasePreview(maxPurchaseCount, remainingLimit, affordableCount);
     }
 
-    public bool TryPurchase(StoreItemDefinition storeItem, ItemDefinition itemDefinition, int purchaseCount)
+    public bool TryPurchase(StoreConfigItemData storeItem, ItemDefinition itemDefinition, int purchaseCount)
     {
         if (purchaseCount <= 0)
         {

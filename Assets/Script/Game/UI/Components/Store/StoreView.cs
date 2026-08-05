@@ -31,7 +31,7 @@ public class StoreView : UIView
         isClosing = false;
         disposable.Clear();
         topView.Bind(OnCancel);
-        viewModel = new StoreViewModel(GameContext.Instance.StoreDatabase, GameDatabase.ItemDatabase);
+        viewModel = new StoreViewModel(GameDatabase.StoreConfigDatabase, GameDatabase.ItemDatabase);
         tabView.Bind(viewModel);
         purchasePopup.HideImmediate();
         viewModel.CurrentTab
