@@ -10,6 +10,7 @@ public class GameSaveData
     public CurrencySaveData currencies = new CurrencySaveData();
     public InventorySaveData inventory = new InventorySaveData();
     public CharacterRepositorySaveData characters = new CharacterRepositorySaveData();
+    public TeamSaveData team = new TeamSaveData();
     public GachaSaveData gacha = new GachaSaveData();
     public StorePurchaseSaveData store = new StorePurchaseSaveData();
     public AchievementSaveData achievements = new AchievementSaveData();
@@ -151,6 +152,40 @@ public class CharacterSaveData
         this.talentLevel = talentLevel;
         this.talentTokenCount = talentTokenCount;
         this.equippedWeaponInstanceId = equippedWeaponInstanceId;
+    }
+}
+
+[Serializable]
+public class TeamSaveData
+{
+    public int activePresetIndex;
+    public List<TeamPresetSaveData> presets = new List<TeamPresetSaveData>();
+    public bool isInitialized;
+    public List<TeamMemberSaveData> members = new List<TeamMemberSaveData>();
+}
+
+[Serializable]
+public class TeamPresetSaveData
+{
+    public int presetIndex;
+    public bool isInitialized;
+    public List<TeamMemberSaveData> members = new List<TeamMemberSaveData>();
+}
+
+[Serializable]
+public class TeamMemberSaveData
+{
+    public int slotIndex;
+    public string characterKey;
+
+    public TeamMemberSaveData()
+    {
+    }
+
+    public TeamMemberSaveData(int slotIndex, string characterKey)
+    {
+        this.slotIndex = slotIndex;
+        this.characterKey = characterKey;
     }
 }
 

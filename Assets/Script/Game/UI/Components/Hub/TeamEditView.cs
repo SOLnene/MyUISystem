@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Game.Domain.Character;
 using Cysharp.Threading.Tasks;
 using TMPro;
@@ -7,8 +8,20 @@ using UnityEngine.UI;
 
 public class TeamEditView : UIView
 {
+    private static readonly UITabOption[] TeamPresetOptions =
+    {
+        new UITabOption(0, string.Empty),
+        new UITabOption(1, string.Empty),
+        new UITabOption(2, string.Empty),
+        new UITabOption(3, string.Empty)
+    };
+
     [SerializeField] private TeamStageView teamStagePrefab;
     [SerializeField] private Button backButton;
+    [SerializeField] private Button confirmButton;
+    [SerializeField] private Button previousTeamButton;
+    [SerializeField] private Button nextTeamButton;
+    [SerializeField] private UITabGroup teamPresetTabs;
     [SerializeField] private Button[] characterButtons;
     [SerializeField] private CharacterSelectPanelView characterSelectPanel;
     [SerializeField] private RectTransform middleArea;
@@ -17,6 +30,8 @@ public class TeamEditView : UIView
     private TeamStageView teamStageInstance;
     private LimitedSelectionSet<CharacterModel> characterSelection;
     private readonly CompositeDisposable characterSelectionDisposable = new();
+    private string[][] workingTeamPresets;
+    private int editingPresetIndex;
     private Canvas uiCanvas;
     private Camera worldCamera;
     private bool worldCameraWasEnabled;
@@ -31,21 +46,10 @@ public class TeamEditView : UIView
 
         teamStageInstance = Instantiate(teamStagePrefab);
         teamStageInstance.DisplayCamera.depth = -10;
-        teamStageInstance.LoadInitialMembersAsync().Forget(Debug.LogException);
-        characterSelection = new LimitedSelectionSet<CharacterModel>(teamStageInstance.MemberCount);
-        for (int index = 0; index < teamStageInstance.MemberCount; index++)
-        {
-            CharacterModel character = GameContext.Instance.CharacterRepository.GetByKey(
-                teamStageInstance.GetMemberCharacterKey(index));
-            if (character != null)
-            {
-                characterSelection.TrySelect(character);
-            }
-        }
-
-        characterSelection.OnDelta
-            .Subscribe(OnCharacterSelectionChanged)
-            .AddTo(characterSelectionDisposable);
+        InitializeWorkingTeamPresets();
+        editingPresetIndex = GameContext.Instance.TeamRepository.ActivePresetIndex;
+        teamPresetTabs.Bind(TeamPresetOptions, editingPresetIndex, OnTeamPresetSelected);
+        LoadTeamPreset(editingPresetIndex);
 
         characterSelectPanel.gameObject.SetActive(false);
         RefreshMemberLabels();
@@ -62,6 +66,9 @@ public class TeamEditView : UIView
     {
         base.OnAddListener();
         backButton.onClick.AddListener(OnBackClicked);
+        confirmButton.onClick.AddListener(OnConfirmClicked);
+        previousTeamButton.onClick.AddListener(SelectPreviousTeamPreset);
+        nextTeamButton.onClick.AddListener(SelectNextTeamPreset);
         foreach (var characterButton in characterButtons)
         {
             characterButton.onClick.AddListener(OpenCharacterSelect);
@@ -71,6 +78,9 @@ public class TeamEditView : UIView
     public override void OnRemoveListener()
     {
         backButton.onClick.RemoveListener(OnBackClicked);
+        confirmButton.onClick.RemoveListener(OnConfirmClicked);
+        previousTeamButton.onClick.RemoveListener(SelectPreviousTeamPreset);
+        nextTeamButton.onClick.RemoveListener(SelectNextTeamPreset);
         foreach (var characterButton in characterButtons)
         {
             characterButton.onClick.RemoveListener(OpenCharacterSelect);
@@ -83,6 +93,7 @@ public class TeamEditView : UIView
     {
         ReleaseCharacterSelection();
         ReleaseTeamStage();
+        workingTeamPresets = null;
         base.OnClose();
     }
 
@@ -90,6 +101,7 @@ public class TeamEditView : UIView
     {
         ReleaseCharacterSelection();
         ReleaseTeamStage();
+        workingTeamPresets = null;
         base.OnRelease();
     }
 
@@ -105,6 +117,104 @@ public class TeamEditView : UIView
         });
     }
 
+    private void InitializeWorkingTeamPresets()
+    {
+        TeamRepository teamRepository = GameContext.Instance.TeamRepository;
+        workingTeamPresets = new string[TeamRepository.PresetCount][];
+        for (int presetIndex = 0; presetIndex < TeamRepository.PresetCount; presetIndex++)
+        {
+            workingTeamPresets[presetIndex] = teamRepository.GetPresetSnapshot(presetIndex);
+        }
+
+        if (teamRepository.HasAnyInitializedPreset)
+        {
+            return;
+        }
+
+        string[] initialPreset = workingTeamPresets[teamRepository.ActivePresetIndex];
+        int memberCount = Mathf.Min(teamStageInstance.MemberCount, initialPreset.Length);
+        for (int memberIndex = 0; memberIndex < memberCount; memberIndex++)
+        {
+            if (teamStageInstance.TryGetMemberCharacterKey(memberIndex, out string characterKey))
+            {
+                initialPreset[memberIndex] = characterKey;
+            }
+        }
+    }
+
+    private void LoadTeamPreset(int presetIndex)
+    {
+        ReleaseCharacterSelection();
+        string[] memberKeys = workingTeamPresets[presetIndex];
+        for (int memberIndex = 0; memberIndex < teamStageInstance.MemberCount; memberIndex++)
+        {
+            string characterKey = memberIndex < memberKeys.Length
+                ? memberKeys[memberIndex]
+                : null;
+            if (string.IsNullOrEmpty(characterKey))
+            {
+                teamStageInstance.ClearMember(memberIndex);
+                continue;
+            }
+
+            teamStageInstance.SetMemberAsync(memberIndex, characterKey)
+                .Forget(Debug.LogException);
+        }
+
+        InitializeCharacterSelection(memberKeys);
+        RefreshMemberLabels();
+    }
+
+    private void InitializeCharacterSelection(IReadOnlyList<string> memberKeys)
+    {
+        characterSelection = new LimitedSelectionSet<CharacterModel>(teamStageInstance.MemberCount);
+        for (int memberIndex = 0; memberIndex < memberKeys.Count; memberIndex++)
+        {
+            string characterKey = memberKeys[memberIndex];
+            if (string.IsNullOrEmpty(characterKey))
+            {
+                continue;
+            }
+
+            CharacterModel character = GameContext.Instance.CharacterRepository.GetByKey(
+                characterKey);
+            if (character != null)
+            {
+                characterSelection.TrySelect(character);
+            }
+        }
+
+        characterSelection.OnDelta
+            .Subscribe(OnCharacterSelectionChanged)
+            .AddTo(characterSelectionDisposable);
+    }
+
+    private void SaveCurrentStageToWorkingPreset()
+    {
+        string[] memberKeys = workingTeamPresets[editingPresetIndex];
+        for (int memberIndex = 0; memberIndex < memberKeys.Length; memberIndex++)
+        {
+            memberKeys[memberIndex] = memberIndex < teamStageInstance.MemberCount
+                && teamStageInstance.TryGetMemberCharacterKey(
+                    memberIndex,
+                    out string characterKey)
+                ? characterKey
+                : null;
+        }
+    }
+
+    private void OnTeamPresetSelected(int presetIndex)
+    {
+        if (presetIndex == editingPresetIndex)
+        {
+            return;
+        }
+
+        SaveCurrentStageToWorkingPreset();
+        editingPresetIndex = presetIndex;
+        LoadTeamPreset(editingPresetIndex);
+    }
+
     private void OnBackClicked()
     {
         if (characterSelectPanel.gameObject.activeSelf)
@@ -114,6 +224,39 @@ public class TeamEditView : UIView
         }
 
         OnCancel();
+    }
+
+    private void OnConfirmClicked()
+    {
+        SaveCurrentStageToWorkingPreset();
+        GameContext.Instance.TeamRepository.ReplaceAllPresets(
+            workingTeamPresets,
+            editingPresetIndex);
+        GameSaveCoordinator.Instance.MarkDirty();
+        OnCancel();
+    }
+
+    private void SelectPreviousTeamPreset()
+    {
+        SelectTeamPreset(-1);
+    }
+
+    private void SelectNextTeamPreset()
+    {
+        SelectTeamPreset(1);
+    }
+
+    private void SelectTeamPreset(int offset)
+    {
+        int currentIndex = teamPresetTabs.SelectedIndex;
+        if (currentIndex < 0)
+        {
+            return;
+        }
+
+        int nextIndex = (currentIndex + offset + TeamPresetOptions.Length)
+            % TeamPresetOptions.Length;
+        teamPresetTabs.Select(nextIndex);
     }
 
     private void OnCharacterSelectionChanged(SelectionDelta<CharacterModel> delta)

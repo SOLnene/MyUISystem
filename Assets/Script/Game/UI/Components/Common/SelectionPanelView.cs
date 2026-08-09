@@ -53,13 +53,14 @@ public abstract class SelectionPanelView : MonoBehaviour
 
         if (animatedPanel != null)
         {
-            await animatedPanel.Hide();
-        }
-        else
-        {
-            gameObject.SetActive(false);
+            bool hidden = await animatedPanel.Hide();
+            if (!hidden)
+            {
+                return;
+            }
         }
 
+        gameObject.SetActive(false);
         OnHidden();
     }
 

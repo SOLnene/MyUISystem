@@ -8,6 +8,7 @@ public class GameContext: Singleton<GameContext>
 
     public InventoryRepository InventoryRepository { get; private set; }
     public CharacterRepository CharacterRepository { get; private set; }
+    public TeamRepository TeamRepository { get; private set; }
     public StoreDatabase StoreDatabase { get; private set; }
     //全项目只有一个实现
     public GachaService GachaService { get; private set; }
@@ -33,6 +34,7 @@ public class GameContext: Singleton<GameContext>
         InventoryRepository = new InventoryRepository();
         StoreDatabase = GameDatabase.StoreDatabase;
         CharacterRepository = new CharacterRepository();
+        TeamRepository = new TeamRepository();
         GachaPoolProvider poolProvider = new GachaPoolProvider(GameDatabase.GachaPoolDatabase);
         GachaService = new GachaService(poolProvider);
         StorePurchaseService = new StorePurchaseService(new StorePurchaseRepository());

@@ -15,7 +15,7 @@ public enum SaveLoadResult
 
 public static class GameSaveSystem
 {
-    const int CurrentVersion = 6;
+    const int CurrentVersion = 7;
     const string SaveFileName = "save.json";
     const string BackupFileName = "save.backup.json";
     const string TempFileName = "save.tmp";
@@ -42,6 +42,7 @@ public static class GameSaveSystem
             GameEconomy.Instance,
             context.InventoryRepository,
             context.CharacterRepository,
+            context.TeamRepository,
             context.GachaService,
             context.StorePurchaseService);
     }
@@ -56,6 +57,7 @@ public static class GameSaveSystem
             economy,
             inventoryRepository,
             characterRepository,
+            context.TeamRepository,
             context.GachaService,
             context.StorePurchaseService);
     }
@@ -64,10 +66,14 @@ public static class GameSaveSystem
         GameEconomy economy,
         InventoryRepository inventoryRepository,
         CharacterRepository characterRepository,
+        TeamRepository teamRepository,
         GachaService gachaService,
         StorePurchaseService storePurchaseService)
     {
-        if (economy == null || inventoryRepository == null || characterRepository == null)
+        if (economy == null
+            || inventoryRepository == null
+            || characterRepository == null
+            || teamRepository == null)
         {
             Debug.LogError("写入存档失败: 游戏数据尚未初始化");
             return false;
@@ -80,6 +86,7 @@ public static class GameSaveSystem
             currencies = economy.ExportSaveData(),
             inventory = inventoryRepository.ExportSaveData(),
             characters = characterRepository.ExportSaveData(),
+            team = teamRepository.ExportSaveData(),
             gacha = gachaService != null ? gachaService.ExportSaveData() : new GachaSaveData(),
             store = storePurchaseService != null
                 ? storePurchaseService.ExportSaveData()
@@ -113,9 +120,11 @@ public static class GameSaveSystem
     {
         GameContext context = GameContext.Instance;
         return Load(
+            SaveDirectory,
             GameEconomy.Instance,
             context.InventoryRepository,
             context.CharacterRepository,
+            context.TeamRepository,
             context.GachaService,
             context.StorePurchaseService);
     }
@@ -126,26 +135,50 @@ public static class GameSaveSystem
         CharacterRepository characterRepository)
     {
         SaveLoadResult result = Load(
+            SaveDirectory,
             economy,
             inventoryRepository,
             characterRepository,
+            null,
             null,
             null);
         return result == SaveLoadResult.Success || result == SaveLoadResult.RecoveredFromBackup;
     }
 
-    static SaveLoadResult Load(
+    internal static SaveLoadResult LoadFromDirectory(
+        string saveDirectory,
         GameEconomy economy,
         InventoryRepository inventoryRepository,
         CharacterRepository characterRepository,
+        TeamRepository teamRepository,
         GachaService gachaService,
         StorePurchaseService storePurchaseService)
     {
-        TutorialProgressService.ImportSaveData(null);
+        return Load(
+            saveDirectory,
+            economy,
+            inventoryRepository,
+            characterRepository,
+            teamRepository,
+            gachaService,
+            storePurchaseService);
+    }
+
+    static SaveLoadResult Load(
+        string saveDirectory,
+        GameEconomy economy,
+        InventoryRepository inventoryRepository,
+        CharacterRepository characterRepository,
+        TeamRepository teamRepository,
+        GachaService gachaService,
+        StorePurchaseService storePurchaseService)
+    {
         NeedsResave = false;
         preserveBackupOnNextSave = false;
-        bool hasMainSave = File.Exists(SavePath);
-        bool hasBackupSave = File.Exists(BackupPath);
+        string savePath = Path.Combine(saveDirectory, SaveFileName);
+        string backupPath = Path.Combine(saveDirectory, BackupFileName);
+        bool hasMainSave = File.Exists(savePath);
+        bool hasBackupSave = File.Exists(backupPath);
         if (!hasMainSave && !hasBackupSave)
         {
             return SaveLoadResult.NotFound;
@@ -153,12 +186,13 @@ public static class GameSaveSystem
 
         SaveLoadResult mainFailure = SaveLoadResult.Corrupted;
         if (hasMainSave &&
-            TryReadSaveData(SavePath, out GameSaveData mainSaveData, out bool mainNeedsResave, out mainFailure) &&
+            TryReadSaveData(savePath, out GameSaveData mainSaveData, out bool mainNeedsResave, out mainFailure) &&
             TryApplySaveData(
                 mainSaveData,
                 economy,
                 inventoryRepository,
                 characterRepository,
+                teamRepository,
                 gachaService,
                 storePurchaseService))
         {
@@ -168,12 +202,13 @@ public static class GameSaveSystem
 
         SaveLoadResult backupFailure = SaveLoadResult.Corrupted;
         if (hasBackupSave &&
-            TryReadSaveData(BackupPath, out GameSaveData backupSaveData, out _, out backupFailure) &&
+            TryReadSaveData(backupPath, out GameSaveData backupSaveData, out _, out backupFailure) &&
             TryApplySaveData(
                 backupSaveData,
                 economy,
                 inventoryRepository,
                 characterRepository,
+                teamRepository,
                 gachaService,
                 storePurchaseService))
         {
@@ -275,6 +310,29 @@ public static class GameSaveSystem
             }
         }
         saveData.characters ??= new CharacterRepositorySaveData();
+        saveData.team ??= new TeamSaveData();
+        saveData.team.members ??= new List<TeamMemberSaveData>();
+        saveData.team.presets ??= new List<TeamPresetSaveData>();
+        if (saveData.team.presets.Count == 0
+            && (saveData.team.isInitialized || saveData.team.members.Count > 0))
+        {
+            saveData.team.presets.Add(new TeamPresetSaveData
+            {
+                presetIndex = 0,
+                isInitialized = saveData.team.isInitialized,
+                members = new List<TeamMemberSaveData>(saveData.team.members)
+            });
+            saveData.team.activePresetIndex = 0;
+        }
+
+        foreach (TeamPresetSaveData preset in saveData.team.presets)
+        {
+            if (preset != null)
+            {
+                preset.members ??= new List<TeamMemberSaveData>();
+            }
+        }
+
         saveData.gacha ??= new GachaSaveData();
         saveData.store ??= new StorePurchaseSaveData();
         saveData.achievements ??= new AchievementSaveData();
@@ -406,6 +464,26 @@ public static class GameSaveSystem
             }
         }
 
+        if (saveData.team.activePresetIndex < 0
+            || saveData.team.activePresetIndex >= TeamRepository.PresetCount)
+        {
+            return false;
+        }
+
+        var teamPresetIndices = new HashSet<int>();
+        foreach (TeamPresetSaveData preset in saveData.team.presets)
+        {
+            if (preset == null
+                || preset.presetIndex < 0
+                || preset.presetIndex >= TeamRepository.PresetCount
+                || !teamPresetIndices.Add(preset.presetIndex)
+                || (!preset.isInitialized && preset.members.Count > 0)
+                || !ValidateTeamMembers(preset.members, characterKeys))
+            {
+                return false;
+            }
+        }
+
         var gachaKeys = new HashSet<string>();
         if (saveData.gacha.pityCounters != null)
         {
@@ -472,21 +550,47 @@ public static class GameSaveSystem
         return true;
     }
 
+    static bool ValidateTeamMembers(
+        IReadOnlyList<TeamMemberSaveData> members,
+        HashSet<string> characterKeys)
+    {
+        var teamSlots = new HashSet<int>();
+        var teamCharacterKeys = new HashSet<string>();
+        for (int index = 0; index < members.Count; index++)
+        {
+            TeamMemberSaveData member = members[index];
+            if (member == null
+                || member.slotIndex < 0
+                || member.slotIndex >= TeamRepository.MemberCapacity
+                || string.IsNullOrEmpty(member.characterKey)
+                || !teamSlots.Add(member.slotIndex)
+                || !teamCharacterKeys.Add(member.characterKey)
+                || !characterKeys.Contains(member.characterKey))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     static bool TryApplySaveData(
         GameSaveData saveData,
         GameEconomy economy,
         InventoryRepository inventoryRepository,
         CharacterRepository characterRepository,
+        TeamRepository teamRepository,
         GachaService gachaService,
         StorePurchaseService storePurchaseService)
     {
         try
         {
-            economy.ImportSaveData(saveData.currencies);
             inventoryRepository.ImportSaveData(saveData.inventory);
             characterRepository.ImportSaveData(saveData.characters, inventoryRepository);
+            teamRepository?.ImportSaveData(saveData.team);
             gachaService?.ImportSaveData(saveData.gacha);
             storePurchaseService?.ImportSaveData(saveData.store);
+            economy.ImportSaveData(saveData.currencies);
             AchievementProgressService.Instance.ImportSaveData(saveData.achievements);
             TutorialProgressService.ImportSaveData(saveData.Tutorial);
             return true;

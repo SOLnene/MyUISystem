@@ -9037,6 +9037,17 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1666482148}
   m_CullTransparentMesh: 1
+--- !u!114 &1667889885 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 6550947764614677405, guid: 940857d1477afcd4fba4bfc33f2ffdd0, type: 3}
+  m_PrefabInstance: {fileID: 8206391946436790210}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ef625f224ae44f0ebe24d46c7cd3cbe2, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!21 &1674092694
 Material:
   serializedVersion: 8
@@ -12190,6 +12201,10 @@ PrefabInstance:
       propertyPath: teamStagePrefab
       value: 
       objectReference: {fileID: 1407843243387857435, guid: 808b2fe028ece6e4083bff00f6a7d861, type: 3}
+    - target: {fileID: 424836541513599950, guid: 940857d1477afcd4fba4bfc33f2ffdd0, type: 3}
+      propertyPath: characterSelectPanel
+      value: 
+      objectReference: {fileID: 1667889885}
     - target: {fileID: 3827080764349450011, guid: 940857d1477afcd4fba4bfc33f2ffdd0, type: 3}
       propertyPath: m_Pivot.x
       value: 0.5
