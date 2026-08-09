@@ -56,6 +56,7 @@ public class UIManager : SingletonMono<UIManager>
 
     async void OnEnable()
     {
+        Init();
         //注册事件
         //打开，关闭ui界面不适合事件总线
         /*openUIBinding = new EventBinding<OpenUIEvent>(e => Open(e.UIType));
@@ -66,8 +67,8 @@ public class UIManager : SingletonMono<UIManager>
         if (testCanvas != null)
         {
             testCanvas.SetActive(false);
+            await StartAsync();
         }
-        await StartAsync();
     }
 
     async UniTask StartAsync()
@@ -77,6 +78,12 @@ public class UIManager : SingletonMono<UIManager>
         await ResourceManager.Instance.InitAsync();
         await InitUIConfig();
         await GameDatabase.Init();
+        if (SaveProfileManager.Instance.ActiveProfile == null)
+        {
+            Open(UIType.LoginView);
+            return;
+        }
+
         await GameContext.Instance.Init();
         //preload
         await EnsureSlotPrefabLoaded();
@@ -98,6 +105,11 @@ public class UIManager : SingletonMono<UIManager>
     
     void Init()
     {
+        if (layers != null && viewHandles != null)
+        {
+            return;
+        }
+
         layers = new Dictionary<UILayer, UILayerLogic>();
         viewHandles = new Dictionary<UIType, UIViewHandle>();
         

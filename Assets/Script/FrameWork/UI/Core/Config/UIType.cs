@@ -25,5 +25,6 @@ public enum UIType
 		AchievementView,
 		RewardPopupView,
 		TeamEditView,
+		LoginView,
 		Max,
 }

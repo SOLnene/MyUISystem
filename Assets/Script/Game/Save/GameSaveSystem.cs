@@ -20,9 +20,12 @@ public static class GameSaveSystem
     const string BackupFileName = "save.backup.json";
     const string TempFileName = "save.tmp";
 
-    static string SavePath => Path.Combine(Application.persistentDataPath, SaveFileName);
-    static string BackupPath => Path.Combine(Application.persistentDataPath, BackupFileName);
-    static string TempPath => Path.Combine(Application.persistentDataPath, TempFileName);
+    static string SaveDirectory => string.IsNullOrEmpty(SaveProfileManager.Instance.ActiveProfileDirectory)
+        ? Application.persistentDataPath
+        : SaveProfileManager.Instance.ActiveProfileDirectory;
+    static string SavePath => Path.Combine(SaveDirectory, SaveFileName);
+    static string BackupPath => Path.Combine(SaveDirectory, BackupFileName);
+    static string TempPath => Path.Combine(SaveDirectory, TempFileName);
     static bool preserveBackupOnNextSave;
 
     public static bool NeedsResave { get; private set; }
@@ -408,6 +411,8 @@ public static class GameSaveSystem
 
     static void WriteSaveFile(string json)
     {
+        Directory.CreateDirectory(SaveDirectory);
+
         using (var stream = new FileStream(TempPath, FileMode.Create, FileAccess.Write, FileShare.None))
         using (var writer = new StreamWriter(stream, new UTF8Encoding(false)))
         {

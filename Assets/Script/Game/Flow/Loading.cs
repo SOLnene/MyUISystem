@@ -87,7 +87,7 @@ public class Loading : SingletonMono<Loading>
     {
         UIManager.Instance.Close(UIType.UILoadingView, () =>
         {
-            UIManager.Instance.Open(UIType.UIStartView);
+            UIManager.Instance.Open(UIType.LoginView);
         });
         CustomObjectPool<LoadingData>.Release(loadingData);
         loadingData = null;

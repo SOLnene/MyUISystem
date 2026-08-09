@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
@@ -12,6 +13,7 @@ public class FlowManager : SingletonMono<FlowManager>
     EventBinding<EnterGameEvent> enterGameBinding;
 
     bool enterScene = false;
+    bool isEnteringProfile;
     
     /*void OnEnable()
     {
@@ -92,6 +94,60 @@ public class FlowManager : SingletonMono<FlowManager>
     {
         enterScene = true;
         Debug.Log("Enter Scene");
+    }
+
+    internal async UniTask<bool> EnterSelectedProfileAsync()
+    {
+        if (isEnteringProfile || SaveProfileManager.Instance.ActiveProfile == null)
+        {
+            return false;
+        }
+
+        isEnteringProfile = true;
+        try
+        {
+            await GameContext.Instance.Init();
+            if (!GameContext.Instance.CanSave)
+            {
+                Debug.LogError($"进入游戏失败，存档读取结果: {GameContext.Instance.LastSaveLoadResult}");
+                return false;
+            }
+
+            await UIManager.Instance.EnsureSlotPrefabLoaded();
+            await UIManager.Instance.EnsureSpritesLoaded("Assets/AssetsPackage/UI/Sprite/TouchIcon/UI_TouchIcon_Plus.png");
+
+            if (GameContext.Instance.TryRequestInitialTestItems())
+            {
+                var items = ItemFactory.CreateTestItems();
+                foreach (var item in items)
+                {
+                    GameContext.Instance.BackpackVM.AddItem(item);
+                }
+            }
+
+            UIManager.Instance.Close(UIType.LoginView, CompleteProfileEntry);
+            return true;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"进入游戏失败: {exception.Message}");
+            return false;
+        }
+        finally
+        {
+            isEnteringProfile = false;
+        }
+    }
+
+    void CompleteProfileEntry()
+    {
+        if (loadOp != null)
+        {
+            ActivateLoadedScene();
+            return;
+        }
+
+        UIManager.Instance.Open(UIType.HubRoot);
     }
 
     void OnDisable()
