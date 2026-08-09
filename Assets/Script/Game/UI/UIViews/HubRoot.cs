@@ -29,6 +29,9 @@ public partial class HubRoot : UIView
         mainMenuRedDotProvider.Bind(
             MainMenuRedDotKey.Achievement,
             GameContext.Instance.AchievementService.HasClaimableReward);
+        mainMenuRedDotProvider.Bind(
+            MainMenuRedDotKey.Backpack,
+            GameContext.Instance.InventoryRepository.HasUnseenItems);
         characterEnhanceTutorialController ??= new CharacterEnhanceTutorialController();
         characterEnhanceTutorialController.TryStart();
     }

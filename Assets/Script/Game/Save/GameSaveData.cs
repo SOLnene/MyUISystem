@@ -56,6 +56,27 @@ public class InventorySaveData
 {
     public List<ItemStackSaveData> stacks = new List<ItemStackSaveData>();
     public List<EquipItemSaveData> equips = new List<EquipItemSaveData>();
+    [SerializeField] List<int> discoveredMaterialIds = new List<int>();
+    [SerializeField] List<int> unseenMaterialIds = new List<int>();
+    [SerializeField] List<long> unseenEquipInstanceIds = new List<long>();
+
+    internal List<int> DiscoveredMaterialIds
+    {
+        get => discoveredMaterialIds;
+        set => discoveredMaterialIds = value;
+    }
+
+    internal List<int> UnseenMaterialIds
+    {
+        get => unseenMaterialIds;
+        set => unseenMaterialIds = value;
+    }
+
+    internal List<long> UnseenEquipInstanceIds
+    {
+        get => unseenEquipInstanceIds;
+        set => unseenEquipInstanceIds = value;
+    }
 }
 
 [Serializable]

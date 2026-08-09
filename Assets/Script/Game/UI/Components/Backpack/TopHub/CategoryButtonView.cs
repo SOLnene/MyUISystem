@@ -1,5 +1,6 @@
 using System;
 using DG.Tweening;
+using UniRx;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -12,6 +13,10 @@ public class CategoryButtonView : UIThreeStateSelectable
     Image bgImage;
     [SerializeField]
     Image iconImage;
+    [SerializeField]
+    RectTransform redDot;
+
+    readonly CompositeDisposable bindDisposables = new();
 
     public string CategoryName { get; private set; }
 
@@ -32,6 +37,12 @@ public class CategoryButtonView : UIThreeStateSelectable
         btn.onClick.RemoveAllListeners();
         btn.onClick.AddListener(() => onClick?.Invoke());
         SetSelected(IsSelected, true);
+    }
+
+    internal void BindRedDot(IReadOnlyReactiveProperty<bool> state)
+    {
+        bindDisposables.Clear();
+        state.Subscribe(value => redDot.gameObject.SetActive(value)).AddTo(bindDisposables);
     }
 
     protected override void ApplyVisualState(VisualState state, bool instant, bool stateChanged)
@@ -70,6 +81,7 @@ public class CategoryButtonView : UIThreeStateSelectable
 
     void OnDestroy()
     {
+        bindDisposables.Dispose();
         iconImage.transform.DOKill();
         bgImage.DOKill();
         iconImage.DOKill();

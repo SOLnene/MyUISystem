@@ -43,9 +43,12 @@ public class  BackpackViewModel
         inventoryRepository.ObserveChanged()
             .Subscribe(OnInventoryChanged)
             .AddTo(disposables);
+        inventoryRepository.ObserveUnseenChanged()
+            .Subscribe(RefreshUnseenState)
+            .AddTo(disposables);
 
         var categories = new List<ItemCategory> { ItemCategory.Equip,ItemCategory.Consumable,ItemCategory.Material };
-        topVM = new BackpackTopViewModel(categories);
+        topVM = new BackpackTopViewModel(categories, inventoryRepository);
         middleVM = new BackpackMiddleViewModel(this);
         infoVM = new InfoPanelViewModel();
 
@@ -112,7 +115,7 @@ public class  BackpackViewModel
 
         if (wasSelected)
         {
-            middleVM.SelectItem(middleVM.displaySlots.Count > 0
+            middleVM.PreviewItem(middleVM.displaySlots.Count > 0
                 ? middleVM.displaySlots[0]
                 : null);
         }
@@ -125,8 +128,22 @@ public class  BackpackViewModel
     void CreateSlotVM(InventoryItem item)
     {
         var slotVM = new ItemSlotViewModel(item);
+        slotVM.isNew.Value = inventoryRepository.IsUnseen(item);
         SlotsViewModels.Add(slotVM);
         itemToSlotVM.Add(item,slotVM);
+    }
+
+    void RefreshUnseenState(InventoryItem item)
+    {
+        if (itemToSlotVM.TryGetValue(item, out ItemSlotViewModel slotVM))
+        {
+            slotVM.isNew.Value = inventoryRepository.IsUnseen(item);
+        }
+    }
+
+    internal void MarkSeen(ItemSlotViewModel slotVM)
+    {
+        inventoryRepository.MarkSeen(slotVM.ItemViewModel.Model);
     }
     
     public void SelectItem(ItemSlotViewModel inventoryItem)

@@ -100,6 +100,7 @@ public class BackpackTopView : MonoBehaviour
             int index = i;
             var config = categoryConfigs.FirstOrDefault(c => c.category == categories[i]);
             btn.Init(GetDisplayName(categories[i], config), config?.icon, () => topVM.SetCategory(index));
+            btn.BindRedDot(topVM.ObserveHasUnseen(categories[i]));
             categoryBtns.Add(btn);
         }
         

@@ -22,6 +22,8 @@ public class ItemSlotView : MonoBehaviour
     [SerializeField]
     Image checkedImage;
     [SerializeField]
+    RectTransform newItemRedDot;
+    [SerializeField]
     AnimatedPanel anim;
     [SerializeField]
     SelectionSlotView selectionSlot;
@@ -114,6 +116,8 @@ public class ItemSlotView : MonoBehaviour
             removeBtn.gameObject.SetActive(selected);
         }).AddTo(disposable);
 
+        vm.isNew.Subscribe(value => newItemRedDot.gameObject.SetActive(value)).AddTo(disposable);
+
         
         
         selectionSlot.SetClickListener(() => vm.onClick.Execute());
@@ -156,6 +160,7 @@ public class ItemSlotView : MonoBehaviour
         selectionSlot.ResetState();
         disposable.Clear();
         removeBtn.onClick.RemoveAllListeners();
+        newItemRedDot.gameObject.SetActive(false);
         vm = null;
     }
 

@@ -6,6 +6,7 @@ using UnityEngine;
 
 public class BackpackTopViewModel
 {
+    readonly InventoryRepository inventoryRepository;
     public readonly ReactiveProperty<int> SelectedCategoryIndex = new ReactiveProperty<int>();
     public readonly List<ItemCategory> Categories;
 
@@ -22,6 +23,21 @@ public class BackpackTopViewModel
     {
         Categories = categories;
         SelectedCategoryIndex.Value = defaultIndex;
+    }
+
+    internal BackpackTopViewModel(
+        List<ItemCategory> categories,
+        InventoryRepository inventoryRepository,
+        int defaultIndex = 0)
+    {
+        Categories = categories;
+        this.inventoryRepository = inventoryRepository;
+        SelectedCategoryIndex.Value = defaultIndex;
+    }
+
+    internal IReadOnlyReactiveProperty<bool> ObserveHasUnseen(ItemCategory category)
+    {
+        return inventoryRepository.ObserveHasUnseen(category);
     }
     
     public void SetCategory(int index)

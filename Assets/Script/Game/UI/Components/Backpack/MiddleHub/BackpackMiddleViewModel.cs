@@ -27,7 +27,14 @@ public class BackpackMiddleViewModel
 
     public void SelectItem(ItemSlotViewModel slot)
     {
-        OnSlotClicked(slot);
+        ApplySelection(slot);
+        backpackVM.MarkSeen(slot);
+    }
+
+    internal void PreviewItem(ItemSlotViewModel slot)
+    {
+        // 分类切换和删除后的自动预览不代表玩家主动查看，不能清除红点。
+        ApplySelection(slot);
     }
     
     public void FilterByCategory(ItemCategory category)
@@ -36,7 +43,7 @@ public class BackpackMiddleViewModel
         UpdateDisplayItems();
         if (displaySlots.Count > 0)
         {
-            OnSlotClicked(displaySlots[0]);
+            PreviewItem(displaySlots[0]);
         }
     }
 
@@ -53,7 +60,7 @@ public class BackpackMiddleViewModel
         }
     }
     
-    void OnSlotClicked(ItemSlotViewModel clickedVM)
+    void ApplySelection(ItemSlotViewModel clickedVM)
     {
         foreach (var slot in displaySlots)
         {

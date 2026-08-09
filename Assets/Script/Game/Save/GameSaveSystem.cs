@@ -15,7 +15,7 @@ public enum SaveLoadResult
 
 public static class GameSaveSystem
 {
-    const int CurrentVersion = 4;
+    const int CurrentVersion = 6;
     const string SaveFileName = "save.json";
     const string BackupFileName = "save.backup.json";
     const string TempFileName = "save.tmp";
@@ -222,8 +222,9 @@ public static class GameSaveSystem
                 return false;
             }
 
-            needsResave = saveData.version < CurrentVersion;
-            NormalizeSaveData(saveData);
+            int sourceVersion = saveData.version;
+            needsResave = sourceVersion < CurrentVersion;
+            NormalizeSaveData(saveData, sourceVersion);
             if (!ValidateSaveData(saveData))
             {
                 saveData = null;
@@ -240,11 +241,39 @@ public static class GameSaveSystem
         }
     }
 
-    static void NormalizeSaveData(GameSaveData saveData)
+    static void NormalizeSaveData(GameSaveData saveData, int sourceVersion)
     {
         saveData.version = CurrentVersion;
         saveData.currencies ??= new CurrencySaveData();
         saveData.inventory ??= new InventorySaveData();
+        saveData.inventory.stacks ??= new List<ItemStackSaveData>();
+        saveData.inventory.equips ??= new List<EquipItemSaveData>();
+        saveData.inventory.DiscoveredMaterialIds ??= new List<int>();
+        saveData.inventory.UnseenMaterialIds ??= new List<int>();
+        saveData.inventory.UnseenEquipInstanceIds ??= new List<long>();
+        // 旧存档没有未查看状态：现有材料登记为已发现，避免升级后全部显示红点。
+        if (sourceVersion < 6)
+        {
+            saveData.inventory.DiscoveredMaterialIds.Clear();
+            saveData.inventory.UnseenMaterialIds.Clear();
+            saveData.inventory.UnseenEquipInstanceIds.Clear();
+            foreach (ItemStackSaveData stack in saveData.inventory.stacks)
+            {
+                if (stack == null)
+                {
+                    continue;
+                }
+
+                ItemDefinition itemDefinition =
+                    GameDatabase.ItemDatabase.GetItemByID(stack.itemId);
+                if (itemDefinition != null &&
+                    itemDefinition.category == ItemCategory.Material &&
+                    !saveData.inventory.DiscoveredMaterialIds.Contains(stack.itemId))
+                {
+                    saveData.inventory.DiscoveredMaterialIds.Add(stack.itemId);
+                }
+            }
+        }
         saveData.characters ??= new CharacterRepositorySaveData();
         saveData.gacha ??= new GachaSaveData();
         saveData.store ??= new StorePurchaseSaveData();
@@ -270,27 +299,39 @@ public static class GameSaveSystem
         }
 
         var equipIds = new HashSet<long>();
+        var eligibleUnseenEquipIds = new HashSet<long>();
         if (saveData.inventory.equips != null)
         {
             foreach (EquipItemSaveData equip in saveData.inventory.equips)
             {
-                if (equip == null ||
-                    equip.instanceId <= 0 ||
+                if (equip == null)
+                {
+                    return false;
+                }
+
+                EquipDefinition equipDefinition =
+                    GameDatabase.ItemDatabase.GetItemByID(equip.itemId) as EquipDefinition;
+                if (equip.instanceId <= 0 ||
                     equip.level <= 0 ||
                     equip.exp < 0 ||
                     equip.rank < 0 ||
                     equip.refinementLevel <= 0 ||
                     !equipIds.Add(equip.instanceId) ||
-                    GameDatabase.ItemDatabase.GetItemByID(equip.itemId) is not EquipDefinition)
+                    equipDefinition == null)
                 {
                     return false;
+                }
+
+                if (equipDefinition.stars >= 4)
+                {
+                    eligibleUnseenEquipIds.Add(equip.instanceId);
                 }
             }
         }
 
+        var stackIds = new HashSet<int>();
         if (saveData.inventory.stacks != null)
         {
-            var stackIds = new HashSet<int>();
             foreach (ItemStackSaveData stack in saveData.inventory.stacks)
             {
                 if (stack == null ||
@@ -301,6 +342,39 @@ public static class GameSaveSystem
                 {
                     return false;
                 }
+            }
+        }
+
+        var discoveredMaterialIds = new HashSet<int>();
+        foreach (int itemId in saveData.inventory.DiscoveredMaterialIds)
+        {
+            ItemDefinition itemDefinition = GameDatabase.ItemDatabase.GetItemByID(itemId);
+            if (itemDefinition == null ||
+                itemDefinition.category != ItemCategory.Material ||
+                !discoveredMaterialIds.Add(itemId))
+            {
+                return false;
+            }
+        }
+
+        var unseenMaterialIds = new HashSet<int>();
+        foreach (int itemId in saveData.inventory.UnseenMaterialIds)
+        {
+            if (!discoveredMaterialIds.Contains(itemId) ||
+                !stackIds.Contains(itemId) ||
+                !unseenMaterialIds.Add(itemId))
+            {
+                return false;
+            }
+        }
+
+        var unseenEquipInstanceIds = new HashSet<long>();
+        foreach (long instanceId in saveData.inventory.UnseenEquipInstanceIds)
+        {
+            if (!eligibleUnseenEquipIds.Contains(instanceId) ||
+                !unseenEquipInstanceIds.Add(instanceId))
+            {
+                return false;
             }
         }
 

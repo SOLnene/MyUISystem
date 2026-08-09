@@ -9,7 +9,18 @@ public class InventoryRepository
     private readonly Dictionary<long, InventoryItem> itemsByInstanceId = new Dictionary<long, InventoryItem>();
     private readonly Dictionary<int, ItemStack> itemStacks = new Dictionary<int, ItemStack>();
     private readonly Subject<InventoryChangedEvent> changed = new Subject<InventoryChangedEvent>();
+    private readonly Subject<InventoryItem> unseenChanged = new Subject<InventoryItem>();
+    // 武器按实例记录，材料按物品定义记录；已发现材料不会因数量归零后再次获得而重新提示。
+    private readonly HashSet<int> discoveredMaterialIds = new HashSet<int>();
+    private readonly HashSet<int> unseenMaterialIds = new HashSet<int>();
+    private readonly HashSet<long> unseenEquipInstanceIds = new HashSet<long>();
+    private readonly ReactiveProperty<bool> hasUnseenItems = new ReactiveProperty<bool>();
+    private readonly ReactiveProperty<bool> hasUnseenEquips = new ReactiveProperty<bool>();
+    private readonly ReactiveProperty<bool> hasUnseenMaterials = new ReactiveProperty<bool>();
+    private readonly ReactiveProperty<bool> noUnseenItems = new ReactiveProperty<bool>();
     private long nextInstanceId = 1;
+
+    internal IReadOnlyReactiveProperty<bool> HasUnseenItems => hasUnseenItems;
 
     public IReadOnlyList<InventoryItem> GetAllItems() => items;
 
@@ -18,6 +29,22 @@ public class InventoryRepository
     public IObservable<InventoryChangedEvent> ObserveChanged()
     {
         return changed;
+    }
+
+    internal IObservable<InventoryItem> ObserveUnseenChanged()
+    {
+        return unseenChanged;
+    }
+
+    internal IReadOnlyReactiveProperty<bool> ObserveHasUnseen(ItemCategory category)
+    {
+        return category switch
+        {
+            ItemCategory.Equip => hasUnseenEquips,
+            ItemCategory.Material => hasUnseenMaterials,
+            ItemCategory.All => hasUnseenItems,
+            _ => noUnseenItems,
+        };
     }
 
     public int GetItemCount(int itemId)
@@ -51,6 +78,7 @@ public class InventoryRepository
         nextInstanceId++;
         items.Add(inventoryItem);
         itemsByInstanceId.Add(inventoryItem.InstanceId, inventoryItem);
+        MarkNewItem(inventoryItem);
         changed.OnNext(new InventoryChangedEvent(InventoryChangeType.Added, inventoryItem));
     }
 
@@ -77,6 +105,7 @@ public class InventoryRepository
         stack = new ItemStack(inventoryItem.ItemDefinition, amount);
         itemStacks.Add(inventoryItem.Id, stack);
         items.Add(inventoryItem);
+        MarkNewItem(inventoryItem);
         changed.OnNext(new InventoryChangedEvent(InventoryChangeType.Added, inventoryItem, stack));
     }
 
@@ -95,6 +124,7 @@ public class InventoryRepository
 
     public void RemoveItem(InventoryItem inventoryItem)
     {
+        ClearUnseen(inventoryItem);
         items.Remove(inventoryItem);
         itemsByInstanceId.Remove(inventoryItem.InstanceId);
         if (inventoryItem is IStackableItem)
@@ -187,6 +217,13 @@ public class InventoryRepository
             saveData.stacks.Add(new ItemStackSaveData(pair.Key, pair.Value));
         }
 
+        saveData.DiscoveredMaterialIds.AddRange(discoveredMaterialIds);
+        saveData.UnseenMaterialIds.AddRange(unseenMaterialIds);
+        saveData.UnseenEquipInstanceIds.AddRange(unseenEquipInstanceIds);
+        saveData.DiscoveredMaterialIds.Sort();
+        saveData.UnseenMaterialIds.Sort();
+        saveData.UnseenEquipInstanceIds.Sort();
+
         return saveData;
     }
 
@@ -215,6 +252,8 @@ public class InventoryRepository
             }
         }
 
+        ImportAttention(saveData);
+
         changed.OnNext(new InventoryChangedEvent(InventoryChangeType.Reset, null));
     }
 
@@ -223,7 +262,39 @@ public class InventoryRepository
         items.Clear();
         itemsByInstanceId.Clear();
         itemStacks.Clear();
+        discoveredMaterialIds.Clear();
+        unseenMaterialIds.Clear();
+        unseenEquipInstanceIds.Clear();
+        RefreshUnseenState();
         nextInstanceId = 1;
+    }
+
+    internal bool IsUnseen(InventoryItem item)
+    {
+        return item.Category switch
+        {
+            ItemCategory.Equip => unseenEquipInstanceIds.Contains(item.InstanceId),
+            ItemCategory.Material => unseenMaterialIds.Contains(item.Id),
+            _ => false,
+        };
+    }
+
+    internal void MarkSeen(InventoryItem item)
+    {
+        bool changedState = item.Category switch
+        {
+            ItemCategory.Equip => unseenEquipInstanceIds.Remove(item.InstanceId),
+            ItemCategory.Material => unseenMaterialIds.Remove(item.Id),
+            _ => false,
+        };
+        if (!changedState)
+        {
+            return;
+        }
+
+        RefreshUnseenState();
+        unseenChanged.OnNext(item);
+        GameSaveCoordinator.Instance.MarkDirty();
     }
 
     void ImportStack(ItemStackSaveData stackData)
@@ -281,6 +352,68 @@ public class InventoryRepository
         nextInstanceId = Math.Max(nextInstanceId, instanceId + 1);
         items.Add(equipItem);
         itemsByInstanceId.Add(equipItem.InstanceId, equipItem);
+    }
+
+    void MarkNewItem(InventoryItem item)
+    {
+        bool changedState = false;
+        if (item.Category == ItemCategory.Equip && item.Stars >= 4)
+        {
+            changedState = unseenEquipInstanceIds.Add(item.InstanceId);
+        }
+        else if (item.Category == ItemCategory.Material && discoveredMaterialIds.Add(item.Id))
+        {
+            changedState = unseenMaterialIds.Add(item.Id);
+        }
+
+        if (changedState)
+        {
+            RefreshUnseenState();
+        }
+    }
+
+    void ClearUnseen(InventoryItem item)
+    {
+        bool changedState = item.Category switch
+        {
+            ItemCategory.Equip => unseenEquipInstanceIds.Remove(item.InstanceId),
+            ItemCategory.Material => unseenMaterialIds.Remove(item.Id),
+            _ => false,
+        };
+        if (!changedState)
+        {
+            return;
+        }
+
+        RefreshUnseenState();
+        unseenChanged.OnNext(item);
+    }
+
+    void ImportAttention(InventorySaveData saveData)
+    {
+        if (saveData.DiscoveredMaterialIds != null)
+        {
+            discoveredMaterialIds.UnionWith(saveData.DiscoveredMaterialIds);
+        }
+
+        if (saveData.UnseenMaterialIds != null)
+        {
+            unseenMaterialIds.UnionWith(saveData.UnseenMaterialIds);
+        }
+
+        if (saveData.UnseenEquipInstanceIds != null)
+        {
+            unseenEquipInstanceIds.UnionWith(saveData.UnseenEquipInstanceIds);
+        }
+
+        RefreshUnseenState();
+    }
+
+    void RefreshUnseenState()
+    {
+        hasUnseenEquips.Value = unseenEquipInstanceIds.Count > 0;
+        hasUnseenMaterials.Value = unseenMaterialIds.Count > 0;
+        hasUnseenItems.Value = hasUnseenEquips.Value || hasUnseenMaterials.Value;
     }
 }
 

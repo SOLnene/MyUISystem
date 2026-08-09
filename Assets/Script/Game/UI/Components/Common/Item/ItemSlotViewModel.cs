@@ -12,6 +12,7 @@ public class ItemSlotViewModel: IDisposable
     public readonly ReactiveProperty<string> count = new ReactiveProperty<string>();
     //单纯的是否被选中，和素材选择界面是否被勾选分开
     public readonly ReactiveProperty<bool> isSelected = new ReactiveProperty<bool>(false);
+    public readonly ReactiveProperty<bool> isNew = new ReactiveProperty<bool>(false);
     public readonly ReactiveProperty<int> star = new ReactiveProperty<int>();
     public readonly ReactiveProperty<Color> color = new();
     public readonly ReactiveProperty<bool> isEmpty = new ReactiveProperty<bool>(true);
