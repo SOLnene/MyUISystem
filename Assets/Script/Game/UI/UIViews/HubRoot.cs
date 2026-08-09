@@ -14,6 +14,7 @@ public partial class HubRoot : UIView
     private bool mainMenuOpen;
     private MainMenuNavigator mainMenuNavigator;
     private MainMenuRedDotProvider mainMenuRedDotProvider;
+    private CharacterEnhanceTutorialController characterEnhanceTutorialController;
     
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -28,6 +29,8 @@ public partial class HubRoot : UIView
         mainMenuRedDotProvider.Bind(
             MainMenuRedDotKey.Achievement,
             GameContext.Instance.AchievementService.HasClaimableReward);
+        characterEnhanceTutorialController ??= new CharacterEnhanceTutorialController();
+        characterEnhanceTutorialController.TryStart();
     }
 
     /// <summary>
@@ -108,6 +111,8 @@ public partial class HubRoot : UIView
 
     public override void OnRelease()
     {
+        characterEnhanceTutorialController?.Dispose();
+        characterEnhanceTutorialController = null;
         mainMenuRedDotProvider?.Dispose();
         mainMenuRedDotProvider = null;
         base.OnRelease();

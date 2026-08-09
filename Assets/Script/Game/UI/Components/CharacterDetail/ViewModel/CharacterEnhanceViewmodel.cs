@@ -150,11 +150,14 @@ namespace Game.UI.Components.CharacterDetail
             bool needSwitchContent = newLevel >= model.GetCurrentMaxLevel();
             Color rarityColor = GetRarityColor();
             materialInput.Clear();
-            requestPlayEnhanceResult.OnNext(new EnhanceResultData(oldLevel, newLevel, oldProgress, newProgress, levelUpCount, needSwitchContent, rarityColor));
+            var result = new EnhanceResultData(oldLevel, newLevel, oldProgress, newProgress, levelUpCount, needSwitchContent, rarityColor);
+            requestPlayEnhanceResult.OnNext(result);
             AchievementProgressService.Instance.AddProgress(
                 AchievementProgressKeys.CharacterEnhance);
             onUpgrade.Execute(Unit.Default);
             GameSaveCoordinator.Instance.MarkDirty();
+            EventBus<CharacterEnhanceCompletedEvent>.Raise(
+                new CharacterEnhanceCompletedEvent(result));
         }
 
         float GetExpProgress()
@@ -249,6 +252,13 @@ namespace Game.UI.Components.CharacterDetail
             if (remainExp > 0)
             {
                 materialInput.Add("expbook_small", 1);
+            }
+
+            int totalExp = materialInput.GetTotalExp();
+            if (totalExp > 0)
+            {
+                EventBus<CharacterQuickFillCompletedEvent>.Raise(
+                    new CharacterQuickFillCompletedEvent(totalExp));
             }
         }
 

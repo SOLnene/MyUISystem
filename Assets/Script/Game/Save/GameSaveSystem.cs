@@ -15,7 +15,7 @@ public enum SaveLoadResult
 
 public static class GameSaveSystem
 {
-    const int CurrentVersion = 3;
+    const int CurrentVersion = 4;
     const string SaveFileName = "save.json";
     const string BackupFileName = "save.backup.json";
     const string TempFileName = "save.tmp";
@@ -84,7 +84,8 @@ public static class GameSaveSystem
             store = storePurchaseService != null
                 ? storePurchaseService.ExportSaveData()
                 : new StorePurchaseSaveData(),
-            achievements = AchievementProgressService.Instance.ExportSaveData()
+            achievements = AchievementProgressService.Instance.ExportSaveData(),
+            Tutorial = TutorialProgressService.ExportSaveData()
         };
 
         try
@@ -140,6 +141,7 @@ public static class GameSaveSystem
         GachaService gachaService,
         StorePurchaseService storePurchaseService)
     {
+        TutorialProgressService.ImportSaveData(null);
         NeedsResave = false;
         preserveBackupOnNextSave = false;
         bool hasMainSave = File.Exists(SavePath);
@@ -249,6 +251,8 @@ public static class GameSaveSystem
         saveData.achievements ??= new AchievementSaveData();
         saveData.achievements.progress ??= new List<AchievementProgressSaveData>();
         saveData.achievements.claimedIds ??= new List<string>();
+        saveData.Tutorial ??= new TutorialSaveData();
+        saveData.Tutorial.completedIds ??= new List<string>();
     }
 
     static bool ValidateSaveData(GameSaveData saveData)
@@ -381,6 +385,16 @@ public static class GameSaveSystem
             }
         }
 
+        var completedTutorialIds = new HashSet<string>();
+        foreach (string tutorialId in saveData.Tutorial.completedIds)
+        {
+            if (string.IsNullOrWhiteSpace(tutorialId)
+                || !completedTutorialIds.Add(tutorialId))
+            {
+                return false;
+            }
+        }
+
         return true;
     }
 
@@ -400,6 +414,7 @@ public static class GameSaveSystem
             gachaService?.ImportSaveData(saveData.gacha);
             storePurchaseService?.ImportSaveData(saveData.store);
             AchievementProgressService.Instance.ImportSaveData(saveData.achievements);
+            TutorialProgressService.ImportSaveData(saveData.Tutorial);
             return true;
         }
         catch (Exception exception)

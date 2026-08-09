@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using UnityEngine;
 
 [Serializable]
 public class GameSaveData
@@ -12,6 +13,19 @@ public class GameSaveData
     public GachaSaveData gacha = new GachaSaveData();
     public StorePurchaseSaveData store = new StorePurchaseSaveData();
     public AchievementSaveData achievements = new AchievementSaveData();
+    [SerializeField] TutorialSaveData tutorial = new TutorialSaveData();
+
+    internal TutorialSaveData Tutorial
+    {
+        get => tutorial;
+        set => tutorial = value;
+    }
+}
+
+[Serializable]
+internal class TutorialSaveData
+{
+    public List<string> completedIds = new List<string>();
 }
 
 [Serializable]
