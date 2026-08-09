@@ -19,6 +19,7 @@ public partial class LoginView : UIView
     [SerializeField]
     Button enterButton;
 
+    // 通过档案 ID 定位旧、新选中项，切换时无需刷新整个列表。
     readonly Dictionary<string, SaveProfileItemView> profileItems = new();
 
     LoginViewModel viewModel;
@@ -35,6 +36,7 @@ public partial class LoginView : UIView
     {
         base.OnInit(uiControlData,handle);
         viewModel = new LoginViewModel(SaveProfileManager.Instance);
+        // Prefab 内保留一个隐藏模板，运行时实例只由档案列表生成。
         saveItemTemplate.gameObject.SetActive(false);
     }
 
@@ -108,16 +110,17 @@ public partial class LoginView : UIView
         if (viewModel.ConfirmSelection())
         {
             Debug.Log($"已选择存档: {viewModel.SelectedProfile.displayName}");
-            EnterSelectedProfileAsync().Forget();
+            EnterSelectedProfileAsync(viewModel.SelectedProfile.profileId).Forget();
         }
     }
 
-    async UniTask EnterSelectedProfileAsync()
+    async UniTask EnterSelectedProfileAsync(string profileId)
     {
+        // 初始化存档期间锁住入口；失败时恢复，成功时由关闭动画接管界面生命周期。
         createButton.interactable = false;
         enterButton.interactable = false;
 
-        if (await FlowManager.Instance.EnterSelectedProfileAsync())
+        if (await FlowManager.Instance.EnterSelectedProfileAsync(profileId))
         {
             return;
         }

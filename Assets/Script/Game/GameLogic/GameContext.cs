@@ -1,63 +1,88 @@
 using Cysharp.Threading.Tasks;
+using System.Threading;
+
 public class GameContext: Singleton<GameContext>
 {
-    AsyncLazy initializeTask;
-    bool initialTestItemsRequested;
+    // 串行化会话切换，避免两个候选同时读取并争抢提交点。
+    readonly SemaphoreSlim sessionGate = new(1, 1);
+    GameSession currentSession;
 
-    public BackpackViewModel BackpackVM { get; private set; }
+    public BackpackViewModel BackpackVM => currentSession?.BackpackVM;
 
-    public InventoryRepository InventoryRepository { get; private set; }
-    public CharacterRepository CharacterRepository { get; private set; }
-    public TeamRepository TeamRepository { get; private set; }
-    public StoreDatabase StoreDatabase { get; private set; }
+    public InventoryRepository InventoryRepository => currentSession?.InventoryRepository;
+    public CharacterRepository CharacterRepository => currentSession?.CharacterRepository;
+    public TeamRepository TeamRepository => currentSession?.TeamRepository;
+    public StoreDatabase StoreDatabase => currentSession?.StoreDatabase;
     //全项目只有一个实现
-    public GachaService GachaService { get; private set; }
-    internal StorePurchaseService StorePurchaseService { get; private set; }
-    internal AchievementService AchievementService { get; private set; }
+    public GachaService GachaService => currentSession?.GachaService;
+    internal StorePurchaseService StorePurchaseService => currentSession?.StorePurchaseService;
+    internal AchievementService AchievementService => currentSession?.AchievementService;
     internal SaveLoadResult LastSaveLoadResult { get; private set; } = SaveLoadResult.NotFound;
-    internal bool CanSave => LastSaveLoadResult == SaveLoadResult.Success
-                             || LastSaveLoadResult == SaveLoadResult.NotFound
-                             || LastSaveLoadResult == SaveLoadResult.RecoveredFromBackup;
+    internal bool CanSave => currentSession != null && currentSession.CanSave;
+    internal string ActiveSaveDirectory => currentSession?.SaveDirectory;
     //可能有多个不同的实现
-    public IGachaVisualProvider GachaVisualProvider { get; private set; }
-    public UniTask Init()
-    {
-        initializeTask ??= UniTask.Lazy(Initialize);
-        return initializeTask.Task;
-    }
+    public IGachaVisualProvider GachaVisualProvider => currentSession?.GachaVisualProvider;
 
-    async UniTask Initialize()
+    public async UniTask Init()
     {
-        await GameDatabase.Init();
-        //backpackVM = new BackpackViewModel();
-        //todo:改为使用 Installer + DI 容器注入
-        InventoryRepository = new InventoryRepository();
-        StoreDatabase = GameDatabase.StoreDatabase;
-        CharacterRepository = new CharacterRepository();
-        TeamRepository = new TeamRepository();
-        GachaPoolProvider poolProvider = new GachaPoolProvider(GameDatabase.GachaPoolDatabase);
-        GachaService = new GachaService(poolProvider);
-        StorePurchaseService = new StorePurchaseService(new StorePurchaseRepository());
-        GachaVisualProvider = new GachaVisualProvider(GameDatabase.CharaVisualDatabase);
+        if (currentSession != null)
+        {
+            return;
+        }
 
-        LastSaveLoadResult = GameSaveSystem.LoadCurrentGame();
-        AchievementService = new AchievementService(GameDatabase.ItemDatabase);
-        await AchievementService.InitializeAsync();
-        BackpackVM = new BackpackViewModel(InventoryRepository);
-        if (CanSave && (LastSaveLoadResult == SaveLoadResult.NotFound || GameSaveSystem.NeedsResave))
+        string saveDirectory = SaveProfileManager.Instance.ActiveProfileDirectory;
+        if (!string.IsNullOrEmpty(saveDirectory) &&
+            await TryStartProfileAsync(saveDirectory) &&
+            (LastSaveLoadResult == SaveLoadResult.NotFound || GameSaveSystem.NeedsResave))
         {
             GameSaveCoordinator.Instance.MarkDirty();
         }
     }
 
+    internal async UniTask<bool> TryStartProfileAsync(string saveDirectory)
+    {
+        await sessionGate.WaitAsync();
+        try
+        {
+            if (currentSession?.SaveDirectory == saveDirectory)
+            {
+                return true;
+            }
+
+            await GameDatabase.Init();
+            // 候选初始化期间保留旧会话，失败时可以无损重试其他存档。
+            var candidateSession = new GameSession(saveDirectory);
+            try
+            {
+                await candidateSession.InitializeAsync();
+            }
+            catch
+            {
+                candidateSession.Dispose();
+                throw;
+            }
+
+            LastSaveLoadResult = candidateSession.LoadResult;
+            if (!candidateSession.CanSave)
+            {
+                candidateSession.Dispose();
+                return false;
+            }
+
+            GameSession previousSession = currentSession;
+            // 这是会话的唯一提交点；从这里开始外部属性才会转发到新状态。
+            currentSession = candidateSession;
+            previousSession?.Dispose();
+            return true;
+        }
+        finally
+        {
+            sessionGate.Release();
+        }
+    }
+
     internal bool TryRequestInitialTestItems()
     {
-        if (LastSaveLoadResult != SaveLoadResult.NotFound || initialTestItemsRequested)
-        {
-            return false;
-        }
-
-        initialTestItemsRequested = true;
-        return true;
+        return currentSession != null && currentSession.TryRequestInitialTestItems();
     }
 }

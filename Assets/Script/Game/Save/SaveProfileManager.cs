@@ -4,6 +4,9 @@ using System.IO;
 using System.Text;
 using UnityEngine;
 
+/// <summary>
+/// 管理 Profiles/{profileId} 目录及其 profile.json，完整游戏数据仍由 GameSaveSystem 读写。
+/// </summary>
 public sealed class SaveProfileManager
 {
     const string ProfilesFolderName = "Profiles";
@@ -15,6 +18,7 @@ public sealed class SaveProfileManager
 
     readonly string profilesRootPath;
 
+    // 激活档案决定 GameSaveSystem 后续使用哪个目录，实际游戏数据在进入流程中加载。
     public SaveProfileInfo ActiveProfile { get; private set; }
     public string ActiveProfileDirectory => ActiveProfile == null
         ? string.Empty
@@ -43,6 +47,7 @@ public sealed class SaveProfileManager
             profiles.Add(legacyProfile);
         }
 
+        // 时间均以 UTC 的 O 格式写入，可以直接按字符串倒序得到最近使用顺序。
         profiles.Sort(CompareProfiles);
         return profiles;
     }
@@ -62,16 +67,38 @@ public sealed class SaveProfileManager
 
     public bool ActivateProfile(string profileId)
     {
-        if (!IsValidProfileId(profileId) ||
-            !TryReadProfile(GetProfileDirectory(profileId), out SaveProfileInfo profile))
+        if (!TryGetProfile(profileId, out SaveProfileInfo profile, out _))
         {
             return false;
         }
 
-        profile.lastPlayedAtUtc = DateTime.UtcNow.ToString("O");
-        WriteProfile(GetProfileDirectory(profileId), profile);
-        ActiveProfile = profile;
+        ActivateProfile(profile);
         return true;
+    }
+
+    internal bool TryGetProfile(
+        string profileId,
+        out SaveProfileInfo profile,
+        out string profileDirectory)
+    {
+        // 此阶段只读取候选元数据，不改变当前激活档案。
+        profileDirectory = string.Empty;
+        if (!IsValidProfileId(profileId))
+        {
+            profile = null;
+            return false;
+        }
+
+        profileDirectory = GetProfileDirectory(profileId);
+        return TryReadProfile(profileDirectory, out profile);
+    }
+
+    internal void ActivateProfile(SaveProfileInfo profile)
+    {
+        // 游戏数据加载成功后才更新时间并提交激活状态。
+        profile.lastPlayedAtUtc = DateTime.UtcNow.ToString("O");
+        WriteProfile(GetProfileDirectory(profile.profileId), profile);
+        ActiveProfile = profile;
     }
 
     static int CompareProfiles(SaveProfileInfo left, SaveProfileInfo right)
@@ -87,6 +114,7 @@ public sealed class SaveProfileManager
 
     bool TryImportLegacyProfile(out SaveProfileInfo profile)
     {
+        // 保留根目录旧文件作为兜底，只复制到首个档案目录，不在迁移阶段删除原数据。
         profile = null;
         string legacySavePath = Path.Combine(Application.persistentDataPath, SaveFileName);
         string legacyBackupPath = Path.Combine(Application.persistentDataPath, BackupFileName);

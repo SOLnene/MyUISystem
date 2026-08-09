@@ -15,7 +15,7 @@ public sealed class SaveProfileItemView : MonoBehaviour
     TMP_Text nameLabel;
 
     [SerializeField]
-    TMP_Text createdAtLabel;
+    TMP_Text activityLabel;
 
     [SerializeField]
     Color normalColor = new Color(0.85f, 0.85f, 0.85f, 1f);
@@ -31,7 +31,7 @@ public sealed class SaveProfileItemView : MonoBehaviour
         button = GetComponent<Button>();
         background = GetComponent<Image>();
         nameLabel = transform.Find("NameLabel").GetComponent<TMP_Text>();
-        createdAtLabel = transform.Find("CreatedAtLabel").GetComponent<TMP_Text>();
+        activityLabel = transform.Find("CreatedAtLabel").GetComponent<TMP_Text>();
     }
 
     public void Bind(SaveProfileInfo profile, Action<string> selectedCallback)
@@ -39,7 +39,7 @@ public sealed class SaveProfileItemView : MonoBehaviour
         profileId = profile.profileId;
         onSelected = selectedCallback;
         nameLabel.text = profile.displayName;
-        createdAtLabel.text = GetActivityText(profile);
+        activityLabel.text = GetActivityText(profile);
         button.onClick.RemoveListener(HandleClick);
         button.onClick.AddListener(HandleClick);
     }

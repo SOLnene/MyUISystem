@@ -96,9 +96,14 @@ public class FlowManager : SingletonMono<FlowManager>
         Debug.Log("Enter Scene");
     }
 
-    internal async UniTask<bool> EnterSelectedProfileAsync()
+    internal async UniTask<bool> EnterSelectedProfileAsync(string profileId)
     {
-        if (isEnteringProfile || SaveProfileManager.Instance.ActiveProfile == null)
+        // 避免快速重复点击并发初始化同一个全局 GameContext。
+        if (isEnteringProfile ||
+            !SaveProfileManager.Instance.TryGetProfile(
+                profileId,
+                out SaveProfileInfo profile,
+                out string profileDirectory))
         {
             return false;
         }
@@ -106,11 +111,18 @@ public class FlowManager : SingletonMono<FlowManager>
         isEnteringProfile = true;
         try
         {
-            await GameContext.Instance.Init();
-            if (!GameContext.Instance.CanSave)
+            if (!await GameContext.Instance.TryStartProfileAsync(profileDirectory))
             {
                 Debug.LogError($"进入游戏失败，存档读取结果: {GameContext.Instance.LastSaveLoadResult}");
                 return false;
+            }
+
+            // Session 已提交后再激活档案，失败的候选不会改变后续保存目标。
+            SaveProfileManager.Instance.ActivateProfile(profile);
+            if (GameContext.Instance.LastSaveLoadResult == SaveLoadResult.NotFound ||
+                GameSaveSystem.NeedsResave)
+            {
+                GameSaveCoordinator.Instance.MarkDirty();
             }
 
             await UIManager.Instance.EnsureSlotPrefabLoaded();
@@ -125,6 +137,7 @@ public class FlowManager : SingletonMono<FlowManager>
                 }
             }
 
+            // 场景激活或 Hub 打开必须等登录界面的关闭动画结束。
             UIManager.Instance.Close(UIType.LoginView, CompleteProfileEntry);
             return true;
         }
@@ -141,6 +154,7 @@ public class FlowManager : SingletonMono<FlowManager>
 
     void CompleteProfileEntry()
     {
+        // 正常启动已有待激活场景；UICreate 等测试入口则直接进入 Hub。
         if (loadOp != null)
         {
             ActivateLoadedScene();

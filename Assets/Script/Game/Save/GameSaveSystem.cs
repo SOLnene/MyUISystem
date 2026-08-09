@@ -20,9 +20,22 @@ public static class GameSaveSystem
     const string BackupFileName = "save.backup.json";
     const string TempFileName = "save.tmp";
 
-    static string SaveDirectory => string.IsNullOrEmpty(SaveProfileManager.Instance.ActiveProfileDirectory)
-        ? Application.persistentDataPath
-        : SaveProfileManager.Instance.ActiveProfileDirectory;
+    static string SaveDirectory
+    {
+        get
+        {
+            // 运行时数据属于已提交会话，保存目录也必须跟随同一个所有者。
+            string sessionDirectory = GameContext.Instance.ActiveSaveDirectory;
+            if (!string.IsNullOrEmpty(sessionDirectory))
+            {
+                return sessionDirectory;
+            }
+
+            return string.IsNullOrEmpty(SaveProfileManager.Instance.ActiveProfileDirectory)
+                ? Application.persistentDataPath
+                : SaveProfileManager.Instance.ActiveProfileDirectory;
+        }
+    }
     static string SavePath => Path.Combine(SaveDirectory, SaveFileName);
     static string BackupPath => Path.Combine(SaveDirectory, BackupFileName);
     static string TempPath => Path.Combine(SaveDirectory, TempFileName);
@@ -154,6 +167,7 @@ public static class GameSaveSystem
         GachaService gachaService,
         StorePurchaseService storePurchaseService)
     {
+        // 候选档案尚未激活，因此加载不能依赖全局 ActiveProfile。
         return Load(
             saveDirectory,
             economy,

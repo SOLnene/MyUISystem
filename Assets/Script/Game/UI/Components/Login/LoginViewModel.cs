@@ -6,6 +6,7 @@ public sealed class LoginViewModel
     readonly List<SaveProfileInfo> profiles = new List<SaveProfileInfo>();
 
     public IReadOnlyList<SaveProfileInfo> Profiles => profiles;
+    // SelectedProfile 只表示界面选择；确认后才会成为 SaveProfileManager.ActiveProfile。
     public SaveProfileInfo SelectedProfile { get; private set; }
 
     public LoginViewModel(SaveProfileManager profileManager)
@@ -46,6 +47,6 @@ public sealed class LoginViewModel
 
     public bool ConfirmSelection()
     {
-        return SelectedProfile != null && profileManager.ActivateProfile(SelectedProfile.profileId);
+        return SelectedProfile != null;
     }
 }
