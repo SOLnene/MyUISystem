@@ -16,51 +16,34 @@ public sealed class AchievementItemViewModel : IDisposable
     public ItemSlotViewModel RewardSlot { get; }
 
     readonly CompositeDisposable disposable = new();
-    readonly ItemDefinition rewardItem;
-    readonly int rewardAmount;
+    readonly AchievementService achievementService;
 
     internal IReadOnlyReactiveProperty<bool> IsClaimed { get; }
     internal ReactiveCommand ClaimCommand { get; }
 
-    public AchievementItemViewModel(
-        AchievementDefinition definition,
-        ItemDefinition rewardItem,
-        int rewardAmount)
+    internal AchievementItemViewModel(
+        AchievementState state,
+        AchievementService achievementService)
     {
+        AchievementDefinition definition = state.Definition;
+        ItemDefinition rewardItem = state.RewardItem;
+        int rewardAmount = definition.reward.amount;
         Id = definition.id;
         Title = definition.title;
         Description = definition.description;
         IconAddress = definition.iconAddress;
         TargetProgress = definition.target;
-        this.rewardItem = rewardItem;
-        this.rewardAmount = rewardAmount;
+        this.achievementService = achievementService;
         // 当前进度来自统一成就进度服务，界面只订阅 RP；超过目标值时在展示层截断。
-        CurrentProgress = AchievementProgressService.Instance
-            .ObserveProgress(definition.progressKey)
-            .Select(progress => Math.Min(TargetProgress, progress))
-            .ToReadOnlyReactiveProperty()
-            .AddTo(disposable);
+        CurrentProgress = state.CurrentProgress;
         ProgressText = CurrentProgress
             .Select(progress => $"{progress}/{TargetProgress}")
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
-        IsCompleted = CurrentProgress
-            .Select(progress => progress >= TargetProgress)
-            .DistinctUntilChanged()
-            .ToReadOnlyReactiveProperty()
-            .AddTo(disposable);
+        IsCompleted = state.IsCompleted;
         // 领取状态与完成进度分离，确保重开页面或读取存档后仍能显示“已领取”。
-        IsClaimed = AchievementProgressService.Instance
-            .ObserveClaimed(Id)
-            .ToReadOnlyReactiveProperty()
-            .AddTo(disposable);
-        CanClaim = IsCompleted
-            .CombineLatest(
-                IsClaimed,
-                (isCompleted, isClaimed) => isCompleted && !isClaimed)
-            .DistinctUntilChanged()
-            .ToReadOnlyReactiveProperty()
-            .AddTo(disposable);
+        IsClaimed = state.IsClaimed;
+        CanClaim = state.CanClaim;
         ClaimCommand = CanClaim
             .ToReactiveCommand()
             .AddTo(disposable);
@@ -79,17 +62,7 @@ public sealed class AchievementItemViewModel : IDisposable
     void ClaimReward()
     {
         // TryClaim 负责一次性领取校验，奖励发放成功后再标记存档脏状态。
-        if (!IsCompleted.Value ||
-            !AchievementProgressService.Instance.TryClaim(
-                Id,
-                () => RewardGrantService.TryGrant(
-                    new[]
-                    {
-                        new RewardItemData(rewardItem.id, rewardAmount)
-                    })))
-        {
-            return;
-        }
+        achievementService.TryClaim(Id);
     }
 
     public void Dispose()

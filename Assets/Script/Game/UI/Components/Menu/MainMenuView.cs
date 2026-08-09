@@ -27,6 +27,7 @@ public enum MainMenuRedDotKey
     Map,
     Quest,
     Shop,
+    Achievement,
 }
 
 [Serializable]

@@ -20,6 +20,8 @@ public class AchievementTabItemView : UIThreeStateSelectable
     [SerializeField]
     TextMeshProUGUI progressText;
     [SerializeField]
+    GameObject redDot;
+    [SerializeField]
     RectTransform visualRoot;
     [SerializeField]
     AnimatedPanel anim;
@@ -55,6 +57,9 @@ public class AchievementTabItemView : UIThreeStateSelectable
         viewModel.ProgressPercent
             .Subscribe(value => progressText.text = $"{value}%")
             .AddTo(bindDisposables);
+        viewModel.HasClaimableReward
+            .Subscribe(redDot.SetActive)
+            .AddTo(bindDisposables);
         SetSelected(IsSelected, true);
     }
 
@@ -64,6 +69,7 @@ public class AchievementTabItemView : UIThreeStateSelectable
         button.onClick.RemoveAllListeners();
         clickHighlightTween?.Kill();
         clickHighlight.gameObject.SetActive(false);
+        redDot.SetActive(false);
         categoryId = null;
         onSelected = null;
         SetSelected(false, true);

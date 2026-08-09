@@ -1,22 +1,14 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Threading;
-using Cysharp.Threading.Tasks;
-using Newtonsoft.Json;
 using UniRx;
-using UnityEngine;
 
 public sealed class AchievementViewModel : IDisposable
 {
-    const string ConfigAddress = "config/achievement";
-
-    readonly ItemDatabase itemDatabase;
     // 分类 VM 独占分类内的成就 VM，页面 VM 只负责分类选择和跨分类统计。
     readonly List<AchievementCategoryTabViewModel> categories = new();
     // 这是当前分类的投影列表，不重复持有成就 VM 的所有权。
     readonly List<AchievementItemViewModel> visibleItems = new();
-    readonly VersionedAssetLoader<TextAsset> configLoader = new();
     readonly CompositeDisposable categoryStateSubscriptions = new();
     readonly CompositeDisposable disposable = new();
     readonly ReactiveProperty<string> selectedCategoryId = new();
@@ -29,59 +21,32 @@ public sealed class AchievementViewModel : IDisposable
     public IReadOnlyReactiveProperty<AchievementCountInfo> CountInfo => countInfo;
     internal IObservable<Unit> VisibleItemsChanged => visibleItemsChanged;
 
-    public AchievementViewModel(ItemDatabase itemDatabase)
+    internal AchievementViewModel(AchievementService achievementService)
     {
-        this.itemDatabase = itemDatabase;
         selectedCategoryId
             .Subscribe(_ => RefreshVisibleItems())
             .AddTo(disposable);
+        BuildCategories(achievementService);
     }
 
-    public async UniTask LoadAsync(CancellationToken cancellationToken)
+    void BuildCategories(AchievementService achievementService)
     {
-        VersionedAssetLoadResult<TextAsset> result =
-            await configLoader.LoadAsync(ConfigAddress, cancellationToken);
-        if (!result.IsCurrent)
-        {
-            return;
-        }
-
-        AchievementConfigData config;
-        try
-        {
-            config = JsonConvert.DeserializeObject<AchievementConfigData>(result.Asset.text);
-        }
-        catch (JsonException exception)
-        {
-            Debug.LogError($"Achievement config parse failed: {exception.Message}");
-            return;
-        }
-
-        if (!AchievementConfigValidator.TryValidate(config, itemDatabase))
-        {
-            return;
-        }
-
         ClearCategories();
 
         // 配表顺序只决定左侧分类顺序，右侧成就顺序由完成状态统一计算。
-        foreach (AchievementCategoryConfigData category in config.categories.OrderBy(category => category.order))
+        foreach (AchievementCategoryState category in achievementService.Categories)
         {
             List<AchievementItemViewModel> categoryItems = new();
-            foreach (AchievementDefinition definition in category.achievements)
+            foreach (AchievementState achievement in category.Achievements)
             {
-                ItemDefinition rewardItem =
-                    itemDatabase.GetItemByID(definition.reward.itemId);
                 categoryItems.Add(new AchievementItemViewModel(
-                    definition,
-                    rewardItem,
-                    definition.reward.amount));
+                    achievement,
+                    achievementService));
             }
 
             // 分类 VM 接管 categoryItems 的生命周期，页面 VM 不再单独 Dispose 成就项。
             AchievementCategoryTabViewModel categoryViewModel = new(
-                category.id,
-                category.name,
+                category,
                 categoryItems);
             categories.Add(categoryViewModel);
             categoryViewModel.ItemsChanged
@@ -109,7 +74,6 @@ public sealed class AchievementViewModel : IDisposable
 
     public void Dispose()
     {
-        configLoader.Dispose();
         ClearCategories();
         categoryStateSubscriptions.Dispose();
         disposable.Dispose();

@@ -12,6 +12,7 @@ public class GameContext: Singleton<GameContext>
     //全项目只有一个实现
     public GachaService GachaService { get; private set; }
     internal StorePurchaseService StorePurchaseService { get; private set; }
+    internal AchievementService AchievementService { get; private set; }
     internal SaveLoadResult LastSaveLoadResult { get; private set; } = SaveLoadResult.NotFound;
     internal bool CanSave => LastSaveLoadResult == SaveLoadResult.Success
                              || LastSaveLoadResult == SaveLoadResult.NotFound
@@ -38,6 +39,8 @@ public class GameContext: Singleton<GameContext>
         GachaVisualProvider = new GachaVisualProvider(GameDatabase.CharaVisualDatabase);
 
         LastSaveLoadResult = GameSaveSystem.LoadCurrentGame();
+        AchievementService = new AchievementService(GameDatabase.ItemDatabase);
+        await AchievementService.InitializeAsync();
         BackpackVM = new BackpackViewModel(InventoryRepository);
         if (CanSave && (LastSaveLoadResult == SaveLoadResult.NotFound || GameSaveSystem.NeedsResave))
         {

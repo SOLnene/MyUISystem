@@ -29,7 +29,7 @@ public partial class AchievementView : UIView
             this.GetCancellationTokenOnDestroy());
 
         viewModel?.Dispose();
-        viewModel = new AchievementViewModel(GameDatabase.ItemDatabase);
+        viewModel = new AchievementViewModel(GameContext.Instance.AchievementService);
         topView.Bind(viewModel.CountInfo, OnCancel);
         LoadItemsAsync(openCancellation.Token).Forget();
     }
@@ -48,7 +48,6 @@ public partial class AchievementView : UIView
 
     async UniTask LoadItemsAsync(CancellationToken cancellationToken)
     {
-        await viewModel.LoadAsync(cancellationToken);
         if (cancellationToken.IsCancellationRequested)
         {
             return;

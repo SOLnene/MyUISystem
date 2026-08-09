@@ -14,15 +14,16 @@ public sealed class AchievementCategoryTabViewModel : IDisposable
     public string Name { get; }
     public IReadOnlyList<AchievementItemViewModel> Items => items;
     public IReadOnlyReactiveProperty<int> ProgressPercent => progressPercent;
+    public IReadOnlyReactiveProperty<bool> HasClaimableReward { get; }
     internal IObservable<Unit> ItemsChanged => itemsChanged;
 
-    public AchievementCategoryTabViewModel(
-        string id,
-        string name,
+    internal AchievementCategoryTabViewModel(
+        AchievementCategoryState state,
         List<AchievementItemViewModel> items)
     {
-        Id = id;
-        Name = name;
+        Id = state.Id;
+        Name = state.Name;
+        HasClaimableReward = state.HasClaimableReward;
         this.items = items;
 
         // 完成状态变化刷新可领取排序，领取状态变化刷新分类进度并通知页面重新排序。

@@ -13,6 +13,7 @@ public partial class HubRoot : UIView
     //UIControlData
     private bool mainMenuOpen;
     private MainMenuNavigator mainMenuNavigator;
+    private MainMenuRedDotProvider mainMenuRedDotProvider;
     
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -23,6 +24,10 @@ public partial class HubRoot : UIView
     {
         base.OnOpen(data);
         mainMenuNavigator ??= new MainMenuNavigator();
+        mainMenuRedDotProvider ??= new MainMenuRedDotProvider();
+        mainMenuRedDotProvider.Bind(
+            MainMenuRedDotKey.Achievement,
+            GameContext.Instance.AchievementService.HasClaimableReward);
     }
 
     /// <summary>
@@ -51,7 +56,11 @@ public partial class HubRoot : UIView
     private void OpenMainMenu()
     {
         mainMenuOpen = true;
-        UIManager.Instance.Open(UIType.MainMenuView, new MainMenuOpenParams(HandleMainMenuAction));
+        UIManager.Instance.Open(
+            UIType.MainMenuView,
+            new MainMenuOpenParams(
+                HandleMainMenuAction,
+                redDotProvider: mainMenuRedDotProvider));
     }
 
     private void CloseMainMenu(Action callback = null)
@@ -99,6 +108,8 @@ public partial class HubRoot : UIView
 
     public override void OnRelease()
     {
+        mainMenuRedDotProvider?.Dispose();
+        mainMenuRedDotProvider = null;
         base.OnRelease();
     }
 }

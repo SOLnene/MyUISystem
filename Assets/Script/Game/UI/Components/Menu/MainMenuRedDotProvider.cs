@@ -4,8 +4,8 @@ using UniRx;
 
 public class MainMenuRedDotProvider : IMainMenuRedDotProvider, IDisposable
 {
-    private readonly Dictionary<MainMenuRedDotKey, ReactiveProperty<bool>> states =
-        new Dictionary<MainMenuRedDotKey, ReactiveProperty<bool>>();
+    private readonly Dictionary<MainMenuRedDotKey, IReadOnlyReactiveProperty<bool>> states =
+        new Dictionary<MainMenuRedDotKey, IReadOnlyReactiveProperty<bool>>();
 
     private readonly ReactiveProperty<bool> noneState = new ReactiveProperty<bool>(false);
 
@@ -16,39 +16,20 @@ public class MainMenuRedDotProvider : IMainMenuRedDotProvider, IDisposable
             return noneState;
         }
 
-        if (!states.TryGetValue(key, out var state))
-        {
-            state = new ReactiveProperty<bool>(false);
-            states.Add(key, state);
-        }
-
-        return state;
+        return states.TryGetValue(key, out var state)
+            ? state
+            : noneState;
     }
 
-    public void Set(MainMenuRedDotKey key, bool visible)
+    internal void Bind(
+        MainMenuRedDotKey key,
+        IReadOnlyReactiveProperty<bool> state)
     {
-        if (key == MainMenuRedDotKey.None)
-        {
-            return;
-        }
-
-        if (!states.TryGetValue(key, out var state))
-        {
-            state = new ReactiveProperty<bool>(visible);
-            states.Add(key, state);
-            return;
-        }
-
-        state.Value = visible;
+        states[key] = state;
     }
 
     public void Dispose()
     {
-        foreach (var state in states.Values)
-        {
-            state.Dispose();
-        }
-
         states.Clear();
         noneState.Dispose();
     }
