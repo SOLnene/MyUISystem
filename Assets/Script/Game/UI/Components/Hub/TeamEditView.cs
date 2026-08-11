@@ -4,6 +4,7 @@ using Cysharp.Threading.Tasks;
 using TMPro;
 using UniRx;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.UI;
 
 public class TeamEditView : UIView
@@ -19,6 +20,7 @@ public class TeamEditView : UIView
     [SerializeField] private TeamStageView teamStagePrefab;
     [SerializeField] private Button backButton;
     [SerializeField] private Button confirmButton;
+    [SerializeField] private Button quickFormationButton;
     [SerializeField] private Button previousTeamButton;
     [SerializeField] private Button nextTeamButton;
     [SerializeField] private UITabGroup teamPresetTabs;
@@ -30,8 +32,10 @@ public class TeamEditView : UIView
     private TeamStageView teamStageInstance;
     private LimitedSelectionSet<CharacterModel> characterSelection;
     private readonly CompositeDisposable characterSelectionDisposable = new();
+    private UnityAction[] characterButtonActions;
     private string[][] workingTeamPresets;
     private int editingPresetIndex;
+    private int selectionMemberIndex = -1;
     private Canvas uiCanvas;
     private Camera worldCamera;
     private bool worldCameraWasEnabled;
@@ -67,11 +71,16 @@ public class TeamEditView : UIView
         base.OnAddListener();
         backButton.onClick.AddListener(OnBackClicked);
         confirmButton.onClick.AddListener(OnConfirmClicked);
+        quickFormationButton.onClick.AddListener(BeginQuickFormation);
         previousTeamButton.onClick.AddListener(SelectPreviousTeamPreset);
         nextTeamButton.onClick.AddListener(SelectNextTeamPreset);
-        foreach (var characterButton in characterButtons)
+        characterButtonActions = new UnityAction[characterButtons.Length];
+        for (int index = 0; index < characterButtons.Length; index++)
         {
-            characterButton.onClick.AddListener(OpenCharacterSelect);
+            int memberIndex = index;
+            UnityAction action = () => BeginNormalFormation(memberIndex);
+            characterButtonActions[index] = action;
+            characterButtons[index].onClick.AddListener(action);
         }
     }
 
@@ -79,13 +88,15 @@ public class TeamEditView : UIView
     {
         backButton.onClick.RemoveListener(OnBackClicked);
         confirmButton.onClick.RemoveListener(OnConfirmClicked);
+        quickFormationButton.onClick.RemoveListener(BeginQuickFormation);
         previousTeamButton.onClick.RemoveListener(SelectPreviousTeamPreset);
         nextTeamButton.onClick.RemoveListener(SelectNextTeamPreset);
-        foreach (var characterButton in characterButtons)
+        for (int index = 0; index < characterButtons.Length; index++)
         {
-            characterButton.onClick.RemoveListener(OpenCharacterSelect);
+            characterButtons[index].onClick.RemoveListener(characterButtonActions[index]);
         }
 
+        characterButtonActions = null;
         base.OnRemoveListener();
     }
 
@@ -105,16 +116,60 @@ public class TeamEditView : UIView
         base.OnRelease();
     }
 
-    private void OpenCharacterSelect()
+    private void BeginQuickFormation()
     {
-        characterSelectPanel.transform.SetAsLastSibling();
-        characterSelectPanel.Show(new CharacterSelectParams(
-            GameContext.Instance.CharacterRepository.Characters,
-            null,
-            null)
+        BeginFormationSelection(-1, teamStageInstance.MemberCount);
+    }
+
+    private void BeginNormalFormation(int memberIndex)
+    {
+        BeginFormationSelection(memberIndex, 1);
+        teamStageInstance.FocusMember(memberIndex);
+    }
+
+    private void BeginFormationSelection(int memberIndex, int maxSelectionCount)
+    {
+        ReleaseCharacterSelection();
+        selectionMemberIndex = memberIndex;
+        characterSelection = new LimitedSelectionSet<CharacterModel>(maxSelectionCount);
+
+        if (memberIndex >= 0)
         {
-            selection = characterSelection
-        });
+            AddMemberToCharacterSelection(memberIndex);
+        }
+        else
+        {
+            for (int index = 0; index < teamStageInstance.MemberCount; index++)
+            {
+                AddMemberToCharacterSelection(index);
+            }
+        }
+
+        characterSelection.OnDelta
+            .Subscribe(OnCharacterSelectionChanged)
+            .AddTo(characterSelectionDisposable);
+
+        characterSelectPanel.transform.SetAsLastSibling();
+        characterSelectPanel.Show(CharacterSelectionRequest.ForMultiple(
+            GameContext.Instance.CharacterRepository.Characters,
+            characterSelection,
+            FinishCharacterSelection,
+            memberIndex >= 0 ? CanSelectForCurrentMember : null));
+    }
+
+    private void AddMemberToCharacterSelection(int memberIndex)
+    {
+        if (!teamStageInstance.TryGetMemberCharacterKey(memberIndex, out string characterKey))
+        {
+            return;
+        }
+
+        CharacterModel character = GameContext.Instance.CharacterRepository.GetByKey(
+            characterKey);
+        if (character != null)
+        {
+            characterSelection.TrySelect(character);
+        }
     }
 
     private void InitializeWorkingTeamPresets()
@@ -161,32 +216,7 @@ public class TeamEditView : UIView
                 .Forget(Debug.LogException);
         }
 
-        InitializeCharacterSelection(memberKeys);
         RefreshMemberLabels();
-    }
-
-    private void InitializeCharacterSelection(IReadOnlyList<string> memberKeys)
-    {
-        characterSelection = new LimitedSelectionSet<CharacterModel>(teamStageInstance.MemberCount);
-        for (int memberIndex = 0; memberIndex < memberKeys.Count; memberIndex++)
-        {
-            string characterKey = memberKeys[memberIndex];
-            if (string.IsNullOrEmpty(characterKey))
-            {
-                continue;
-            }
-
-            CharacterModel character = GameContext.Instance.CharacterRepository.GetByKey(
-                characterKey);
-            if (character != null)
-            {
-                characterSelection.TrySelect(character);
-            }
-        }
-
-        characterSelection.OnDelta
-            .Subscribe(OnCharacterSelectionChanged)
-            .AddTo(characterSelectionDisposable);
     }
 
     private void SaveCurrentStageToWorkingPreset()
@@ -219,6 +249,7 @@ public class TeamEditView : UIView
     {
         if (characterSelectPanel.gameObject.activeSelf)
         {
+            FinishCharacterSelection();
             characterSelectPanel.Hide();
             return;
         }
@@ -262,9 +293,11 @@ public class TeamEditView : UIView
     private void OnCharacterSelectionChanged(SelectionDelta<CharacterModel> delta)
     {
         string characterKey = delta.Item.Definition.key;
-        int memberIndex = delta.Added
-            ? FindEmptyMemberIndex()
-            : FindMemberIndex(characterKey);
+        int memberIndex = selectionMemberIndex >= 0
+            ? selectionMemberIndex
+            : delta.Added
+                ? FindEmptyMemberIndex()
+                : FindMemberIndex(characterKey);
         if (memberIndex < 0)
         {
             return;
@@ -281,6 +314,21 @@ public class TeamEditView : UIView
         }
 
         RefreshMemberLabels();
+    }
+
+    private bool CanSelectForCurrentMember(CharacterModel character)
+    {
+        string characterKey = character.Definition.key;
+        for (int memberIndex = 0; memberIndex < teamStageInstance.MemberCount; memberIndex++)
+        {
+            if (memberIndex != selectionMemberIndex
+                && teamStageInstance.GetMemberCharacterKey(memberIndex) == characterKey)
+            {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     private int FindEmptyMemberIndex()
@@ -394,5 +442,12 @@ public class TeamEditView : UIView
         characterSelectionDisposable.Clear();
         characterSelection?.Dispose();
         characterSelection = null;
+    }
+
+    private void FinishCharacterSelection()
+    {
+        ReleaseCharacterSelection();
+        selectionMemberIndex = -1;
+        teamStageInstance.ShowOverview();
     }
 }

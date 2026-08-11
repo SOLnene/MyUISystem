@@ -11,33 +11,34 @@ public class CharacterSelectPanelView : SelectionPanelView
 
     readonly List<CharacterSlotView> activeSlots = new();
     readonly Dictionary<CharacterModel, CharacterSlotView> slotsByCharacter = new();
-    CharacterSelectParams selectParams;
+    CharacterSelectionRequest selectionRequest;
 
     protected override void OnShow(object data)
     {
         ClearSlots();
-        selectParams = data as CharacterSelectParams;
-        if (selectParams == null)
+        selectionRequest = data as CharacterSelectionRequest;
+        if (selectionRequest == null)
         {
             Debug.LogError("CharacterSelectPanelView 参数错误");
             return;
         }
 
-        foreach (CharacterModel character in selectParams.candidates)
+        foreach (CharacterModel character in selectionRequest.AvailableCharacters)
         {
             CharacterSlotView slot = Instantiate(characterSlotPrefab, content);
-            bool isChecked = selectParams.selection?.Contains(character) ?? false;
-            bool isSelected = selectParams.selection == null && character == selectParams.selectedCharacter;
-            bool isSelectable = selectParams.isSelectable?.Invoke(character) ?? true;
+            bool isChecked = selectionRequest.MultiSelectionSet?.Contains(character) ?? false;
+            bool isSelected = !selectionRequest.IsMultipleSelection
+                && character == selectionRequest.InitialSingleSelectedCharacter;
+            bool isSelectable = selectionRequest.CanSelectCharacter?.Invoke(character) ?? true;
             slot.Bind(character, isChecked, isSelectable, OnCharacterPicked);
             slot.SetSelected(isSelected);
             activeSlots.Add(slot);
             slotsByCharacter.Add(character, slot);
         }
 
-        if (selectParams.selection != null)
+        if (selectionRequest.IsMultipleSelection)
         {
-            selectParams.selection.OnDelta.Subscribe(delta =>
+            selectionRequest.MultiSelectionSet.OnDelta.Subscribe(delta =>
             {
                 if (slotsByCharacter.TryGetValue(delta.Item, out CharacterSlotView slot))
                 {
@@ -51,27 +52,28 @@ public class CharacterSelectPanelView : SelectionPanelView
     {
         disposable.Clear();
         ClearSlots();
-        selectParams = null;
+        selectionRequest = null;
     }
 
     protected override void OnCancelRequested()
     {
-        selectParams?.onCancel?.Invoke();
+        selectionRequest?.OnCancelled?.Invoke();
     }
 
     void OnCharacterPicked(CharacterModel character)
     {
-        if (selectParams?.selection != null)
+        if (selectionRequest?.IsMultipleSelection == true)
         {
-            if (selectParams.selection.Toggle(character) == LimitedSelectionResult.LimitReached)
+            if (selectionRequest.MultiSelectionSet.Toggle(character)
+                == LimitedSelectionResult.LimitReached)
             {
-                selectParams.onLimitReached?.Invoke();
+                selectionRequest.OnMultiSelectionLimitReached?.Invoke();
             }
 
             return;
         }
 
-        selectParams?.onPicked?.Invoke(character);
+        selectionRequest?.OnSingleCharacterPicked?.Invoke(character);
         Hide();
     }
 
@@ -87,27 +89,67 @@ public class CharacterSelectPanelView : SelectionPanelView
     }
 }
 
-public class CharacterSelectParams
+public sealed class CharacterSelectionRequest
 {
-    public IReadOnlyList<CharacterModel> candidates;
-    public CharacterModel selectedCharacter;
-    public Func<CharacterModel, bool> isSelectable;
-    public Action<CharacterModel> onPicked;
-    public Action onCancel;
-    public LimitedSelectionSet<CharacterModel> selection;
-    public Action onLimitReached;
+    public readonly IReadOnlyList<CharacterModel> AvailableCharacters;
+    public readonly CharacterModel InitialSingleSelectedCharacter;
+    public readonly LimitedSelectionSet<CharacterModel> MultiSelectionSet;
+    public readonly Func<CharacterModel, bool> CanSelectCharacter;
+    public readonly Action<CharacterModel> OnSingleCharacterPicked;
+    public readonly Action OnCancelled;
+    public readonly Action OnMultiSelectionLimitReached;
 
-    public CharacterSelectParams(
-        IReadOnlyList<CharacterModel> candidates,
-        CharacterModel selectedCharacter,
-        Action<CharacterModel> onPicked,
-        Action onCancel = null,
-        Func<CharacterModel, bool> isSelectable = null)
+    public bool IsMultipleSelection => MultiSelectionSet != null;
+
+    CharacterSelectionRequest(
+        IReadOnlyList<CharacterModel> availableCharacters,
+        CharacterModel initialSingleSelectedCharacter,
+        LimitedSelectionSet<CharacterModel> multiSelectionSet,
+        Func<CharacterModel, bool> canSelectCharacter,
+        Action<CharacterModel> onSingleCharacterPicked,
+        Action onCancelled,
+        Action onMultiSelectionLimitReached)
     {
-        this.candidates = candidates;
-        this.selectedCharacter = selectedCharacter;
-        this.isSelectable = isSelectable;
-        this.onPicked = onPicked;
-        this.onCancel = onCancel;
+        AvailableCharacters = availableCharacters;
+        InitialSingleSelectedCharacter = initialSingleSelectedCharacter;
+        MultiSelectionSet = multiSelectionSet;
+        CanSelectCharacter = canSelectCharacter;
+        OnSingleCharacterPicked = onSingleCharacterPicked;
+        OnCancelled = onCancelled;
+        OnMultiSelectionLimitReached = onMultiSelectionLimitReached;
+    }
+
+    public static CharacterSelectionRequest ForSingle(
+        IReadOnlyList<CharacterModel> availableCharacters,
+        CharacterModel initialSelectedCharacter,
+        Action<CharacterModel> onCharacterPicked,
+        Action onCancelled = null,
+        Func<CharacterModel, bool> canSelectCharacter = null)
+    {
+        return new CharacterSelectionRequest(
+            availableCharacters,
+            initialSelectedCharacter,
+            null,
+            canSelectCharacter,
+            onCharacterPicked,
+            onCancelled,
+            null);
+    }
+
+    public static CharacterSelectionRequest ForMultiple(
+        IReadOnlyList<CharacterModel> availableCharacters,
+        LimitedSelectionSet<CharacterModel> selectionSet,
+        Action onCancelled = null,
+        Func<CharacterModel, bool> canSelectCharacter = null,
+        Action onSelectionLimitReached = null)
+    {
+        return new CharacterSelectionRequest(
+            availableCharacters,
+            null,
+            selectionSet,
+            canSelectCharacter,
+            null,
+            onCancelled,
+            onSelectionLimitReached);
     }
 }
