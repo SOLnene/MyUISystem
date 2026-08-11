@@ -6,6 +6,9 @@ internal interface ITutorialOverlaySession
 {
     void Attach(TutorialOverlayView view);
     void Detach(TutorialOverlayView view);
+#if UNITY_EDITOR
+    void SkipForTesting();
+#endif
 }
 
 internal readonly struct CharacterQuickFillCompletedEvent : IEvent
@@ -31,6 +34,11 @@ internal readonly struct CharacterEnhanceCompletedEvent : IEvent
 internal sealed class CharacterEnhanceTutorialController : ITutorialOverlaySession, IDisposable
 {
     const string TutorialId = "character_enhance_intro";
+#if UNITY_EDITOR
+    const bool AlwaysRunForTesting = true;
+#else
+    const bool AlwaysRunForTesting = false;
+#endif
 
     enum Step
     {
@@ -58,7 +66,8 @@ internal sealed class CharacterEnhanceTutorialController : ITutorialOverlaySessi
 
     public void TryStart()
     {
-        if (started || TutorialProgressService.IsCompleted(TutorialId))
+        if (started ||
+            (!AlwaysRunForTesting && TutorialProgressService.IsCompleted(TutorialId)))
         {
             return;
         }
@@ -123,7 +132,7 @@ internal sealed class CharacterEnhanceTutorialController : ITutorialOverlaySessi
     {
         if (targetId == GetTargetId(step))
         {
-            overlayView?.ShowMessageOnly(GetWaitingMessage(step));
+            overlayView?.HideGuidance();
         }
     }
 
@@ -166,7 +175,13 @@ internal sealed class CharacterEnhanceTutorialController : ITutorialOverlaySessi
             return;
         }
 
-        overlayView.ShowMessageOnly(GetWaitingMessage(step));
+        if (step == Step.OpenMainMenu)
+        {
+            overlayView.ShowMessageOnly("按 Esc 打开主菜单。");
+            return;
+        }
+
+        overlayView.HideGuidance();
     }
 
     void Complete()
@@ -181,6 +196,20 @@ internal sealed class CharacterEnhanceTutorialController : ITutorialOverlaySessi
         UIManager.Instance.Close(UIType.TutorialOverlayView);
         DisposeSubscriptions();
     }
+
+#if UNITY_EDITOR
+    public void SkipForTesting()
+    {
+        if (!started || step == Step.Completed)
+        {
+            return;
+        }
+
+        step = Step.Completed;
+        UIManager.Instance.Close(UIType.TutorialOverlayView);
+        DisposeSubscriptions();
+    }
+#endif
 
     static TutorialTargetId GetTargetId(Step currentStep)
     {
@@ -202,19 +231,6 @@ internal sealed class CharacterEnhanceTutorialController : ITutorialOverlaySessi
             Step.OpenEnhance => "点击「升级」，进入角色强化界面。",
             Step.QuickFill => "点击「快速添加」，自动选择升级材料。",
             Step.ConfirmEnhance => "点击「升级」，提升角色等级。",
-            _ => string.Empty,
-        };
-    }
-
-    static string GetWaitingMessage(Step currentStep)
-    {
-        return currentStep switch
-        {
-            Step.OpenMainMenu => "按 Esc 打开主菜单。",
-            Step.SelectCharacter => "正在打开角色界面……",
-            Step.OpenEnhance => "正在打开角色强化界面……",
-            Step.QuickFill => "正在准备升级材料……",
-            Step.ConfirmEnhance => "正在准备升级……",
             _ => string.Empty,
         };
     }

@@ -86,6 +86,25 @@ public partial class TutorialOverlayView : UIView
         UpdateFocusRect();
     }
 
+    internal void HideGuidance()
+    {
+        currentTarget = null;
+        fullScreenDimmer.gameObject.SetActive(false);
+        cutoutDimmerRoot.gameObject.SetActive(false);
+        focusRoot.gameObject.SetActive(false);
+        messagePanel.gameObject.SetActive(false);
+    }
+
+#if UNITY_EDITOR
+    void Update()
+    {
+        if (Input.GetKeyDown(KeyCode.F8))
+        {
+            session?.SkipForTesting();
+        }
+    }
+#endif
+
     void LateUpdate()
     {
         if (currentTarget != null && currentTarget.gameObject.activeInHierarchy)

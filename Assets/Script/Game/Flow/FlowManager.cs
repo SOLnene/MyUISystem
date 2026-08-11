@@ -125,18 +125,6 @@ public class FlowManager : SingletonMono<FlowManager>
                 GameSaveCoordinator.Instance.MarkDirty();
             }
 
-            await UIManager.Instance.EnsureSlotPrefabLoaded();
-            await UIManager.Instance.EnsureSpritesLoaded("Assets/AssetsPackage/UI/Sprite/TouchIcon/UI_TouchIcon_Plus.png");
-
-            if (GameContext.Instance.TryRequestInitialTestItems())
-            {
-                var items = ItemFactory.CreateTestItems();
-                foreach (var item in items)
-                {
-                    GameContext.Instance.BackpackVM.AddItem(item);
-                }
-            }
-
             // 场景激活或 Hub 打开必须等登录界面的关闭动画结束。
             UIManager.Instance.Close(UIType.LoginView, CompleteProfileEntry);
             return true;

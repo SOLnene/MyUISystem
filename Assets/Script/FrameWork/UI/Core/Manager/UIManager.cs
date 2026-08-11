@@ -1,8 +1,5 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using Cysharp.Threading.Tasks;
-using Game.UI.Components.CharacterDetail;
 using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
@@ -39,68 +36,10 @@ public class UIManager : SingletonMono<UIManager>
 
     CanvasGroup blackMask;
     CanvasGroup backgrondMask;
-    
-    //uicreate场景中使用，用于关闭场景中原本的ui
-    [SerializeField]
-    GameObject testCanvas;
-    //[SerializeField] private UIType defaultOpenUI = UIType.HubRoot;
 
-    /// <summary>
-    /// 预加载的itemslotview,先放这里
-    /// </summary>
-    public ItemSlotView slotPrefab;
     void Awake()
     {
         Init();
-    }
-
-    async void OnEnable()
-    {
-        Init();
-        //注册事件
-        //打开，关闭ui界面不适合事件总线
-        /*openUIBinding = new EventBinding<OpenUIEvent>(e => Open(e.UIType));
-        closeUIBinding = new EventBinding<CloseUIEvent>(e => Close(e.UIType));
-        EventBus<OpenUIEvent>.Register(openUIBinding);
-        EventBus<CloseUIEvent>.Register(closeUIBinding);*/
-        //在ui创建界面测试
-        if (testCanvas != null)
-        {
-            testCanvas.SetActive(false);
-            await StartAsync();
-        }
-    }
-
-    async UniTask StartAsync()
-    {
-        //todo:ui无关的都拿到GameBootstrap中
-        ResourceManager.Instance.Init();
-        await ResourceManager.Instance.InitAsync();
-        await InitUIConfig();
-        await GameDatabase.Init();
-        if (SaveProfileManager.Instance.ActiveProfile == null)
-        {
-            Open(UIType.LoginView);
-            return;
-        }
-
-        await GameContext.Instance.Init();
-        //preload
-        await EnsureSlotPrefabLoaded();
-        await EnsureSpritesLoaded("Assets/AssetsPackage/UI/Sprite/TouchIcon/UI_TouchIcon_Plus.png");
-        //await PreLoad(UIType.GachaView);
-        
-        //创建item并添加到背包中
-        var items = ItemFactory.CreateTestItems();
-        foreach (var item in items)
-        {
-            GameContext.Instance.BackpackVM.AddItem(item);
-        }
-        var flow = new GachaFlowController();
-        var characterDefinition = GameDatabase.CharacterDatabase.Get("hutao");
-        var characterModel = CharacterFactory.Create(characterDefinition, 1);
-        var characterDetailVm = new CharacterDetailViewModel(characterModel);
-        Open(UIType.HubRoot);
     }
     
     void Init()
@@ -275,37 +214,4 @@ public class UIManager : SingletonMono<UIManager>
         return rect;
     }
     
-    public async UniTask<ItemSlotView> EnsureSlotPrefabLoaded()
-    {
-        if (slotPrefab == null)
-        {
-            var prefab = await ResourceManager.Instance.LoadAssetAsync<GameObject>(
-                "ui/prefab/item_slot");
-            slotPrefab = prefab.GetComponent<ItemSlotView>();
-        }
-        return slotPrefab;
-    }
-    
-    public async UniTask<Sprite> EnsureSpritesLoaded(string path)
-    {
-        var sprite = await ResourceManager.Instance.LoadAssetAsync<Sprite>(path);
-        return sprite;
-    }
-    
-    void OnDestroy()
-    {
-        /*EventBus<OpenUIEvent>.Deregister(openUIBinding);
-        EventBus<CloseUIEvent>.Deregister(closeUIBinding);*/
-    }
-
-  #region 测试用
-    public void ShowTest()
-    {
-        
-    }
-  #endregion
-  
-
-    
-  
 }
