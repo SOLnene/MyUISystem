@@ -1,0 +1,35 @@
+{
+  "tutorialId": "character_enhance_intro",
+  "steps": [
+    {
+      "message": "按 Esc 打开主菜单。",
+      "targetId": "None",
+      "completionMode": "TargetRegistered",
+      "completionTargetId": "MainMenuCharacter"
+    },
+    {
+      "message": "点击「角色」，查看角色信息。",
+      "targetId": "MainMenuCharacter",
+      "completionMode": "TargetRegistered",
+      "completionTargetId": "CharacterEnhanceEntry"
+    },
+    {
+      "message": "点击「升级」，进入角色强化界面。",
+      "targetId": "CharacterEnhanceEntry",
+      "completionMode": "TargetRegistered",
+      "completionTargetId": "CharacterEnhancePanel"
+    },
+    {
+      "message": "点击「快速添加」，自动选择升级材料。",
+      "targetId": "CharacterQuickAdd",
+      "completionMode": "Signal",
+      "completionSignalId": "CharacterQuickFillCompleted"
+    },
+    {
+      "message": "点击「升级」，提升角色等级。",
+      "targetId": "CharacterUpgrade",
+      "completionMode": "Signal",
+      "completionSignalId": "CharacterEnhanceCompleted"
+    }
+  ]
+}

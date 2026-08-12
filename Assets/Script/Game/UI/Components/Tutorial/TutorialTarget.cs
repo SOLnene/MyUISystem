@@ -4,11 +4,13 @@ using UnityEngine;
 
 internal enum TutorialTargetId
 {
-    None,
-    MainMenuCharacter,
-    CharacterEnhanceEntry,
-    CharacterQuickAdd,
-    CharacterUpgrade,
+    // 数值已被 prefab 序列化；新增成员只能使用新编号，不能重排或复用旧编号。
+    None = 0,
+    MainMenuCharacter = 1,
+    CharacterEnhanceEntry = 2,
+    CharacterQuickAdd = 3,
+    CharacterUpgrade = 4,
+    CharacterEnhancePanel = 5,
 }
 
 internal static class TutorialTargetRegistry

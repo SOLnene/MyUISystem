@@ -14,7 +14,9 @@ public partial class HubRoot : UIView
     private bool mainMenuOpen;
     private MainMenuNavigator mainMenuNavigator;
     private MainMenuRedDotProvider mainMenuRedDotProvider;
-    private CharacterEnhanceTutorialController characterEnhanceTutorialController;
+    [SerializeField]
+    private TextAsset characterEnhanceTutorialConfig;
+    private TutorialScheduler tutorialScheduler;
     
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -32,8 +34,6 @@ public partial class HubRoot : UIView
         mainMenuRedDotProvider.Bind(
             MainMenuRedDotKey.Backpack,
             GameContext.Instance.InventoryRepository.HasUnseenItems);
-        characterEnhanceTutorialController ??= new CharacterEnhanceTutorialController();
-        characterEnhanceTutorialController.TryStart();
     }
 
     /// <summary>
@@ -57,7 +57,25 @@ public partial class HubRoot : UIView
                 OpenMainMenu();
             }
         }
+#if UNITY_EDITOR
+        if (Input.GetKeyDown(KeyCode.F7))
+        {
+            RestartTutorialForTesting();
+        }
+#endif
     }
+
+#if UNITY_EDITOR
+    private void RestartTutorialForTesting()
+    {
+        // 每次测试都创建新的调度会话，避免复用已取消或已走完的步骤索引。
+        tutorialScheduler?.Dispose();
+        tutorialScheduler = new TutorialScheduler(
+            new[] { characterEnhanceTutorialConfig },
+            new CharacterEnhanceTutorialSignalAdapter());
+        tutorialScheduler.Start();
+    }
+#endif
 
     private void OpenMainMenu()
     {
@@ -114,8 +132,8 @@ public partial class HubRoot : UIView
 
     public override void OnRelease()
     {
-        characterEnhanceTutorialController?.Dispose();
-        characterEnhanceTutorialController = null;
+        tutorialScheduler?.Dispose();
+        tutorialScheduler = null;
         mainMenuRedDotProvider?.Dispose();
         mainMenuRedDotProvider = null;
         base.OnRelease();

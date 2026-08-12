@@ -156,6 +156,7 @@ namespace Game.UI.Components.CharacterDetail
                 AchievementProgressKeys.CharacterEnhance);
             onUpgrade.Execute(Unit.Default);
             GameSaveCoordinator.Instance.MarkDirty();
+            // 业务事件在强化结果实际产生后发送，教程、成就或埋点都可独立观察。
             EventBus<CharacterEnhanceCompletedEvent>.Raise(
                 new CharacterEnhanceCompletedEvent(result));
         }
@@ -257,6 +258,7 @@ namespace Game.UI.Components.CharacterDetail
             int totalExp = materialInput.GetTotalExp();
             if (totalExp > 0)
             {
+                // 快速添加确实选入材料后才发送成功事件，避免按钮点击造成误判。
                 EventBus<CharacterQuickFillCompletedEvent>.Raise(
                     new CharacterQuickFillCompletedEvent(totalExp));
             }
