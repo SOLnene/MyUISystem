@@ -1,4 +1,5 @@
 #if UNITY_EDITOR
+using System;
 using System.Text;
 using UnityEngine;
 
@@ -21,10 +22,11 @@ namespace SkierFramework
                 if (ctrl.targets.Length == 0)
                     continue;
 
+                string typeName = GetCSharpTypeName(ctrl.type);
                 if (ctrl.targets.Length == 1)
-                    sb.AppendFormat("\t\t[ControlBinding]\r\n\t\t{0} {1} {2};\r\n", accessLevel, ctrl.type, ctrl.name);
+                    sb.AppendFormat("\t\t[ControlBinding]\r\n\t\t{0} {1} {2};\r\n", accessLevel, typeName, ctrl.name);
                 else
-                    sb.AppendFormat("\t\t[ControlBinding]\r\n\t\t{0} {1}[] {2};\r\n", accessLevel, ctrl.type, ctrl.name);
+                    sb.AppendFormat("\t\t[ControlBinding]\r\n\t\t{0} {1}[] {2};\r\n", accessLevel, typeName, ctrl.name);
             }
 
             sb.AppendLine();
@@ -36,6 +38,13 @@ namespace SkierFramework
             sb.Append("#endregion\r\n\r\n");
 
             GUIUtility.systemCopyBuffer = sb.ToString();
+        }
+
+        private static string GetCSharpTypeName(string serializedTypeName)
+        {
+            return UIBindingTypeRegistry.TryResolve(serializedTypeName, out Type type)
+                ? type.Name
+                : serializedTypeName;
         }
 
         public static void CopyLuaToClipboard(UIControlData controlData)

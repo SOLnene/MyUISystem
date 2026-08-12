@@ -32,6 +32,7 @@ namespace SkierFramework
             if (!TryGetTargetObjects(itemData, out List<GameObject> targetObjects))
             {
                 AddFallbackCandidates(candidates, fallbackNames, fallbackTypes);
+                AddSavedTypeCandidate(candidates, itemData);
                 return candidates;
             }
 
@@ -40,6 +41,12 @@ namespace SkierFramework
             {
                 if (IsAvailableOnAllTargets(targetObjects, fallbackTypes[i]))
                     AddCandidate(candidates, fallbackNames[i], fallbackTypes[i]);
+            }
+
+            if (TryGetSavedType(itemData, out Type savedType) &&
+                IsAvailableOnAllTargets(targetObjects, savedType))
+            {
+                AddCandidate(candidates, itemData.type, savedType);
             }
 
             Component[] components = targetObjects[0].GetComponents<Component>();
@@ -54,6 +61,21 @@ namespace SkierFramework
             }
 
             return candidates;
+        }
+
+        private static void AddSavedTypeCandidate(
+            List<UIBindingTypeCandidate> candidates,
+            CtrlItemData itemData)
+        {
+            if (TryGetSavedType(itemData, out Type savedType))
+                AddCandidate(candidates, itemData.type, savedType);
+        }
+
+        private static bool TryGetSavedType(CtrlItemData itemData, out Type savedType)
+        {
+            savedType = null;
+            return !string.IsNullOrEmpty(itemData.type) &&
+                   UIBindingTypeRegistry.TryResolve(itemData.type, out savedType);
         }
 
         private static bool TryGetTargetObjects(CtrlItemData itemData, out List<GameObject> targetObjects)
