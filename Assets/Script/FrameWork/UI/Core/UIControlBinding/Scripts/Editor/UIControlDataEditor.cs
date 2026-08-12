@@ -49,6 +49,11 @@ namespace SkierFramework
             }
         }
 
+        internal List<UIBindingTypeCandidate> GetTypeCandidates(CtrlItemData itemData)
+        {
+            return UIBindingTypeResolver.GetCandidates(itemData, allTypeNames, allTypes);
+        }
+
         public override void OnInspectorGUI()
         {
             if (skin == null || skin.customStyles == null || skin.customStyles.Length == 0)

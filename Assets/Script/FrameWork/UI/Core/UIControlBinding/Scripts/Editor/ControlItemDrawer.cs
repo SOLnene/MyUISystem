@@ -13,6 +13,8 @@ namespace SkierFramework
         private CtrlItemData            _itemData;
         private bool                    _foldout = true;
         private int                     _controlTypeIdx = 0;
+        private List<UIBindingTypeCandidate> _typeCandidates;
+        private string[]                _typeCandidateNames;
 
         public ControlItemDrawer(UIControlDataEditor container, CtrlItemData item)
         {
@@ -61,6 +63,8 @@ namespace SkierFramework
                 {
                     EditorGUILayout.LabelField("变量类型 ", UIControlDataEditor.skin.label, GUILayout.Width(60f));
 
+                    RefreshTypeCandidates();
+
                     if (_controlTypeIdx == 0 && !string.IsNullOrEmpty(_itemData.type))
                         _controlTypeIdx = FindTypeIdx(_itemData.type);
 
@@ -70,7 +74,7 @@ namespace SkierFramework
                     }
 
                     EditorGUI.BeginChangeCheck();
-                    _controlTypeIdx = EditorGUILayout.Popup(_controlTypeIdx, _container.allTypeNames, UIControlDataEditor.popupAlignLeft);
+                    _controlTypeIdx = EditorGUILayout.Popup(_controlTypeIdx, _typeCandidateNames, UIControlDataEditor.popupAlignLeft);
                     if (EditorGUI.EndChangeCheck())
                     {
                         if(_controlTypeIdx != 0)
@@ -154,13 +158,19 @@ namespace SkierFramework
 
         private int FindTypeIdx(string typeName)
         {
-            string[] allTypeNames = _container.allTypeNames;
-            for (int i = 0, imax = allTypeNames.Length; i < imax; i++)
+            for (int i = 0, imax = _typeCandidates.Count; i < imax; i++)
             {
-                if(allTypeNames[i] == typeName)
+                if(_typeCandidates[i].Name == typeName)
                     return i;
             }
             return 0;
+        }
+
+        private void RefreshTypeCandidates()
+        {
+            _typeCandidates = _container.GetTypeCandidates(_itemData);
+            _typeCandidateNames = _typeCandidates.Select(candidate => candidate.Name).ToArray();
+            _controlTypeIdx = string.IsNullOrEmpty(_itemData.type) ? 0 : FindTypeIdx(_itemData.type);
         }
 
         private void InsertItem(int idx)
@@ -201,8 +211,8 @@ namespace SkierFramework
         /// <param name="typeIdx"></param>
         private bool ChangeControlsTypeTo(int typeIdx)
         {
-            System.Type targetType = _container.allTypes[typeIdx];
-            string targetTypeName = _container.allTypeNames[typeIdx];
+            System.Type targetType = _typeCandidates[typeIdx].Type;
+            string targetTypeName = _typeCandidates[typeIdx].Name;
             bool isGameObject = targetType == typeof(GameObject);
 
 

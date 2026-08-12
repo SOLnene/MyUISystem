@@ -175,6 +175,7 @@ namespace SkierFramework
             { "Transform", typeof(Transform)},
             { "GameObject", typeof(GameObject)},
         };
+        private static Dictionary<string, Type> _resolvedTypeCache = new Dictionary<string, Type>();
 
         public static string[] GetAllTypeNames()
         {
@@ -190,6 +191,41 @@ namespace SkierFramework
             types[0] = typeof(UnityEngine.Object);
             _typeMap.Values.CopyTo(types, 1);
             return types;
+        }
+
+        private static bool TryGetBindingType(string typeName, out Type type)
+        {
+            if (_typeMap.TryGetValue(typeName, out type))
+                return true;
+
+            if (_resolvedTypeCache.TryGetValue(typeName, out type))
+                return true;
+
+            foreach (Assembly assembly in AppDomain.CurrentDomain.GetAssemblies())
+            {
+                Type[] assemblyTypes;
+                try
+                {
+                    assemblyTypes = assembly.GetTypes();
+                }
+                catch (ReflectionTypeLoadException exception)
+                {
+                    assemblyTypes = exception.Types;
+                }
+
+                foreach (Type assemblyType in assemblyTypes)
+                {
+                    if (assemblyType != null && (assemblyType.Name == typeName || assemblyType.FullName == typeName))
+                    {
+                        type = assemblyType;
+                        _resolvedTypeCache[typeName] = type;
+                        return true;
+                    }
+                }
+            }
+
+            type = null;
+            return false;
         }
 #endif
 #endregion
@@ -651,14 +687,14 @@ namespace SkierFramework
                             type = correctComponent.GetType();
                         }else
                         {
-                            if(!_typeMap.TryGetValue(ctrlItemDatas[i].type, out type))
+                            if(!TryGetBindingType(ctrlItemDatas[i].type, out type))
                             {
                                 Debug.LogError("Internal Error, pls contact author");
                                 return false;
                             }
                         }
                     }
-                    else if(correctComponent.GetType() != type && !correctComponent.GetType().IsSubclassOf(type))
+                    else if(!type.IsAssignableFrom(correctComponent.GetType()))
                     {
                         Debug.LogErrorFormat("[{2}]控件名字 [{0}] 第 {1} 项与第 1 项的类型不同，请修正", ctrlItemDatas[i].name, j + 1, gameObject.name);
                         return false;
@@ -670,7 +706,7 @@ namespace SkierFramework
                     objs[j] = correctComponent;
                 }
 
-                if(type.Name != ctrlItemDatas[i].type)
+                if(string.IsNullOrEmpty(ctrlItemDatas[i].type))
                 {
                     ctrlItemDatas[i].type = type.Name;
 //#if UNITY_2019_1_OR_NEWER
@@ -679,7 +715,6 @@ namespace SkierFramework
                     EditorUtility.SetDirty(this);
                     PrefabUtility.RecordPrefabInstancePropertyModifications(this);
                 }
-                ctrlItemDatas[i].type = type.Name;
             }
             return true;
         }
@@ -708,7 +743,7 @@ namespace SkierFramework
                 foreach (var comp in components)
                 {
                     Type compType = comp.GetType();
-                    if (compType == t || compType.IsSubclassOf(t))
+                    if (t.IsAssignableFrom(compType))
                     {
                         return comp;
                     }
@@ -731,7 +766,7 @@ namespace SkierFramework
             else
             {// 指定了类型名则只找指定类型的控件
                 Type type = null;
-                if (_typeMap.TryGetValue(typename, out type))
+                if (TryGetBindingType(typename, out type))
                 {
                     newComp = getSpecialTypeComp(type);
                 }
