@@ -38,20 +38,44 @@ namespace SkierFramework
                 popupAlignLeft.alignment = TextAnchor.MiddleLeft;
             }
 
-            allTypeNames = UIControlData.GetAllTypeNames();
-            allTypes = UIControlData.GetAllTypes();
+            allTypeNames = UIBindingTypeRegistry.GetDefaultTypeNames();
+            allTypes = UIBindingTypeRegistry.GetDefaultTypes();
 
             UIControlData uIControlData = target as UIControlData;
             if (uIControlData != null)
             {
-                uIControlData.CorrectComponents();
-                uIControlData.CheckSubUIs();
+                UIControlDataValidator.CorrectComponents(uIControlData);
+                UIControlDataValidator.CheckSubUIs(uIControlData);
             }
         }
 
         internal List<UIBindingTypeCandidate> GetTypeCandidates(CtrlItemData itemData)
         {
             return UIBindingTypeResolver.GetCandidates(itemData, allTypeNames, allTypes);
+        }
+
+        [MenuItem("CONTEXT/UIControlData/复制代码到剪贴板(Private)")]
+        private static void CopyCodeToClipBoardPrivate(MenuCommand command)
+        {
+            UIBindingCodeGenerator.CopyCSharpToClipboard(command.context as UIControlData, "private");
+        }
+
+        [MenuItem("CONTEXT/UIControlData/复制代码到剪贴板(Protected)")]
+        private static void CopyCodeToClipBoardProtected(MenuCommand command)
+        {
+            UIBindingCodeGenerator.CopyCSharpToClipboard(command.context as UIControlData, "protected");
+        }
+
+        [MenuItem("CONTEXT/UIControlData/复制代码到剪贴板(Public)")]
+        private static void CopyCodeToClipBoardPublic(MenuCommand command)
+        {
+            UIBindingCodeGenerator.CopyCSharpToClipboard(command.context as UIControlData, "public");
+        }
+
+        [MenuItem("CONTEXT/UIControlData/复制代码到剪贴板(Lua)")]
+        private static void CopyCodeToClipBoardLua(MenuCommand command)
+        {
+            UIBindingCodeGenerator.CopyLuaToClipboard(command.context as UIControlData);
         }
 
         public override void OnInspectorGUI()
@@ -230,7 +254,7 @@ namespace SkierFramework
         private void SetPrefabDirty()
         {
             UIControlData uIControlData = target as UIControlData;
-            uIControlData.SetDirty();
+            UIControlDataEditorUtility.SetDirty(uIControlData);
         }
     #endregion
     }

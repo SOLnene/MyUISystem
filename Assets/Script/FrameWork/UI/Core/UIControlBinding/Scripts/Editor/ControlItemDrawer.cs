@@ -35,7 +35,7 @@ namespace SkierFramework
                 if (newName != _itemData.name)
                 {
                     _itemData.name = newName;
-                    (_container.target as UIControlData).SetDirty();
+                    UIControlDataEditorUtility.SetDirty(_container.target as UIControlData);
                 }
 
                 EditorGUILayout.Space();
@@ -70,7 +70,7 @@ namespace SkierFramework
 
                     if (EditorGUI.EndChangeCheck())
                     {
-                        (_container.target as UIControlData).SetDirty();
+                        UIControlDataEditorUtility.SetDirty(_container.target as UIControlData);
                     }
 
                     EditorGUI.BeginChangeCheck();
@@ -85,7 +85,7 @@ namespace SkierFramework
                         else // 被主动设置为了自动
                             _itemData.type = string.Empty;
 
-                        (_container.target as UIControlData).SetDirty();
+                        UIControlDataEditorUtility.SetDirty(_container.target as UIControlData);
                         return false;
                     }
 
@@ -105,7 +105,7 @@ namespace SkierFramework
                     _itemData.targets[i] = EditorGUILayout.ObjectField(obj, typeof(Object), true);
                     if (EditorGUI.EndChangeCheck())
                     {
-                        (_container.target as UIControlData).SetDirty();
+                        UIControlDataEditorUtility.SetDirty(_container.target as UIControlData);
                     }
 
                     EditorGUILayout.Space(); EditorGUILayout.Space(); EditorGUILayout.Space();
@@ -142,7 +142,7 @@ namespace SkierFramework
 
             if (EditorGUI.EndChangeCheck())
             {
-                (_container.target as UIControlData).SetDirty();
+                UIControlDataEditorUtility.SetDirty(_container.target as UIControlData);
             }
 
             PostProcess();

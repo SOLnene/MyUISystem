@@ -57,8 +57,8 @@ namespace SkierFramework
                 {
                     foreach (var comp in uiControlData)
                     {
-                        comp.CorrectComponents();
-                        comp.CheckSubUIs();
+                        UIControlDataValidator.CorrectComponents(comp);
+                        UIControlDataValidator.CheckSubUIs(comp);
                     }
                 }
             }

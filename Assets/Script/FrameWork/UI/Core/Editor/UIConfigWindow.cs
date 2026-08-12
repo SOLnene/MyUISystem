@@ -195,7 +195,7 @@ public class UIConfigWindow : EditorWindow
                                     UIControlData uiControlData = uiPrefab.GetComponent<UIControlData>();
                                     if (uiControlData != null)
                                     {
-                                        uiControlData.CopyCodeToClipBoardPrivate();
+                                        UIBindingCodeGenerator.CopyCSharpToClipboard(uiControlData, "private");
                                     }
 
                                     File.WriteAllText(newPath,UpdateBindingCode(uiScriptContent, GUIUtility.systemCopyBuffer));
@@ -260,7 +260,7 @@ public class UIConfigWindow : EditorWindow
                                 UIControlData uiControlData = uiPrefab.GetComponent<UIControlData>();
                                 if (uiControlData != null)
                                 {
-                                    uiControlData.CopyCodeToClipBoardPrivate();
+                                    UIBindingCodeGenerator.CopyCSharpToClipboard(uiControlData, "private");
                                 }
                                 string source = File.ReadAllText(uiScriptPath);
                                 File.WriteAllText(uiScriptPath,UpdateBindingCode(source, GUIUtility.systemCopyBuffer));
