@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using Game.Domain.Character;
 using Cysharp.Threading.Tasks;
-using TMPro;
 using UniRx;
 using UnityEngine;
 using UnityEngine.Events;
@@ -26,8 +25,7 @@ public class TeamEditView : UIView
     [SerializeField] private UITabGroup teamPresetTabs;
     [SerializeField] private Button[] characterButtons;
     [SerializeField] private CharacterSelectPanelView characterSelectPanel;
-    [SerializeField] private RectTransform middleArea;
-    [SerializeField] private TMP_Text[] memberLabels;
+    [SerializeField] private TeamMemberLabelsView memberLabelsView;
 
     private TeamStageView teamStageInstance;
     private LimitedSelectionSet<CharacterModel> characterSelection;
@@ -59,6 +57,7 @@ public class TeamEditView : UIView
         RefreshMemberLabels();
         Canvas.ForceUpdateCanvases();
         UpdateMemberLabelPositions();
+        memberLabelsView.ShowLabels(true).Forget(Debug.LogException);
     }
 
     private void LateUpdate()
@@ -102,6 +101,7 @@ public class TeamEditView : UIView
 
     public override void OnClose()
     {
+        memberLabelsView.HideLabelsImmediate();
         ReleaseCharacterSelection();
         ReleaseTeamStage();
         workingTeamPresets = null;
@@ -110,6 +110,7 @@ public class TeamEditView : UIView
 
     public override void OnRelease()
     {
+        memberLabelsView.HideLabelsImmediate();
         ReleaseCharacterSelection();
         ReleaseTeamStage();
         workingTeamPresets = null;
@@ -123,8 +124,9 @@ public class TeamEditView : UIView
 
     private void BeginNormalFormation(int memberIndex)
     {
-        BeginFormationSelection(memberIndex, 1);
+        memberLabelsView.HideLabels().Forget(Debug.LogException);
         teamStageInstance.FocusMember(memberIndex);
+        BeginFormationSelection(memberIndex, 1);
     }
 
     private void BeginFormationSelection(int memberIndex, int maxSelectionCount)
@@ -359,28 +361,7 @@ public class TeamEditView : UIView
 
     private void RefreshMemberLabels()
     {
-        int memberCount = Mathf.Min(teamStageInstance.MemberCount, memberLabels.Length);
-        for (int i = 0; i < memberLabels.Length; i++)
-        {
-            if (i >= memberCount)
-            {
-                memberLabels[i].gameObject.SetActive(false);
-                continue;
-            }
-
-            if (!teamStageInstance.TryGetMemberCharacterKey(i, out string characterKey))
-            {
-                memberLabels[i].gameObject.SetActive(false);
-                continue;
-            }
-
-            var character = GameContext.Instance.CharacterRepository.GetByKey(characterKey);
-            memberLabels[i].gameObject.SetActive(character != null);
-            if (character != null)
-            {
-                memberLabels[i].text = $"{character.Name.Value}\nLv.{character.LevelRP.Value}";
-            }
-        }
+        memberLabelsView.Refresh(teamStageInstance);
     }
 
     private void UpdateMemberLabelPositions()
@@ -393,31 +374,7 @@ public class TeamEditView : UIView
         Camera eventCamera = uiCanvas.renderMode == RenderMode.ScreenSpaceOverlay
             ? null
             : uiCanvas.worldCamera;
-        int memberCount = Mathf.Min(teamStageInstance.MemberCount, memberLabels.Length);
-        for (int i = 0; i < memberCount; i++)
-        {
-            TMP_Text memberLabel = memberLabels[i];
-            if (!memberLabel.gameObject.activeSelf)
-            {
-                continue;
-            }
-
-            Vector3 screenPosition = teamStageInstance.DisplayCamera.WorldToScreenPoint(
-                teamStageInstance.GetMemberInfoPosition(i));
-            if (screenPosition.z <= 0f)
-            {
-                continue;
-            }
-
-            if (RectTransformUtility.ScreenPointToWorldPointInRectangle(
-                    middleArea,
-                    screenPosition,
-                    eventCamera,
-                    out Vector3 worldPosition))
-            {
-                memberLabel.rectTransform.position = worldPosition;
-            }
-        }
+        memberLabelsView.UpdatePositions(teamStageInstance, eventCamera);
     }
 
     private void ReleaseTeamStage()
@@ -449,5 +406,6 @@ public class TeamEditView : UIView
         ReleaseCharacterSelection();
         selectionMemberIndex = -1;
         teamStageInstance.ShowOverview();
+        memberLabelsView.ShowLabels().Forget(Debug.LogException);
     }
 }

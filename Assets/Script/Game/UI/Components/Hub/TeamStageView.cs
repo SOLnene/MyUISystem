@@ -1,7 +1,6 @@
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
-using DG.Tweening;
 using UnityEngine;
 
 public sealed class TeamStageView : MonoBehaviour
@@ -11,14 +10,11 @@ public sealed class TeamStageView : MonoBehaviour
     [SerializeField] private Transform[] memberModelRoots;
     [SerializeField] private string[] memberCharacterKeys;
     [SerializeField] private ModelPreviewDatabase modelPreviewDatabase;
-    [SerializeField] private Transform overviewCameraPose;
-    [SerializeField] private Transform[] memberFocusCameraPoses;
-    [SerializeField] private float cameraTransitionDuration = 0.35f;
+    [SerializeField] private TeamStageCameraController cameraController;
 
     private GameObject[] activeMemberModels;
     private CancellationTokenSource[] memberLoadCancellations;
     private int[] memberLoadVersions;
-    private Tween cameraTransition;
 
     public Camera DisplayCamera => displayCamera;
     public int MemberCount => Mathf.Min(
@@ -50,12 +46,12 @@ public sealed class TeamStageView : MonoBehaviour
 
     public void FocusMember(int index)
     {
-        MoveCameraTo(memberFocusCameraPoses[index]);
+        cameraController.FocusMember(index);
     }
 
     public void ShowOverview()
     {
-        MoveCameraTo(overviewCameraPose);
+        cameraController.ShowOverview();
     }
 
     public async UniTask SetMemberAsync(int index, string characterKey)
@@ -196,22 +192,8 @@ public sealed class TeamStageView : MonoBehaviour
         }
     }
 
-    private void MoveCameraTo(Transform targetPose)
-    {
-        cameraTransition?.Kill();
-        Transform cameraTransform = displayCamera.transform;
-        cameraTransition = DOTween.Sequence()
-            .Join(cameraTransform.DOMove(targetPose.position, cameraTransitionDuration))
-            .Join(cameraTransform.DORotateQuaternion(
-                targetPose.rotation,
-                cameraTransitionDuration))
-            .SetEase(Ease.InOutCubic)
-            .OnComplete(() => cameraTransition = null);
-    }
-
     private void OnDestroy()
     {
-        cameraTransition?.Kill();
         for (int index = 0; index < MemberCount; index++)
         {
             CancelMemberLoad(index);
