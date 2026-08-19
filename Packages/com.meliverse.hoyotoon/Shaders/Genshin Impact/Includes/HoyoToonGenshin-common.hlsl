@@ -36,6 +36,22 @@ void ditherClip(float2 pos, float alpha)
     clip(isDithered(pos, alpha));
 }
 
+// Screen-pixel dithering preserves opaque depth behavior during per-model fades.
+void modelFadeClip(float2 pixelPosition)
+{
+    if (_ModelFade < 0.9999f)
+    {
+        ditherClip(pixelPosition, saturate(_ModelFade));
+    }
+}
+
+void modelFadeClip(float4 screenPosition)
+{
+    float reciprocalW = rcp(max(screenPosition.w, 0.00001f));
+    float2 pixelPosition = screenPosition.xy * reciprocalW * _ScreenParams.xy;
+    modelFadeClip(pixelPosition);
+}
+
 // from: https://github.com/cnlohr/shadertrixx/blob/main/README.md#best-practice-for-getting-depth-of-a-given-pixel-from-the-depth-texture
 float GetLinearZFromZDepth_WorksWithMirrors(float zDepthFromMap, float2 screenUV)
 {

@@ -479,6 +479,7 @@ shadow_out vs_shadow(shadow_in v)
 float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+    modelFadeClip(i.ss_pos);
 
     // get the world space position now, might be more expensive here but concerving vertex outputs
     float4 ws_pos = mul(unity_ObjectToWorld, i.ws_pos);
@@ -1045,6 +1046,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
 
 float4 ps_edge(vs_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
 {
+    modelFadeClip(i.ss_pos);
     float4 out_color = (float4)1.0f;
     #if defined(can_shift)
         float outline_mask = packed_channel_picker(sampler_linear_repeat, _HueMaskTexture, i.uv_a.xy, _OutlineMaskSource);
@@ -1092,6 +1094,7 @@ float4 ps_edge(vs_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
 
 float4 ps_nyx(vs_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
 {
+    modelFadeClip(i.ss_pos);
     #if defined(nyx_outline)
         if(_EnableNyxOutline)
         {
@@ -1166,6 +1169,7 @@ float4 ps_nyx(vs_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
 
 float4 ps_shadow(shadow_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
 {
+    modelFadeClip(i.pos.xy);
     // initialize uv 
     float2 uv = (!vface && _UseBackFaceUV2) ? i.uv_a.zw : i.uv_a.xy;
 

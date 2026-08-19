@@ -512,6 +512,7 @@ Shader "HoyoToon/Genshin/Character"
 
         //Special Effects
         [HideInInspector] start_specialeffects("Special Effects", Float) = 0
+            _ModelFade ("Model Fade", Range(0, 1)) = 1
             [HideInInspector] start_emissionglow("Emission / Archon Glow", Float) = 0
                 [Enum(From Diffuse Alpha, 0, From Custom Mask, 1)]  _EmissionType ("Emission Mask Source", Float) = 0
                 _CustomEmissionTex ("Custom Emission Texture--{condition_show:{type:PROPERTY_BOOL,data:_EmissionType==1}}", 2D) = "black"{}

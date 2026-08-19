@@ -1,20 +1,30 @@
 using System;
 using System.Threading;
 using Cysharp.Threading.Tasks;
+using DG.Tweening;
 using UnityEngine;
 
 public sealed class TeamStageView : MonoBehaviour
 {
+    private static readonly int ModelFadeId = Shader.PropertyToID("_ModelFade");
+
     [SerializeField] private Camera displayCamera;
     [SerializeField] private Transform[] memberInfoAnchors;
     [SerializeField] private Transform[] memberModelRoots;
     [SerializeField] private string[] memberCharacterKeys;
     [SerializeField] private ModelPreviewDatabase modelPreviewDatabase;
     [SerializeField] private TeamStageCameraController cameraController;
+    [SerializeField] private float memberFadeDuration = 0.15f;
 
     private GameObject[] activeMemberModels;
+    private string[] activeMemberCharacterKeys;
+    private Renderer[][] memberRenderers;
     private CancellationTokenSource[] memberLoadCancellations;
     private int[] memberLoadVersions;
+    private MaterialPropertyBlock memberFadePropertyBlock;
+    private Tween memberFadeTween;
+    private int focusedMemberIndex = -1;
+    private bool isReleased;
 
     public Camera DisplayCamera => displayCamera;
     public int MemberCount => Mathf.Min(
@@ -24,8 +34,11 @@ public sealed class TeamStageView : MonoBehaviour
     private void Awake()
     {
         activeMemberModels = new GameObject[MemberCount];
+        activeMemberCharacterKeys = new string[MemberCount];
+        memberRenderers = new Renderer[MemberCount][];
         memberLoadCancellations = new CancellationTokenSource[MemberCount];
         memberLoadVersions = new int[MemberCount];
+        memberFadePropertyBlock = new MaterialPropertyBlock();
     }
 
     public Vector3 GetMemberInfoPosition(int index)
@@ -47,19 +60,62 @@ public sealed class TeamStageView : MonoBehaviour
     public void FocusMember(int index)
     {
         cameraController.FocusMember(index);
+        focusedMemberIndex = index;
+        memberFadeTween?.Kill();
+        memberFadeTween = DOVirtual.Float(1f, 0f, memberFadeDuration, fade =>
+        {
+            for (int memberIndex = 0; memberIndex < MemberCount; memberIndex++)
+            {
+                SetMemberFade(memberIndex, memberIndex == index ? 1f : fade);
+            }
+        }).SetEase(Ease.OutCubic);
     }
 
     public void ShowOverview()
     {
         cameraController.ShowOverview();
+        memberFadeTween?.Kill();
+        if (focusedMemberIndex < 0)
+        {
+            for (int index = 0; index < MemberCount; index++)
+            {
+                SetMemberFade(index, 1f);
+            }
+
+            return;
+        }
+
+        int previousFocusedMemberIndex = focusedMemberIndex;
+        focusedMemberIndex = -1;
+        memberFadeTween = DOVirtual.Float(0f, 1f, memberFadeDuration, fade =>
+        {
+            for (int memberIndex = 0; memberIndex < MemberCount; memberIndex++)
+            {
+                SetMemberFade(
+                    memberIndex,
+                    memberIndex == previousFocusedMemberIndex ? 1f : fade);
+            }
+        }).SetEase(Ease.OutCubic);
     }
 
     public async UniTask SetMemberAsync(int index, string characterKey)
     {
+        if (isReleased)
+        {
+            return;
+        }
+
         memberCharacterKeys[index] = characterKey;
         if (string.IsNullOrEmpty(characterKey))
         {
             ClearMemberModel(index);
+            return;
+        }
+
+        if (activeMemberModels[index] != null
+            && activeMemberCharacterKeys[index] == characterKey)
+        {
+            CancelMemberLoad(index);
             return;
         }
 
@@ -73,7 +129,7 @@ public sealed class TeamStageView : MonoBehaviour
             return;
         }
 
-        await LoadMemberModelAsync(index, definition);
+        await LoadMemberModelAsync(index, characterKey, definition);
     }
 
     public void ClearMember(int index)
@@ -97,7 +153,10 @@ public sealed class TeamStageView : MonoBehaviour
         }
     }
 
-    private async UniTask LoadMemberModelAsync(int index, ModelPreviewDefinition definition)
+    private async UniTask LoadMemberModelAsync(
+        int index,
+        string characterKey,
+        ModelPreviewDefinition definition)
     {
         CancelMemberLoad(index);
         int requestVersion = memberLoadVersions[index];
@@ -117,7 +176,8 @@ public sealed class TeamStageView : MonoBehaviour
                 return;
             }
 
-            if (requestVersion != memberLoadVersions[index]
+            if (isReleased
+                || requestVersion != memberLoadVersions[index]
                 || cancellation.IsCancellationRequested)
             {
                 return;
@@ -130,7 +190,15 @@ public sealed class TeamStageView : MonoBehaviour
             SetLayerRecursively(loadedModel, LayerMask.NameToLayer("ModelDisplay"));
 
             GameObject previousModel = activeMemberModels[index];
+            if (previousModel != null)
+            {
+                SetMemberFade(index, 1f);
+            }
+
             activeMemberModels[index] = loadedModel;
+            activeMemberCharacterKeys[index] = characterKey;
+            memberRenderers[index] = loadedModel.GetComponentsInChildren<Renderer>(true);
+            SetMemberFade(index, focusedMemberIndex < 0 || focusedMemberIndex == index ? 1f : 0f);
             loadedModel.SetActive(true);
             loadedModel = null;
 
@@ -146,7 +214,7 @@ public sealed class TeamStageView : MonoBehaviour
         {
             if (loadedModel != null)
             {
-                ResourceManager.Instance.Recycle(loadedModel);
+                ResourceManager.Instance.Recycle(loadedModel, isReleased);
             }
 
             if (memberLoadCancellations[index] == cancellation)
@@ -172,16 +240,99 @@ public sealed class TeamStageView : MonoBehaviour
         cancellation?.Cancel();
     }
 
-    private void RecycleMemberModel(int index)
+    private void RecycleMemberModel(int index, bool forceDestroy = false)
     {
         GameObject memberModel = activeMemberModels[index];
         if (memberModel == null)
         {
+            activeMemberCharacterKeys[index] = null;
+            memberRenderers[index] = null;
             return;
         }
 
-        ResourceManager.Instance.Recycle(memberModel);
+        // MaterialPropertyBlock is retained by pooled renderers, so restore the
+        // shared model to its visible state before returning it to the pool.
+        SetMemberFade(index, 1f);
+        ResourceManager.Instance.Recycle(memberModel, forceDestroy);
         activeMemberModels[index] = null;
+        activeMemberCharacterKeys[index] = null;
+        memberRenderers[index] = null;
+    }
+
+    internal void Open()
+    {
+        if (!isReleased)
+        {
+            gameObject.SetActive(true);
+        }
+    }
+
+    internal void Close()
+    {
+        if (isReleased)
+        {
+            return;
+        }
+
+        for (int index = 0; index < MemberCount; index++)
+        {
+            CancelMemberLoad(index);
+            SetMemberFade(index, 1f);
+        }
+
+        memberFadeTween?.Kill();
+        memberFadeTween = null;
+        focusedMemberIndex = -1;
+        cameraController.ShowOverview();
+        gameObject.SetActive(false);
+    }
+
+    internal void Release()
+    {
+        ReleaseOwnedModels(false);
+        gameObject.SetActive(false);
+        Destroy(gameObject);
+    }
+
+    private void ReleaseOwnedModels(bool forceDestroy)
+    {
+        if (isReleased)
+        {
+            return;
+        }
+
+        // Pooling is valid during an explicit release; destruction fallback must not
+        // move scene-owned models into DontDestroyOnLoad while Unity is unloading.
+        isReleased = true;
+        memberFadeTween?.Kill();
+        memberFadeTween = null;
+        for (int index = 0; index < MemberCount; index++)
+        {
+            CancelMemberLoad(index);
+            RecycleMemberModel(index, forceDestroy);
+        }
+    }
+
+    private void SetMemberFade(int index, float fade)
+    {
+        Renderer[] renderers = memberRenderers[index];
+        if (renderers == null)
+        {
+            return;
+        }
+
+        foreach (Renderer memberRenderer in renderers)
+        {
+            if (memberRenderer == null)
+            {
+                continue;
+            }
+
+            memberFadePropertyBlock.Clear();
+            memberRenderer.GetPropertyBlock(memberFadePropertyBlock);
+            memberFadePropertyBlock.SetFloat(ModelFadeId, fade);
+            memberRenderer.SetPropertyBlock(memberFadePropertyBlock);
+        }
     }
 
     private static void SetLayerRecursively(GameObject root, int layer)
@@ -194,10 +345,6 @@ public sealed class TeamStageView : MonoBehaviour
 
     private void OnDestroy()
     {
-        for (int index = 0; index < MemberCount; index++)
-        {
-            CancelMemberLoad(index);
-            RecycleMemberModel(index);
-        }
+        ReleaseOwnedModels(true);
     }
 }

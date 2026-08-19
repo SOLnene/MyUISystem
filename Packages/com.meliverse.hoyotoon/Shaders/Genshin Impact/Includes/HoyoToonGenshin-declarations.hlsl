@@ -156,6 +156,7 @@ float _UseMaterial3;
 float _UseMaterial4;
 float _UseMaterial5;
 float _EnableDithering;
+float _ModelFade;
 
 // light: 
 float _FilterLight;

@@ -46,8 +46,13 @@ public class TeamEditView : UIView
         worldCameraWasEnabled = worldCamera.enabled;
         worldCamera.enabled = false;
 
-        teamStageInstance = Instantiate(teamStagePrefab);
-        teamStageInstance.DisplayCamera.depth = -10;
+        if (teamStageInstance == null)
+        {
+            teamStageInstance = Instantiate(teamStagePrefab);
+            DontDestroyOnLoad(teamStageInstance.gameObject);
+        }
+
+        teamStageInstance.Open();
         InitializeWorkingTeamPresets();
         editingPresetIndex = GameContext.Instance.TeamRepository.ActivePresetIndex;
         teamPresetTabs.Bind(TeamPresetOptions, editingPresetIndex, OnTeamPresetSelected);
@@ -103,7 +108,7 @@ public class TeamEditView : UIView
     {
         memberLabelsView.HideLabelsImmediate();
         ReleaseCharacterSelection();
-        ReleaseTeamStage();
+        CloseTeamStage();
         workingTeamPresets = null;
         base.OnClose();
     }
@@ -379,14 +384,28 @@ public class TeamEditView : UIView
 
     private void ReleaseTeamStage()
     {
-        if (teamStageInstance == null)
+        if (teamStageInstance != null)
         {
-            return;
+            TeamStageView stage = teamStageInstance;
+            teamStageInstance = null;
+            stage.Release();
         }
 
-        Destroy(teamStageInstance);
-        teamStageInstance = null;
+        RestoreWorldCamera();
+    }
 
+    private void CloseTeamStage()
+    {
+        if (teamStageInstance != null)
+        {
+            teamStageInstance.Close();
+        }
+
+        RestoreWorldCamera();
+    }
+
+    private void RestoreWorldCamera()
+    {
         if (worldCamera != null)
         {
             worldCamera.enabled = worldCameraWasEnabled;
