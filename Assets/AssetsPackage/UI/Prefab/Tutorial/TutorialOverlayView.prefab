@@ -68,7 +68,7 @@ MonoBehaviour:
   m_Sprite: {fileID: 21300000, guid: 0b4a0b16d014390479b172784a86a410, type: 3}
   m_Type: 1
   m_PreserveAspect: 0
-  m_FillCenter: 1
+  m_FillCenter: 0
   m_FillMethod: 4
   m_FillAmount: 1
   m_FillClockwise: 1
@@ -442,9 +442,9 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_Sprite: {fileID: 21300000, guid: e88464a767f3bdd4c900b4d2e235736d, type: 3}
-  m_Type: 0
+  m_Type: 1
   m_PreserveAspect: 0
-  m_FillCenter: 1
+  m_FillCenter: 0
   m_FillMethod: 4
   m_FillAmount: 1
   m_FillClockwise: 1
@@ -1058,8 +1058,8 @@ MonoBehaviour:
   messagePanel: {fileID: 4321654992356572793}
   messageText: {fileID: 6152518395852485105}
   focusPadding: 16
-  convergingStartPadding: 120
-  convergingDuration: 0.45
+  convergingStartPadding: 500
+  convergingDuration: 1
 --- !u!1 &8789018362153876524
 GameObject:
   m_ObjectHideFlags: 0
