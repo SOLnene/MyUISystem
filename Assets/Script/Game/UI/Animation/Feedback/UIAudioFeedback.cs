@@ -7,15 +7,11 @@ using UnityEngine.UI;
 /// 组件未挂载到 Prefab 时不会影响现有 UI 行为。
 /// </summary>
 public sealed class UIAudioFeedback : MonoBehaviour,
-    IPointerEnterHandler,
     IPointerClickHandler,
-    ISelectHandler,
     ISubmitHandler
 {
     [SerializeField]
     Selectable selectable;
-    [SerializeField]
-    UIAudioFeedbackPreset preset;
 
     void Reset()
     {
@@ -30,33 +26,23 @@ public sealed class UIAudioFeedback : MonoBehaviour,
         }
     }
 
-    public void OnPointerEnter(PointerEventData eventData)
-    {
-        Play(preset != null ? preset.HoverCue : null);
-    }
-
     public void OnPointerClick(PointerEventData eventData)
     {
-        Play(preset != null ? preset.ClickCue : null);
-    }
-
-    public void OnSelect(BaseEventData eventData)
-    {
-        Play(preset != null ? preset.SelectCue : null);
+        PlayClick();
     }
 
     public void OnSubmit(BaseEventData eventData)
     {
-        Play(preset != null ? preset.SubmitCue : null);
+        PlayClick();
     }
 
-    void Play(AudioCue cue)
+    void PlayClick()
     {
-        if (cue == null || selectable != null && !selectable.IsInteractable())
+        if (selectable != null && !selectable.IsInteractable())
         {
             return;
         }
 
-        AudioManager.Instance.Play(cue);
+        AudioManager.Instance.PlayUI(UISound.ButtonClick);
     }
 }

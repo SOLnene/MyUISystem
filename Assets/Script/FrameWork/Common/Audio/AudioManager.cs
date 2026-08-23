@@ -4,6 +4,13 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
+public enum UISound
+{
+    PanelOpen,
+    PanelClose,
+    ButtonClick
+}
+
 /// <summary>
 /// 统一负责 AudioClip 异步加载、AudioSource 复用、并发限制和总线控制。
 /// </summary>
@@ -17,12 +24,28 @@ public sealed class AudioManager : SingletonMono<AudioManager>
 
     [SerializeField]
     AudioSystemConfig config;
+    [SerializeField]
+    AudioClip panelOpenClip;
+    [SerializeField]
+    AudioClip panelCloseClip;
+    [SerializeField]
+    AudioClip buttonClickClip;
+    [SerializeField]
+    [Range(0f, 1f)]
+    float panelOpenVolume = 0.75f;
+    [SerializeField]
+    [Range(0f, 1f)]
+    float panelCloseVolume = 0.95f;
+    [SerializeField]
+    [Range(0f, 1f)]
+    float buttonClickVolume = 0.8f;
 
     readonly List<AudioSource> sources = new();
     readonly Dictionary<int, ActivePlayback> activePlaybacks = new();
     readonly Dictionary<AudioCue, float> lastPlayedTimes = new();
     readonly List<int> completedHandles = new();
 
+    AudioSource uiSource;
     Transform sourceRoot;
     int nextHandleId = 1;
     bool initialized;
@@ -32,12 +55,37 @@ public sealed class AudioManager : SingletonMono<AudioManager>
     protected override void Awake()
     {
         base.Awake();
-        if (Instance != this || config == null)
+        if (Instance != this)
         {
             return;
         }
 
-        Initialize(config);
+        EnsureUISource();
+        if (config != null)
+        {
+            Initialize(config);
+        }
+    }
+
+    /// <summary>
+    /// 播放常驻的基础 UI 音效，不经过异步资源加载。
+    /// </summary>
+    public void PlayUI(UISound sound)
+    {
+        if (uiSource == null)
+        {
+            EnsureUISource();
+        }
+
+        (AudioClip clip, float volume) = sound switch
+        {
+            UISound.PanelOpen => (panelOpenClip, panelOpenVolume),
+            UISound.PanelClose => (panelCloseClip, panelCloseVolume),
+            UISound.ButtonClick => (buttonClickClip, buttonClickVolume),
+            _ => throw new ArgumentOutOfRangeException(nameof(sound), sound, null)
+        };
+
+        uiSource.PlayOneShot(clip, volume);
     }
 
     /// <summary>
@@ -296,6 +344,19 @@ public sealed class AudioManager : SingletonMono<AudioManager>
         var root = new GameObject("AudioSources");
         root.transform.SetParent(transform, false);
         sourceRoot = root.transform;
+    }
+
+    void EnsureUISource()
+    {
+        // 基础 UI 音效常驻并共享一个 PlayOneShot Source，避免首次交互等待异步加载。
+        uiSource = GetComponent<AudioSource>();
+        if (uiSource == null)
+        {
+            uiSource = gameObject.AddComponent<AudioSource>();
+        }
+
+        uiSource.playOnAwake = false;
+        uiSource.spatialBlend = 0f;
     }
 
     void EnsurePoolSize(int targetSize)

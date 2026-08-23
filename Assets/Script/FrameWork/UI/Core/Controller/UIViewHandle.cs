@@ -188,6 +188,7 @@ public class UIViewHandle
         uiState = UIState.Opening;
         //Todo:层级管理
         SetVisible(true);
+        AudioManager.Instance.PlayUI(UISound.PanelOpen);
         //Todo:调用uiview内部方法
         
         uiView.OnOpen(data);
@@ -212,6 +213,7 @@ public class UIViewHandle
     {
         uiLayerLogic.CloseUI(this);
         uiState = UIState.Closing;
+        AudioManager.Instance.PlayUI(UISound.PanelClose);
         //Todo:层级管理
         
         //Todo:调用uiview内部方法
