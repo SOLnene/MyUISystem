@@ -17,11 +17,12 @@ public class CharacterPreviewAnimator : MonoBehaviour
     private AnimatorOverrideController overrideController;
 
     private AnimatorOverrideController runtimeOverrideController;
+    private RuntimeAnimatorController originalAnimatorController;
+    private bool originalApplyRootMotion;
     private const string STATE_NAME = "Idle";
 
     private Coroutine idleRoutine;
     private Coroutine completeRoutine;
-    private CameraPreset currentPreset;
     bool isPlayingStateA = true; // 标记当前在播放 StateA 还是 StateB
 
     #region Playable
@@ -37,22 +38,25 @@ public class CharacterPreviewAnimator : MonoBehaviour
   #endregion
     void Awake()
     {
-        if (animator != null)
+        Animator initialAnimator = animator;
+        animator = null;
+        if (initialAnimator != null)
         {
-            Bind(animator);
+            Bind(initialAnimator);
         }
     }
 
     public void Bind(Animator targetAnimator)
     {
-        StopActiveRoutines();
-        ReleaseRuntimeController();
+        Unbind();
         animator = targetAnimator;
         if (animator == null)
         {
             return;
         }
 
+        originalAnimatorController = animator.runtimeAnimatorController;
+        originalApplyRootMotion = animator.applyRootMotion;
         runtimeOverrideController = Instantiate(overrideController);
         animator.runtimeAnimatorController = runtimeOverrideController;
         animator.applyRootMotion = false; // 防止飞走
@@ -62,9 +66,15 @@ public class CharacterPreviewAnimator : MonoBehaviour
     public void Unbind()
     {
         StopActiveRoutines();
-        animator = null;
+        if (animator != null)
+        {
+            animator.runtimeAnimatorController = originalAnimatorController;
+            animator.applyRootMotion = originalApplyRootMotion;
+        }
+
         ReleaseRuntimeController();
-        currentPreset = null;
+        animator = null;
+        originalAnimatorController = null;
         isPlayingStateA = true;
     }
 
@@ -96,41 +106,41 @@ public class CharacterPreviewAnimator : MonoBehaviour
 
     void OnDestroy()
     {
-        ReleaseRuntimeController();
+        Unbind();
     }
     // AnimatorOverrideController有问题，先用这个
-    public void ApplyPreset(CameraPreset preset, Action onCompleted = null)
+    public void CrossFadeTo(
+        AnimationClip clip,
+        float blendDuration,
+        Action onBlendCompleted = null)
     {
         if (animator == null || runtimeOverrideController == null)
         {
-            onCompleted?.Invoke();
+            onBlendCompleted?.Invoke();
             return;
         }
 
-        /*var s = preset.animationClip.name;
-        animator.CrossFade(s, preset.crossFadeDuration);*/
-        currentPreset = preset;
-
-        var clip =preset.animationClip;
         if (clip == null)
         {
-            onCompleted?.Invoke();
+            onBlendCompleted?.Invoke();
             return;
         }
+
+        blendDuration = Mathf.Max(0f, blendDuration);
 
         // 乒乓切换：如果当前在A，就替换B的Clip并过渡到B；反之亦然。
         if (isPlayingStateA)
         {
             // 注意：这里的 "DefaultClipB" 必须是你 Animator Controller 中 StateB 默认绑定的 Clip 的真实名称
             runtimeOverrideController["biye"] = clip;
-            animator.CrossFadeInFixedTime("StateB", preset.crossFadeDuration);
+            animator.CrossFadeInFixedTime("StateB", blendDuration);
             Debug.Log("Switching to StateB: " + clip.name);
         }
         else
         {
             // 注意：这里的 "DefaultClipA" 必须是你 Animator Controller 中 StateA 默认绑定的 Clip 的真实名称
             runtimeOverrideController["idle"] = clip;
-            animator.CrossFadeInFixedTime("StateA", preset.crossFadeDuration);
+            animator.CrossFadeInFixedTime("StateA", blendDuration);
             Debug.Log("Switching to StateA: " + clip.name);
         }
 
@@ -142,16 +152,15 @@ public class CharacterPreviewAnimator : MonoBehaviour
             StopCoroutine(completeRoutine);
         }
 
-        completeRoutine = StartCoroutine(NotifyCompletedAfterDelay(preset.crossFadeDuration, onCompleted));
+        completeRoutine = StartCoroutine(NotifyCompletedAfterDelay(blendDuration, onBlendCompleted));
     }
     
     //无过渡切换动作
     //用于初始化动作
-    public void ApplyPresetImmediate(CameraPreset preset, Action onCompleted = null)
+    public void PlayImmediate(AnimationClip clip)
     {
         if (animator == null || runtimeOverrideController == null)
         {
-            onCompleted?.Invoke();
             return;
         }
 
@@ -161,10 +170,8 @@ public class CharacterPreviewAnimator : MonoBehaviour
             completeRoutine = null;
         }
 
-        var clip = preset.animationClip;
         if (clip == null)
         {
-            onCompleted?.Invoke();
             return;
         }
 
@@ -176,10 +183,9 @@ public class CharacterPreviewAnimator : MonoBehaviour
         // 防止第一次点击切换没有过渡
         isPlayingStateA = true; 
         animator.Update(0f);
-        onCompleted?.Invoke();
     }
 
-    IEnumerator NotifyCompletedAfterDelay(float delay, Action onCompleted)
+    IEnumerator NotifyCompletedAfterDelay(float delay, Action onBlendCompleted)
     {
         if (delay > 0f)
         {
@@ -187,7 +193,7 @@ public class CharacterPreviewAnimator : MonoBehaviour
         }
 
         completeRoutine = null;
-        onCompleted?.Invoke();
+        onBlendCompleted?.Invoke();
     }
     
     /*// 对外入口：应用Preset

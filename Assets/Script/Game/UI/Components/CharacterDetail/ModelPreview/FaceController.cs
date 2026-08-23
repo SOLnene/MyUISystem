@@ -25,6 +25,12 @@ public class FaceController : MonoBehaviour
     //眨眼计时器
     float blinkTimer;
     Tween blinkTween;
+    readonly List<FaceExpressionPreset.CurveData> activeCurves = new();
+    bool isPlayingCurvePreset;
+    bool canBlinkAfterCurve;
+    float curveElapsedTime;
+    float curveDuration;
+    float curveIntensity;
     [Header("眨眼参数")]
     [SerializeField, Tooltip("两次眨眼之间的最小间隔（秒）")]
     private float minBlinkInterval = 2.5f;
@@ -85,8 +91,19 @@ public class FaceController : MonoBehaviour
 
     void Update()
     {
-        UpdateAllBlendShapes();
-        SetBlink();
+        if (isPlayingCurvePreset)
+        {
+            UpdateCurvePreset();
+        }
+        else
+        {
+            UpdateAllBlendShapes();
+        }
+
+        if (!isPlayingCurvePreset)
+        {
+            SetBlink();
+        }
     }
 
     // 1. 收集所有可能有 BlendShape 的面部 Renderer
@@ -180,6 +197,8 @@ public class FaceController : MonoBehaviour
     // 5. 清空所有表情
     public void ResetAll()
     {
+        StopCurvePreset();
+
         foreach (var targets in expressionMap.Values)
         {
             foreach (var t in targets)
@@ -197,19 +216,161 @@ public class FaceController : MonoBehaviour
     /// </summary>
     public void ApplyFacePreset(FaceExpressionPreset preset, float intensity = 1f)
     {
-        if (preset == null || preset.blends == null || preset.blends.Count == 0)
+        if (preset == null)
         {
             Debug.LogWarning("表情预设为空或无 Blend 数据");
             return;
         }
-        
+
+        switch (preset.playbackMode)
+        {
+            case FacePresetPlaybackMode.CurveAnimation:
+                ApplyCurvePreset(preset, intensity);
+                break;
+            default:
+                ApplyStaticPreset(preset, intensity);
+                break;
+        }
+    }
+
+    void ApplyStaticPreset(FaceExpressionPreset preset, float intensity)
+    {
+        if (preset.blends == null || preset.blends.Count == 0)
+        {
+            Debug.LogWarning("表情预设为空或无 Blend 数据");
+            return;
+        }
+
+        StopBlink();
         ResetAll();
-        
         canBlink = preset.canBlink;
+
         foreach (var blend in preset.blends)
         {
             SetExpression(blend.blendShapeName, blend.weight * intensity);
         }
+    }
+
+    void ApplyCurvePreset(FaceExpressionPreset preset, float intensity)
+    {
+        if (preset.curves == null || preset.curves.Count == 0)
+        {
+            Debug.LogWarning("曲线表情预设没有曲线数据");
+            return;
+        }
+
+        StopBlink();
+        ResetAll();
+
+        int unresolvedCount = 0;
+        int missingBlendShapeCount = 0;
+        foreach (FaceExpressionPreset.CurveData curve in preset.curves)
+        {
+            if (curve.bindingType == FaceCurveBindingType.Unresolved)
+            {
+                unresolvedCount++;
+                continue;
+            }
+
+            if (curve.bindingType == FaceCurveBindingType.Ignored)
+            {
+                continue;
+            }
+
+            if (string.IsNullOrEmpty(curve.blendShapeName)
+                || !expressionMap.ContainsKey(curve.blendShapeName))
+            {
+                missingBlendShapeCount++;
+                continue;
+            }
+
+            activeCurves.Add(curve);
+        }
+
+        if (unresolvedCount > 0 || missingBlendShapeCount > 0)
+        {
+            Debug.LogWarning(
+                $"表情曲线存在未应用通道：未解析 {unresolvedCount}，模型缺少 BlendShape {missingBlendShapeCount}");
+        }
+
+        if (activeCurves.Count == 0)
+        {
+            Debug.LogWarning("曲线表情预设没有可应用到当前模型的通道");
+            return;
+        }
+
+        canBlinkAfterCurve = preset.canBlink;
+        curveElapsedTime = 0f;
+        curveDuration = preset.duration > 0f ? preset.duration : GetCurveDuration();
+        curveIntensity = intensity;
+        isPlayingCurvePreset = true;
+        ApplyCurveFrame(0f);
+
+        if (curveDuration <= 0f)
+        {
+            CompleteCurvePreset();
+        }
+    }
+
+    void UpdateCurvePreset()
+    {
+        curveElapsedTime = Mathf.Min(curveElapsedTime + Time.deltaTime, curveDuration);
+        ApplyCurveFrame(curveElapsedTime);
+
+        if (curveElapsedTime >= curveDuration)
+        {
+            CompleteCurvePreset();
+        }
+    }
+
+    void ApplyCurveFrame(float time)
+    {
+        // DAT 曲线已经描述完整时间变化，直接写入才能避免再次平滑造成相位和幅度偏差。
+        foreach (FaceExpressionPreset.CurveData curve in activeCurves)
+        {
+            SetExpressionImmediate(curve.blendShapeName, curve.curve.Evaluate(time) * curveIntensity);
+        }
+    }
+
+    void SetExpressionImmediate(string expressionName, float weight)
+    {
+        foreach (BlendTarget target in expressionMap[expressionName])
+        {
+            target.currentWeight = weight;
+            target.targetWeight = weight;
+            target.renderer.SetBlendShapeWeight(target.index, weight);
+        }
+    }
+
+    float GetCurveDuration()
+    {
+        float duration = 0f;
+        foreach (FaceExpressionPreset.CurveData curve in activeCurves)
+        {
+            if (curve.curve.length > 0)
+            {
+                duration = Mathf.Max(duration, curve.curve.keys[^1].time);
+            }
+        }
+
+        return duration;
+    }
+
+    void CompleteCurvePreset()
+    {
+        bool shouldBlink = canBlinkAfterCurve;
+        StopCurvePreset();
+        canBlink = shouldBlink;
+    }
+
+    void StopCurvePreset()
+    {
+        activeCurves.Clear();
+        isPlayingCurvePreset = false;
+        canBlinkAfterCurve = false;
+        curveElapsedTime = 0f;
+        curveDuration = 0f;
+        curveIntensity = 1f;
     }
 
     public void SetBlink()
@@ -259,6 +420,7 @@ public class FaceController : MonoBehaviour
 
     void OnDestroy()
     {
+        StopCurvePreset();
         blinkTween?.Kill();
     }
 }

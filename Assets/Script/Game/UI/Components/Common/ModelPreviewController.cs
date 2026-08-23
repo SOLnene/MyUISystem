@@ -16,10 +16,7 @@ public sealed class ModelPreviewController : MonoBehaviour
     ModelPreviewDatabase modelPreviewDatabase;
 
     [SerializeField]
-    CharacterPreviewAnimator characterPreviewAnimator;
-
-    [SerializeField]
-    FaceController faceController;
+    CharacterPresentationController characterPresentation;
 
     // 描述一次预览请求从后台加载到接管画面的完整生命周期。
     enum PreviewPreparationState
@@ -250,11 +247,15 @@ public sealed class ModelPreviewController : MonoBehaviour
 
         if (immediate)
         {
-            characterPreviewAnimator.ApplyPresetImmediate(preset, onCompleted);
+            characterPresentation.PlayImmediate(preset.animationClip);
+            onCompleted?.Invoke();
         }
         else
         {
-            characterPreviewAnimator.ApplyPreset(preset, onCompleted);
+            characterPresentation.CrossFadeTo(
+                preset.animationClip,
+                preset.crossFadeDuration,
+                onCompleted);
         }
     }
 
@@ -262,7 +263,7 @@ public sealed class ModelPreviewController : MonoBehaviour
     {
         if (IsCharacterPreviewActive)
         {
-            faceController.ApplyFacePreset(preset);
+            characterPresentation.ApplyFacePreset(preset);
         }
     }
 
@@ -380,8 +381,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         }
         else
         {
-            characterPreviewAnimator.Unbind();
-            faceController.Unbind();
+            characterPresentation.Unbind();
         }
 
         if (previousPreviewObject != null)
@@ -402,8 +402,7 @@ public sealed class ModelPreviewController : MonoBehaviour
             }
         }
 
-        characterPreviewAnimator.Unbind();
-        faceController.Unbind();
+        characterPresentation.Unbind();
     }
 
     void BindCharacter(GameObject previewObject)
@@ -412,17 +411,15 @@ public sealed class ModelPreviewController : MonoBehaviour
             previewObject.GetComponentInChildren<CharacterPreviewActor>(true);
         if (actor != null)
         {
-            characterPreviewAnimator.Bind(actor.Animator);
-            faceController.Bind(actor.FaceRenderers);
+            characterPresentation.Bind(actor);
             return;
         }
 
         Debug.LogWarning(
             $"CharacterPreviewActor is missing on preview prefab: {previewObject.name}",
             previewObject);
-        characterPreviewAnimator.Bind(
-            previewObject.GetComponentInChildren<Animator>(true));
-        faceController.Bind(
+        characterPresentation.Bind(
+            previewObject.GetComponentInChildren<Animator>(true),
             previewObject.GetComponentsInChildren<SkinnedMeshRenderer>(true));
     }
 
@@ -431,6 +428,11 @@ public sealed class ModelPreviewController : MonoBehaviour
         if (activePreviewObject == null)
         {
             return;
+        }
+
+        if (activePreviewState == ActivePreviewState.Character)
+        {
+            characterPresentation.Unbind();
         }
 
         ResourceManager.Instance.Recycle(activePreviewObject);
