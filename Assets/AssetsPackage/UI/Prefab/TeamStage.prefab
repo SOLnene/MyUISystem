@@ -217,7 +217,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1133047329085250027}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.017385373, y: 0.9708923, z: -0.07435205, w: 0.22701898}
+  m_LocalRotation: {x: 0.017385373, y: 0.9708923, z: -0.07435204, w: 0.227019}
   m_LocalPosition: {x: 2.130249, y: 1.25, z: 1.2475641}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -552,6 +552,7 @@ MonoBehaviour:
   - lumine
   modelPreviewDatabase: {fileID: 11400000, guid: 742f64222f504b8e96e45a568b05c50c, type: 2}
   cameraController: {fileID: 9100000000000000001}
+  memberFadeDuration: 0.3
 --- !u!1 &3513483647042799330
 GameObject:
   m_ObjectHideFlags: 0
@@ -997,7 +998,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 5743159609047935443}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.017385373, y: 0.9708923, z: -0.07435205, w: 0.22701898}
+  m_LocalRotation: {x: 0.017385373, y: 0.9708923, z: -0.07435204, w: 0.227019}
   m_LocalPosition: {x: 2.130249, y: 1.25, z: 1.2475641}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1075,7 +1076,7 @@ MonoBehaviour:
   m_BlendUpdateMethod: 1
   m_DefaultBlend:
     m_Style: 5
-    m_Time: 0.28
+    m_Time: 0.5
     m_CustomCurve:
       serializedVersion: 2
       m_Curve: []
