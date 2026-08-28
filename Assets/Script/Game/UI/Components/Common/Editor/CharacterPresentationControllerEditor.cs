@@ -8,7 +8,8 @@ public sealed class CharacterPresentationControllerEditor : Editor
 
     CharacterPreviewActor testActor;
     AnimationClip testClip;
-    FaceExpressionPreset testFacePreset;
+    FaceExpressionPreset testFacePresetA;
+    FaceExpressionPreset testFacePresetB;
     float testBlendDuration = 0.15f;
     string sessionKey;
 
@@ -17,7 +18,9 @@ public sealed class CharacterPresentationControllerEditor : Editor
         sessionKey = $"{SessionKeyPrefix}.{GlobalObjectId.GetGlobalObjectIdSlow(target)}";
         testActor = LoadObject<CharacterPreviewActor>("Actor");
         testClip = LoadObject<AnimationClip>("Clip");
-        testFacePreset = LoadObject<FaceExpressionPreset>("FacePreset");
+        testFacePresetA = LoadObject<FaceExpressionPreset>("FacePresetA")
+                          ?? LoadObject<FaceExpressionPreset>("FacePreset");
+        testFacePresetB = LoadObject<FaceExpressionPreset>("FacePresetB");
         testBlendDuration = SessionState.GetFloat(GetSessionKey("BlendDuration"), 0.15f);
     }
 
@@ -38,9 +41,14 @@ public sealed class CharacterPresentationControllerEditor : Editor
             testClip,
             typeof(AnimationClip),
             false);
-        testFacePreset = (FaceExpressionPreset)EditorGUILayout.ObjectField(
-            "面部表情",
-            testFacePreset,
+        testFacePresetA = (FaceExpressionPreset)EditorGUILayout.ObjectField(
+            "面部动画 A",
+            testFacePresetA,
+            typeof(FaceExpressionPreset),
+            false);
+        testFacePresetB = (FaceExpressionPreset)EditorGUILayout.ObjectField(
+            "面部动画 B",
+            testFacePresetB,
             typeof(FaceExpressionPreset),
             false);
         testBlendDuration = Mathf.Max(
@@ -87,13 +95,13 @@ public sealed class CharacterPresentationControllerEditor : Editor
 
             if (GUILayout.Button("播放面部动画"))
             {
-                controller.ApplyFacePreset(testFacePreset);
+                PlayFacePresets(controller);
             }
 
             if (GUILayout.Button("同时播放身体和面部动画"))
             {
                 controller.CrossFadeTo(testClip, testBlendDuration);
-                controller.ApplyFacePreset(testFacePreset);
+                PlayFacePresets(controller);
             }
 
             EditorGUILayout.BeginHorizontal();
@@ -131,8 +139,29 @@ public sealed class CharacterPresentationControllerEditor : Editor
     {
         SaveObject("Actor", testActor);
         SaveObject("Clip", testClip);
-        SaveObject("FacePreset", testFacePreset);
+        SaveObject("FacePresetA", testFacePresetA);
+        SaveObject("FacePresetB", testFacePresetB);
         SessionState.SetFloat(GetSessionKey("BlendDuration"), testBlendDuration);
+    }
+
+    void PlayFacePresets(CharacterPresentationController controller)
+    {
+        if (testFacePresetA != null && testFacePresetB != null)
+        {
+            controller.ApplyFacePresets(testFacePresetA, testFacePresetB);
+            return;
+        }
+
+        FaceExpressionPreset preset = testFacePresetA != null
+            ? testFacePresetA
+            : testFacePresetB;
+        if (preset != null)
+        {
+            controller.ApplyFacePreset(preset);
+            return;
+        }
+
+        Debug.LogWarning("未选择面部动画");
     }
 
     void SaveObject(string fieldName, Object value)

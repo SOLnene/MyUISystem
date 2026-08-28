@@ -9,6 +9,13 @@ public enum FacePresetPlaybackMode
     CurveAnimation
 }
 
+public enum FaceBlinkPolicy
+{
+    Automatic,
+    Allow,
+    Suppress
+}
+
 [Flags]
 public enum FaceRegion
 {
@@ -51,7 +58,7 @@ public class FaceExpressionPreset : ScriptableObject
         public int rotationOrder;
     }
 
-    public bool canBlink;
+    public FaceBlinkPolicy blinkPolicy = FaceBlinkPolicy.Automatic;
 
     public FacePresetPlaybackMode playbackMode;
 

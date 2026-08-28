@@ -8,8 +8,11 @@ using UnityEngine;
 
 public static class CsEmoDatImporter
 {
-    const string OutputFolder = "Assets/GameData/ModelView/FacePreset/Extracted";
+    internal const string DefaultOutputFolder = "Assets/GameData/ModelView/FacePreset/Extracted";
     const string SourceNamePrefix = "Cs_Emo_Avatar_";
+    const int CompositeMouthCurveCount = 32;
+    const int CompositeUpperFaceCurveCount = 42;
+    const int CompositeTailRecordSize = 92;
 
     readonly struct ChannelBinding
     {
@@ -27,6 +30,7 @@ public static class CsEmoDatImporter
     {
         public int ChannelId;
         public int ControllerIndex;
+        public bool BindByControllerIndex;
         public AnimationCurve Curve;
         public int PreInfinity;
         public int PostInfinity;
@@ -37,6 +41,26 @@ public static class CsEmoDatImporter
     {
         public string ExpressionName;
         public List<ParsedCurve> Curves;
+    }
+
+    enum CompositeMouthEncoding
+    {
+        StandardChannelId,
+        ControllerIndexOnly
+    }
+
+    internal readonly struct ImportResult
+    {
+        public readonly int CreatedCount;
+        public readonly int UpdatedCount;
+        public readonly int FailedCount;
+
+        public ImportResult(int createdCount, int updatedCount, int failedCount)
+        {
+            CreatedCount = createdCount;
+            UpdatedCount = updatedCount;
+            FailedCount = failedCount;
+        }
     }
 
     static readonly Dictionary<int, ChannelBinding> KnownBindings = new()
@@ -93,19 +117,13 @@ public static class CsEmoDatImporter
     [MenuItem("Tools/Character/Import Cs Emo DAT Folder")]
     static void SelectAndImportFolder()
     {
-        string sourceFolder = EditorUtility.OpenFolderPanel("选择 Cs Emo DAT 文件夹", string.Empty, string.Empty);
-        if (string.IsNullOrEmpty(sourceFolder))
-        {
-            return;
-        }
-
-        ImportFolder(sourceFolder);
+        CsEmoDatImporterWindow.ShowWindow();
     }
 
     [MenuItem("Tools/Character/Migrate Cs Emo Preset Names")]
     static void MigratePresetNames()
     {
-        string[] presetGuids = AssetDatabase.FindAssets("t:FaceExpressionPreset", new[] { OutputFolder });
+        string[] presetGuids = AssetDatabase.FindAssets("t:FaceExpressionPreset", new[] { DefaultOutputFolder });
         int migratedCount = 0;
         int skippedCount = 0;
         int failedCount = 0;
@@ -121,7 +139,7 @@ public static class CsEmoDatImporter
             }
 
             string targetAssetName = GetPresetAssetName(sourceAssetName);
-            string targetPath = $"{OutputFolder}/{targetAssetName}.asset";
+            string targetPath = $"{DefaultOutputFolder}/{targetAssetName}.asset";
             if (AssetDatabase.LoadMainAssetAtPath(targetPath) != null)
             {
                 failedCount++;
@@ -146,16 +164,16 @@ public static class CsEmoDatImporter
         Debug.Log($"Cs Emo 表情预设命名迁移完成。迁移 {migratedCount}，跳过 {skippedCount}，失败 {failedCount}。");
     }
 
-    internal static void ImportFolder(string sourceFolder)
+    internal static ImportResult ImportFolder(string sourceFolder, string outputFolder)
     {
         string[] datFiles = Directory.GetFiles(sourceFolder, "*.dat", SearchOption.TopDirectoryOnly);
         if (datFiles.Length == 0)
         {
             Debug.LogWarning($"未在目录中找到 DAT 文件: {sourceFolder}");
-            return;
+            return new ImportResult(0, 0, 0);
         }
 
-        EnsureOutputFolder();
+        EnsureOutputFolder(outputFolder);
 
         int createdCount = 0;
         int updatedCount = 0;
@@ -165,7 +183,7 @@ public static class CsEmoDatImporter
         {
             try
             {
-                bool created = ImportFile(datFile);
+                bool created = ImportFile(datFile, outputFolder);
                 if (created)
                 {
                     createdCount++;
@@ -185,20 +203,20 @@ public static class CsEmoDatImporter
         AssetDatabase.SaveAssets();
         AssetDatabase.Refresh();
         Debug.Log($"Cs Emo DAT 导入完成。新建 {createdCount}，更新 {updatedCount}，失败 {failedCount}。");
+        return new ImportResult(createdCount, updatedCount, failedCount);
     }
 
-    static bool ImportFile(string datFile)
+    static bool ImportFile(string datFile, string outputFolder)
     {
         ParsedDat parsed = ParseDat(datFile);
         string assetName = GetPresetAssetName(Path.GetFileNameWithoutExtension(datFile));
-        string assetPath = $"{OutputFolder}/{assetName}.asset";
+        string assetPath = $"{outputFolder}/{assetName}.asset";
         FaceExpressionPreset preset = AssetDatabase.LoadAssetAtPath<FaceExpressionPreset>(assetPath);
         bool created = preset == null;
 
         if (created)
         {
             preset = ScriptableObject.CreateInstance<FaceExpressionPreset>();
-            preset.canBlink = true;
         }
 
         // 重导入只更新原始曲线，保留项目中人工确认过的绑定或忽略配置。
@@ -238,7 +256,7 @@ public static class CsEmoDatImporter
         preset.duration = importedCurves.Count == 0
             ? 0f
             : importedCurves.Max(curve => curve.curve.length == 0 ? 0f : curve.curve.keys[^1].time);
-        preset.containsBlink = importedCurves.Any(IsBlinkCurve);
+        preset.containsBlink = HasCompleteBlinkCycle(importedCurves);
         preset.curves = importedCurves;
 
         if (created)
@@ -271,7 +289,7 @@ public static class CsEmoDatImporter
             numberEnd++;
         }
 
-        string category = shortName[..numberStart];
+        string category = shortName[..numberStart].TrimEnd('_');
         string number = shortName[numberStart..numberEnd];
         string variant = shortName[numberEnd..];
         return SanitizeFileName($"Face_{category}_{number}{variant}");
@@ -290,7 +308,7 @@ public static class CsEmoDatImporter
             blendShapeName = previous.blendShapeName;
         }
         else if (KnownBindings.TryGetValue(parsedCurve.ControllerIndex, out ChannelBinding binding)
-                 && binding.ChannelId == parsedCurve.ChannelId)
+                 && (binding.ChannelId == parsedCurve.ChannelId || parsedCurve.BindByControllerIndex))
         {
             bindingType = FaceCurveBindingType.BlendShape;
             blendShapeName = binding.BlendShapeName;
@@ -325,12 +343,72 @@ public static class CsEmoDatImporter
         string expressionName = ReadAlignedString(reader);
         ReadPPtr(reader);
 
+        int curveCount = ReadCurveCount(reader);
+        List<ParsedCurve> curves = ReadCurves(reader, curveCount);
+
+        if (reader.BaseStream.Position + sizeof(int) == reader.BaseStream.Length)
+        {
+            reader.ReadInt32();
+        }
+
+        if (reader.BaseStream.Position == reader.BaseStream.Length)
+        {
+            return new ParsedDat
+            {
+                ExpressionName = expressionName,
+                Curves = curves
+            };
+        }
+
+        CompositeMouthEncoding mouthEncoding = DetectCompositeMouthEncoding(curves);
+        if (mouthEncoding == CompositeMouthEncoding.ControllerIndexOnly)
+        {
+            foreach (ParsedCurve curve in curves)
+            {
+                // 角色动作复合 DAT 的嘴部 ChannelId 均为 0，只能使用稳定的 ControllerIndex 顺序绑定。
+                curve.BindByControllerIndex = true;
+            }
+        }
+
+        int reserved = reader.ReadInt32();
+        if (reserved != 0)
+        {
+            throw new InvalidDataException($"复合 DAT 的眼眉段前缀异常: {reserved}");
+        }
+
+        reader.ReadSingle();
+        reader.ReadInt32();
+        string upperFaceExpressionName = ReadAlignedString(reader);
+        ReadPPtr(reader);
+
+        int upperFaceCurveCount = ReadCurveCount(reader);
+        List<ParsedCurve> upperFaceCurves = ReadCurves(reader, upperFaceCurveCount);
+        ValidateCompositeUpperFaceCurves(upperFaceCurves);
+        curves.AddRange(upperFaceCurves);
+        ValidateCompositeTail(reader);
+
+        return new ParsedDat
+        {
+            ExpressionName = string.IsNullOrEmpty(upperFaceExpressionName)
+                ? expressionName
+                : upperFaceExpressionName,
+            Curves = curves
+        };
+    }
+
+    static int ReadCurveCount(BinaryReader reader)
+    {
         int curveCount = reader.ReadInt32();
         if (curveCount < 0 || curveCount > 512)
         {
             throw new InvalidDataException($"曲线数量异常: {curveCount}");
         }
 
+        return curveCount;
+    }
+
+    static List<ParsedCurve> ReadCurves(BinaryReader reader, int curveCount)
+    {
         List<ParsedCurve> curves = new(curveCount);
         for (int curveIndex = 0; curveIndex < curveCount; curveIndex++)
         {
@@ -362,22 +440,104 @@ public static class CsEmoDatImporter
             });
         }
 
-        if (reader.BaseStream.Position + sizeof(int) == reader.BaseStream.Length)
+        return curves;
+    }
+
+    static CompositeMouthEncoding DetectCompositeMouthEncoding(IReadOnlyList<ParsedCurve> curves)
+    {
+        if (curves.Count != CompositeMouthCurveCount
+            || !HasControllerRange(curves, 0, 31))
         {
-            reader.ReadInt32();
+            throw new InvalidDataException("DAT 包含额外数据，但首段不符合复合嘴部曲线格式。");
         }
 
-        if (reader.BaseStream.Position != reader.BaseStream.Length)
+        if (curves.All(curve => curve.ChannelId == 0))
+        {
+            return CompositeMouthEncoding.ControllerIndexOnly;
+        }
+
+        if (HasStandardMouthChannels(curves))
+        {
+            return CompositeMouthEncoding.StandardChannelId;
+        }
+
+        throw new InvalidDataException("复合 DAT 的嘴部 ChannelId 既不是标准通道，也不是全零编码。");
+    }
+
+    static bool HasStandardMouthChannels(IEnumerable<ParsedCurve> curves)
+    {
+        foreach (ParsedCurve curve in curves)
+        {
+            if (!TryGetStandardMouthChannelId(curve.ControllerIndex, out int expectedChannelId)
+                || curve.ChannelId != expectedChannelId)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    static bool TryGetStandardMouthChannelId(int controllerIndex, out int channelId)
+    {
+        if (KnownBindings.TryGetValue(controllerIndex, out ChannelBinding binding))
+        {
+            channelId = binding.ChannelId;
+            return true;
+        }
+
+        if (controllerIndex is >= 15 and <= 29)
+        {
+            channelId = 3069 + controllerIndex - 15;
+            return true;
+        }
+
+        channelId = default;
+        return false;
+    }
+
+    static void ValidateCompositeUpperFaceCurves(IReadOnlyList<ParsedCurve> curves)
+    {
+        if (curves.Count != CompositeUpperFaceCurveCount || !HasControllerRange(curves, 32, 73))
+        {
+            throw new InvalidDataException("复合 DAT 的眼眉曲线格式异常。");
+        }
+    }
+
+    static bool HasControllerRange(IReadOnlyList<ParsedCurve> curves, int first, int last)
+    {
+        return curves.Select(curve => curve.ControllerIndex)
+            .OrderBy(index => index)
+            .SequenceEqual(Enumerable.Range(first, last - first + 1));
+    }
+
+    static void ValidateCompositeTail(BinaryReader reader)
+    {
+        long remainingBytes = reader.BaseStream.Length - reader.BaseStream.Position;
+        if (remainingBytes < sizeof(int) * 4)
+        {
+            throw new InvalidDataException($"复合 DAT 的附加数据长度异常: {remainingBytes}");
+        }
+
+        int reserved = reader.ReadInt32();
+        int recordCount = reader.ReadInt32();
+        if (reserved != 0 || recordCount < 0)
+        {
+            throw new InvalidDataException($"复合 DAT 的附加记录头异常: {reserved}, {recordCount}");
+        }
+
+        long expectedBytes = (long)recordCount * CompositeTailRecordSize + sizeof(int) * 2;
+        long availableBytes = reader.BaseStream.Length - reader.BaseStream.Position;
+        if (availableBytes != expectedBytes)
         {
             throw new InvalidDataException(
-                $"DAT 末尾仍有 {reader.BaseStream.Length - reader.BaseStream.Position} 字节未解析，文件结构可能不匹配。");
+                $"复合 DAT 的附加记录长度异常: 记录 {recordCount}，剩余 {availableBytes} 字节。");
         }
 
-        return new ParsedDat
-        {
-            ExpressionName = expressionName,
-            Curves = curves
-        };
+        // 这部分记录的语义尚未确认；先严格验证格式并跳过，避免把未知参数误写入表情通道。
+        reader.BaseStream.Position += (long)recordCount * CompositeTailRecordSize;
+        reader.ReadInt32();
+        reader.ReadInt32();
     }
 
     static void ReadPPtr(BinaryReader reader)
@@ -416,20 +576,40 @@ public static class CsEmoDatImporter
         return regions;
     }
 
-    static bool IsBlinkCurve(FaceExpressionPreset.CurveData curve)
+    static bool HasCompleteBlinkCycle(IEnumerable<FaceExpressionPreset.CurveData> curves)
     {
-        if (curve.controllerIndex != 47 && curve.controllerIndex != 48)
+        FaceExpressionPreset.CurveData leftCurve = curves.FirstOrDefault(curve => curve.controllerIndex == 47);
+        FaceExpressionPreset.CurveData rightCurve = curves.FirstOrDefault(curve => curve.controllerIndex == 48);
+        return HasCloseAndReopen(leftCurve) && HasCloseAndReopen(rightCurve);
+    }
+
+    static bool HasCloseAndReopen(FaceExpressionPreset.CurveData curve)
+    {
+        if (curve?.curve == null)
         {
             return false;
         }
 
-        return curve.curve.keys.Any(key => key.value > 0f);
+        bool reachedClosedState = false;
+        foreach (Keyframe key in curve.curve.keys)
+        {
+            if (key.value >= 99f)
+            {
+                reachedClosedState = true;
+            }
+            else if (reachedClosedState && key.value <= 5f)
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 
-    static void EnsureOutputFolder()
+    static void EnsureOutputFolder(string outputFolder)
     {
         string currentPath = "Assets";
-        foreach (string folderName in OutputFolder.Split('/').Skip(1))
+        foreach (string folderName in outputFolder.Split('/').Skip(1))
         {
             string nextPath = $"{currentPath}/{folderName}";
             if (!AssetDatabase.IsValidFolder(nextPath))
@@ -449,5 +629,123 @@ public static class CsEmoDatImporter
         }
 
         return fileName;
+    }
+}
+
+sealed class CsEmoDatImporterWindow : EditorWindow
+{
+    const string SourceFolderPreferenceKey = "CsEmoDatImporter.SourceFolder";
+    const string OutputFolderPreferenceKey = "CsEmoDatImporter.OutputFolder";
+
+    string sourceFolder;
+    DefaultAsset outputFolder;
+    string importResult;
+
+    internal static void ShowWindow()
+    {
+        CsEmoDatImporterWindow window = GetWindow<CsEmoDatImporterWindow>();
+        window.titleContent = new GUIContent("Cs Emo DAT 导入");
+        window.minSize = new Vector2(520f, 190f);
+        window.Show();
+    }
+
+    void OnEnable()
+    {
+        sourceFolder = EditorPrefs.GetString(SourceFolderPreferenceKey, string.Empty);
+        string outputPath = EditorPrefs.GetString(
+            OutputFolderPreferenceKey,
+            CsEmoDatImporter.DefaultOutputFolder);
+        outputFolder = AssetDatabase.LoadAssetAtPath<DefaultAsset>(outputPath);
+    }
+
+    void OnGUI()
+    {
+        EditorGUILayout.LabelField("Cs Emo DAT 导入", EditorStyles.boldLabel);
+        EditorGUILayout.Space();
+
+        using (new EditorGUILayout.HorizontalScope())
+        {
+            EditorGUI.BeginChangeCheck();
+            sourceFolder = EditorGUILayout.TextField("DAT 来源文件夹", sourceFolder);
+            if (EditorGUI.EndChangeCheck())
+            {
+                EditorPrefs.SetString(SourceFolderPreferenceKey, sourceFolder);
+            }
+
+            if (GUILayout.Button("选择", GUILayout.Width(60f)))
+            {
+                SelectSourceFolder();
+            }
+        }
+
+        EditorGUI.BeginChangeCheck();
+        outputFolder = (DefaultAsset)EditorGUILayout.ObjectField(
+            "Preset 输出文件夹",
+            outputFolder,
+            typeof(DefaultAsset),
+            false);
+        if (EditorGUI.EndChangeCheck())
+        {
+            EditorPrefs.SetString(OutputFolderPreferenceKey, GetOutputPath());
+        }
+
+        using (new EditorGUI.DisabledScope(true))
+        {
+            EditorGUILayout.TextField("格式", "自动识别");
+        }
+
+        bool sourceIsValid = Directory.Exists(sourceFolder);
+        string outputPath = GetOutputPath();
+        bool outputIsValid = AssetDatabase.IsValidFolder(outputPath);
+
+        if (!string.IsNullOrEmpty(sourceFolder) && !sourceIsValid)
+        {
+            EditorGUILayout.HelpBox("DAT 来源文件夹不存在。", MessageType.Warning);
+        }
+
+        if (outputFolder != null && !outputIsValid)
+        {
+            EditorGUILayout.HelpBox("Preset 输出位置必须是 Assets 内的文件夹。", MessageType.Warning);
+        }
+
+        using (new EditorGUI.DisabledScope(!sourceIsValid || !outputIsValid))
+        {
+            if (GUILayout.Button("开始导入"))
+            {
+                Import(sourceFolder, outputPath);
+            }
+        }
+
+        if (!string.IsNullOrEmpty(importResult))
+        {
+            EditorGUILayout.Space();
+            EditorGUILayout.HelpBox(importResult, MessageType.Info);
+        }
+    }
+
+    void SelectSourceFolder()
+    {
+        string selectedFolder = EditorUtility.OpenFolderPanel(
+            "选择 Cs Emo DAT 文件夹",
+            sourceFolder,
+            string.Empty);
+        if (string.IsNullOrEmpty(selectedFolder))
+        {
+            return;
+        }
+
+        sourceFolder = selectedFolder;
+        EditorPrefs.SetString(SourceFolderPreferenceKey, sourceFolder);
+    }
+
+    string GetOutputPath()
+    {
+        return outputFolder == null ? string.Empty : AssetDatabase.GetAssetPath(outputFolder);
+    }
+
+    void Import(string sourcePath, string outputPath)
+    {
+        CsEmoDatImporter.ImportResult result = CsEmoDatImporter.ImportFolder(sourcePath, outputPath);
+        importResult = $"新建 {result.CreatedCount}，更新 {result.UpdatedCount}，失败 {result.FailedCount}。";
     }
 }

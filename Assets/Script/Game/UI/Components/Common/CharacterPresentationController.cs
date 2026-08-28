@@ -63,6 +63,13 @@ public sealed class CharacterPresentationController : MonoBehaviour
         faceController.ApplyFacePreset(preset);
     }
 
+    public void ApplyFacePresets(
+        FaceExpressionPreset firstPreset,
+        FaceExpressionPreset secondPreset)
+    {
+        faceController.ApplyFacePresets(firstPreset, secondPreset);
+    }
+
     public void ResetFace()
     {
         faceController.ResetAll();

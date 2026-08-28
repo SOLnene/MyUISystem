@@ -8,6 +8,19 @@ using UnityEngine;
 /// </summary>
 public class FaceController : MonoBehaviour
 {
+    [System.Flags]
+    enum BlinkEyes
+    {
+        None = 0,
+        Left = 1,
+        Right = 2,
+        Both = Left | Right
+    }
+
+    const string BlinkLeftExpression = "Eye_WinkB_L";
+    const string BlinkRightExpression = "Eye_WinkB_R";
+    const float ClosedBlinkShapeWeight = 99f;
+
     [Header("引用")]
     [SerializeField] private SkinnedMeshRenderer mainFaceRenderer; // 主面部网格（可选，手动拖或自动找）
 
@@ -21,13 +34,17 @@ public class FaceController : MonoBehaviour
     public Dictionary<string, List<BlendTarget>> expressionMap = new();
 
     //是否需要眨眼
-    bool canBlink;
+    BlinkEyes allowedBlinkEyes;
     //眨眼计时器
     float blinkTimer;
+    float nextBlinkInterval;
     Tween blinkTween;
+    BlinkEyes proceduralBlinkEyes;
+    float blinkLeftRestoreWeight;
+    float blinkRightRestoreWeight;
     readonly List<FaceExpressionPreset.CurveData> activeCurves = new();
     bool isPlayingCurvePreset;
-    bool canBlinkAfterCurve;
+    BlinkEyes allowedBlinkEyesAfterCurve;
     float curveElapsedTime;
     float curveDuration;
     float curveIntensity;
@@ -243,7 +260,7 @@ public class FaceController : MonoBehaviour
 
         StopBlink();
         ResetAll();
-        canBlink = preset.canBlink;
+        allowedBlinkEyes = GetAllowedBlinkEyes(preset, null);
 
         foreach (var blend in preset.blends)
         {
@@ -259,11 +276,95 @@ public class FaceController : MonoBehaviour
             return;
         }
 
+        ApplyCurvePresets(preset, null, intensity);
+    }
+
+    public void ApplyFacePresets(
+        FaceExpressionPreset firstPreset,
+        FaceExpressionPreset secondPreset,
+        float intensity = 1f)
+    {
+        if (firstPreset == null || secondPreset == null)
+        {
+            Debug.LogWarning("组合表情需要两个有效的表情预设");
+            return;
+        }
+
+        if (firstPreset.playbackMode != FacePresetPlaybackMode.CurveAnimation
+            || secondPreset.playbackMode != FacePresetPlaybackMode.CurveAnimation)
+        {
+            Debug.LogWarning("组合表情当前只支持曲线表情预设");
+            return;
+        }
+
+        if (firstPreset.curves == null || firstPreset.curves.Count == 0
+            || secondPreset.curves == null || secondPreset.curves.Count == 0)
+        {
+            Debug.LogWarning("组合表情包含没有曲线数据的预设");
+            return;
+        }
+
+        if ((firstPreset.regions & secondPreset.regions) != FaceRegion.None)
+        {
+            Debug.LogWarning("组合表情的区域重叠，无法确定同一 BlendShape 的写入顺序");
+            return;
+        }
+
+        ApplyCurvePresets(firstPreset, secondPreset, intensity);
+    }
+
+    void ApplyCurvePresets(
+        FaceExpressionPreset firstPreset,
+        FaceExpressionPreset secondPreset,
+        float intensity)
+    {
         StopBlink();
         ResetAll();
 
         int unresolvedCount = 0;
         int missingBlendShapeCount = 0;
+        // 组合播放必须只重置一次，再收集两个区域的曲线，否则后一个预设会清掉前一个。
+        AddPresetCurves(firstPreset, ref unresolvedCount, ref missingBlendShapeCount);
+        if (secondPreset != null)
+        {
+            AddPresetCurves(secondPreset, ref unresolvedCount, ref missingBlendShapeCount);
+        }
+
+        if (unresolvedCount > 0 || missingBlendShapeCount > 0)
+        {
+            Debug.LogWarning(
+                $"表情曲线存在未应用通道：未解析 {unresolvedCount}，模型缺少 BlendShape {missingBlendShapeCount}");
+        }
+
+        if (activeCurves.Count == 0)
+        {
+            Debug.LogWarning("曲线表情预设没有可应用到当前模型的通道");
+            return;
+        }
+
+        allowedBlinkEyesAfterCurve = GetAllowedBlinkEyes(firstPreset, secondPreset);
+        curveElapsedTime = 0f;
+        curveDuration = Mathf.Max(firstPreset.duration, secondPreset == null ? 0f : secondPreset.duration);
+        if (curveDuration <= 0f)
+        {
+            curveDuration = GetCurveDuration();
+        }
+
+        curveIntensity = intensity;
+        isPlayingCurvePreset = true;
+        ApplyCurveFrame(0f);
+
+        if (curveDuration <= 0f)
+        {
+            CompleteCurvePreset();
+        }
+    }
+
+    void AddPresetCurves(
+        FaceExpressionPreset preset,
+        ref int unresolvedCount,
+        ref int missingBlendShapeCount)
+    {
         foreach (FaceExpressionPreset.CurveData curve in preset.curves)
         {
             if (curve.bindingType == FaceCurveBindingType.Unresolved)
@@ -286,30 +387,73 @@ public class FaceController : MonoBehaviour
 
             activeCurves.Add(curve);
         }
+    }
 
-        if (unresolvedCount > 0 || missingBlendShapeCount > 0)
+    static BlinkEyes GetAllowedBlinkEyes(
+        FaceExpressionPreset firstPreset,
+        FaceExpressionPreset secondPreset)
+    {
+        BlinkEyes firstEyes = ResolveBlinkEyes(firstPreset);
+        BlinkEyes secondEyes = secondPreset == null
+            ? BlinkEyes.Both
+            : ResolveBlinkEyes(secondPreset);
+        return firstEyes & secondEyes;
+    }
+
+    static BlinkEyes ResolveBlinkEyes(FaceExpressionPreset preset)
+    {
+        switch (preset.blinkPolicy)
         {
-            Debug.LogWarning(
-                $"表情曲线存在未应用通道：未解析 {unresolvedCount}，模型缺少 BlendShape {missingBlendShapeCount}");
+            case FaceBlinkPolicy.Allow:
+                return BlinkEyes.Both;
+            case FaceBlinkPolicy.Suppress:
+                return BlinkEyes.None;
         }
 
-        if (activeCurves.Count == 0)
+        BlinkEyes result = BlinkEyes.Both;
+        if (GetBlinkShapeWeight(preset, BlinkLeftExpression) >= ClosedBlinkShapeWeight)
         {
-            Debug.LogWarning("曲线表情预设没有可应用到当前模型的通道");
-            return;
+            result &= ~BlinkEyes.Left;
         }
 
-        canBlinkAfterCurve = preset.canBlink;
-        curveElapsedTime = 0f;
-        curveDuration = preset.duration > 0f ? preset.duration : GetCurveDuration();
-        curveIntensity = intensity;
-        isPlayingCurvePreset = true;
-        ApplyCurveFrame(0f);
-
-        if (curveDuration <= 0f)
+        if (GetBlinkShapeWeight(preset, BlinkRightExpression) >= ClosedBlinkShapeWeight)
         {
-            CompleteCurvePreset();
+            result &= ~BlinkEyes.Right;
         }
+
+        return result;
+    }
+
+    static float GetBlinkShapeWeight(FaceExpressionPreset preset, string blendShapeName)
+    {
+        if (preset.playbackMode == FacePresetPlaybackMode.StaticBlend)
+        {
+            FaceExpressionPreset.BlendData blend = preset.blends?.Find(data =>
+                data.blendShapeName == blendShapeName);
+            return blend == null ? 0f : blend.weight * 100f;
+        }
+
+        if (preset.curves == null)
+        {
+            return 0f;
+        }
+
+        foreach (FaceExpressionPreset.CurveData curve in preset.curves)
+        {
+            if (curve.blendShapeName != blendShapeName
+                || curve.curve == null
+                || curve.curve.length == 0)
+            {
+                continue;
+            }
+
+            float finalTime = preset.duration > 0f
+                ? preset.duration
+                : curve.curve.keys[^1].time;
+            return curve.curve.Evaluate(finalTime);
+        }
+
+        return 0f;
     }
 
     void UpdateCurvePreset()
@@ -358,16 +502,16 @@ public class FaceController : MonoBehaviour
 
     void CompleteCurvePreset()
     {
-        bool shouldBlink = canBlinkAfterCurve;
+        BlinkEyes blinkEyes = allowedBlinkEyesAfterCurve;
         StopCurvePreset();
-        canBlink = shouldBlink;
+        allowedBlinkEyes = blinkEyes;
     }
 
     void StopCurvePreset()
     {
         activeCurves.Clear();
         isPlayingCurvePreset = false;
-        canBlinkAfterCurve = false;
+        allowedBlinkEyesAfterCurve = BlinkEyes.None;
         curveElapsedTime = 0f;
         curveDuration = 0f;
         curveIntensity = 1f;
@@ -380,33 +524,62 @@ public class FaceController : MonoBehaviour
             return;
         }
 
-        if (!canBlink)
+        if (allowedBlinkEyes == BlinkEyes.None)
         {
-            //假设C只用来做闭眼动画
-            SetExpression("Eye_WinkC_L",0);
-            SetExpression("Eye_WinkC_R",0);
             return;
+        }
+
+        if (blinkTween != null)
+        {
+            return;
+        }
+
+        BlinkEyes availableEyes = allowedBlinkEyes;
+        if (!expressionMap.ContainsKey(BlinkLeftExpression))
+        {
+            availableEyes &= ~BlinkEyes.Left;
+        }
+
+        if (!expressionMap.ContainsKey(BlinkRightExpression))
+        {
+            availableEyes &= ~BlinkEyes.Right;
+        }
+
+        if (availableEyes == BlinkEyes.None)
+        {
+            return;
+        }
+
+        if (nextBlinkInterval <= 0f)
+        {
+            nextBlinkInterval = Random.Range(minBlinkInterval, maxBlinkInterval);
         }
 
         blinkTimer += Time.deltaTime;
 
-        if (blinkTimer >= Random.Range(minBlinkInterval, maxBlinkInterval))
+        if (blinkTimer >= nextBlinkInterval)
         {
-            SetExpression("Eye_WinkC_L",1);
-            SetExpression("Eye_WinkC_R",1);
+            proceduralBlinkEyes = availableEyes;
+            if ((proceduralBlinkEyes & BlinkEyes.Left) != 0)
+            {
+                blinkLeftRestoreWeight = GetExpressionTargetWeight(BlinkLeftExpression);
+                SetExpression(BlinkLeftExpression, 1);
+            }
+
+            if ((proceduralBlinkEyes & BlinkEyes.Right) != 0)
+            {
+                blinkRightRestoreWeight = GetExpressionTargetWeight(BlinkRightExpression);
+                SetExpression(BlinkRightExpression, 1);
+            }
+
             // 延迟一小段时间后复位（闭眼时间 ≈ 0.08~0.15 秒）
             blinkTween = DOVirtual.DelayedCall(Random.Range(minCloseDuration, maxCloseDuration), () =>
             {
-                if (canBlink)
-                {
-                    SetExpression("Eye_WinkC_L",0);
-                    SetExpression("Eye_WinkC_R",0);
-                }
-
+                ResetProceduralBlink();
                 blinkTween = null;
+                blinkTimer = 0f;
+                nextBlinkInterval = Random.Range(minBlinkInterval, maxBlinkInterval);
             });
-            
-            blinkTimer = 0f;
         }
     }
 
@@ -414,8 +587,32 @@ public class FaceController : MonoBehaviour
     {
         blinkTween?.Kill();
         blinkTween = null;
+        ResetProceduralBlink();
         blinkTimer = 0f;
-        canBlink = false;
+        nextBlinkInterval = 0f;
+        allowedBlinkEyes = BlinkEyes.None;
+    }
+
+    void ResetProceduralBlink()
+    {
+        if ((proceduralBlinkEyes & BlinkEyes.Left) != 0)
+        {
+            SetExpression(BlinkLeftExpression, blinkLeftRestoreWeight);
+        }
+
+        if ((proceduralBlinkEyes & BlinkEyes.Right) != 0)
+        {
+            SetExpression(BlinkRightExpression, blinkRightRestoreWeight);
+        }
+
+        proceduralBlinkEyes = BlinkEyes.None;
+        blinkLeftRestoreWeight = 0f;
+        blinkRightRestoreWeight = 0f;
+    }
+
+    float GetExpressionTargetWeight(string expressionName)
+    {
+        return expressionMap[expressionName][0].targetWeight / 100f;
     }
 
     void OnDestroy()
