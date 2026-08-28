@@ -268,6 +268,17 @@ public class UIConfigWindow : EditorWindow
                                 AssetDatabase.Refresh();
                             }
                             GUI.color = defaultColor;
+                            GUI.color = Color.yellow;
+                            if (GUILayout.Button("仅删除配置"))
+                            {
+                                if (EditorUtility.DisplayDialog("是否确认删除配置", $"请确认是否只删除 {uiName} 的 Json 和 UIType 数据。\n脚本和 Prefab 会被保留。", "确定", "取消"))
+                                {
+                                    RemoveUIConfig(uiName);
+                                    AssetDatabase.SaveAssets();
+                                    AssetDatabase.Refresh();
+                                }
+                            }
+                            GUI.color = defaultColor;
                             GUI.color = Color.red;
                             if (GUILayout.Button("删除UI"))
                             {
@@ -306,6 +317,24 @@ public class UIConfigWindow : EditorWindow
             EditorGUILayout.EndHorizontal();
         }
         EditorGUILayout.EndScrollView();
+    }
+
+    /// <summary>
+    /// 只移除 UIConfig 和 UIType 中的注册数据，保留脚本及 Prefab 资源。
+    /// </summary>
+    void RemoveUIConfig(string targetUIName)
+    {
+        var uiTypeContent = File.ReadAllText(uiTypePath);
+        int index = uiTypeContent.IndexOf(targetUIName);
+        int left = uiTypeContent.Substring(0, index).LastIndexOf(',') + 1;
+        int right = uiTypeContent.Substring(index, uiTypeContent.Length - index).IndexOf(',') + index + 1;
+        string newUITypeContent = uiTypeContent.Substring(0, left) + uiTypeContent.Substring(right, uiTypeContent.Length - right);
+        File.Delete(uiTypePath);
+        File.WriteAllText(uiTypePath, newUITypeContent);
+
+        uiJsonDatas.Remove(targetUIName);
+        uiNames.Remove(targetUIName);
+        SaveJson();
     }
 
     /// <summary>

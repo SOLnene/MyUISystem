@@ -15,7 +15,6 @@ public enum UIType
 		GachaView,
 		GachaResultPopup,
 		GachaResultDetailPopup,
-		GachaResultRevealView,
 		CharacterDetailView,
 		TipView,
 		MainMenuView,
