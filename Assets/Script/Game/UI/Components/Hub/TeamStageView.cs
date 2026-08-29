@@ -68,7 +68,7 @@ public sealed class TeamStageView : MonoBehaviour
             {
                 SetMemberFade(memberIndex, memberIndex == index ? 1f : fade);
             }
-        }).SetEase(Ease.OutCubic);
+        }).SetEase(Ease.InQuad);
     }
 
     public void ShowOverview()
