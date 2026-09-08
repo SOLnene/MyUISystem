@@ -1,3 +1,4 @@
+using Cysharp.Threading.Tasks;
 using UnityEditor;
 using UnityEngine;
 
@@ -7,6 +8,11 @@ public sealed class CharacterPresentationControllerEditor : Editor
     const string SessionKeyPrefix = "CharacterPresentationControllerEditor";
 
     CharacterPreviewActor testActor;
+    CharacterPresentationProfile testProfile;
+    CharacterPresentationState testState;
+    PresentationTransitionMode testTransitionMode =
+        PresentationTransitionMode.Authored;
+    bool overrideCrossFadeDuration;
     AnimationClip testClip;
     FaceExpressionPreset testFacePresetA;
     FaceExpressionPreset testFacePresetB;
@@ -17,6 +23,16 @@ public sealed class CharacterPresentationControllerEditor : Editor
     {
         sessionKey = $"{SessionKeyPrefix}.{GlobalObjectId.GetGlobalObjectIdSlow(target)}";
         testActor = LoadObject<CharacterPreviewActor>("Actor");
+        testProfile = LoadObject<CharacterPresentationProfile>("Profile");
+        testState = (CharacterPresentationState)SessionState.GetInt(
+            GetSessionKey("State"),
+            (int)CharacterPresentationState.Default);
+        testTransitionMode = (PresentationTransitionMode)SessionState.GetInt(
+            GetSessionKey("TransitionMode"),
+            (int)PresentationTransitionMode.Authored);
+        overrideCrossFadeDuration = SessionState.GetBool(
+            GetSessionKey("OverrideCrossFadeDuration"),
+            false);
         testClip = LoadObject<AnimationClip>("Clip");
         testFacePresetA = LoadObject<FaceExpressionPreset>("FacePresetA")
                           ?? LoadObject<FaceExpressionPreset>("FacePreset");
@@ -36,6 +52,33 @@ public sealed class CharacterPresentationControllerEditor : Editor
             testActor,
             typeof(CharacterPreviewActor),
             true);
+        testProfile = (CharacterPresentationProfile)EditorGUILayout.ObjectField(
+            "展示配置",
+            testProfile,
+            typeof(CharacterPresentationProfile),
+            false);
+        testState = (CharacterPresentationState)EditorGUILayout.EnumPopup(
+            "目标状态",
+            testState);
+        testTransitionMode = (PresentationTransitionMode)EditorGUILayout.EnumPopup(
+            "切换方式",
+            testTransitionMode);
+        using (new EditorGUI.DisabledScope(
+                   testTransitionMode == PresentationTransitionMode.Immediate))
+        {
+            overrideCrossFadeDuration = EditorGUILayout.Toggle(
+                "覆盖配置过渡时间",
+                overrideCrossFadeDuration);
+            using (new EditorGUI.DisabledScope(!overrideCrossFadeDuration))
+            {
+                testBlendDuration = Mathf.Max(
+                    0f,
+                    EditorGUILayout.FloatField("过渡时间", testBlendDuration));
+            }
+        }
+
+        EditorGUILayout.Space(6f);
+        EditorGUILayout.LabelField("单项测试", EditorStyles.boldLabel);
         testClip = (AnimationClip)EditorGUILayout.ObjectField(
             "身体动画",
             testClip,
@@ -51,9 +94,6 @@ public sealed class CharacterPresentationControllerEditor : Editor
             testFacePresetB,
             typeof(FaceExpressionPreset),
             false);
-        testBlendDuration = Mathf.Max(
-            0f,
-            EditorGUILayout.FloatField("过渡时间", testBlendDuration));
         if (EditorGUI.EndChangeCheck())
         {
             SaveTestState();
@@ -73,13 +113,31 @@ public sealed class CharacterPresentationControllerEditor : Editor
             {
                 testActor = controller.GetComponentInChildren<CharacterPreviewActor>(true);
                 SaveTestState();
-                controller.Bind(testActor);
+                BindTestActor(controller);
             }
 
-            if (GUILayout.Button("绑定测试角色"))
+            if (GUILayout.Button("绑定测试角色与配置"))
             {
-                controller.Bind(testActor);
+                BindTestActor(controller);
             }
+
+            if (controller.HasCurrentPresentation)
+            {
+                EditorGUILayout.LabelField("当前状态", controller.CurrentState.ToString());
+                EditorGUILayout.LabelField("当前阶段", controller.CurrentPhase.ToString());
+            }
+
+            if (GUILayout.Button("切换到目标状态"))
+            {
+                SwitchPresentation(controller);
+            }
+
+            if (GUILayout.Button("停止展示流程"))
+            {
+                controller.Stop();
+            }
+
+            EditorGUILayout.Space(6f);
 
             EditorGUILayout.BeginHorizontal();
             if (GUILayout.Button("立即播放身体动画"))
@@ -138,10 +196,40 @@ public sealed class CharacterPresentationControllerEditor : Editor
     void SaveTestState()
     {
         SaveObject("Actor", testActor);
+        SaveObject("Profile", testProfile);
         SaveObject("Clip", testClip);
         SaveObject("FacePresetA", testFacePresetA);
         SaveObject("FacePresetB", testFacePresetB);
+        SessionState.SetInt(GetSessionKey("State"), (int)testState);
+        SessionState.SetInt(
+            GetSessionKey("TransitionMode"),
+            (int)testTransitionMode);
+        SessionState.SetBool(
+            GetSessionKey("OverrideCrossFadeDuration"),
+            overrideCrossFadeDuration);
         SessionState.SetFloat(GetSessionKey("BlendDuration"), testBlendDuration);
+    }
+
+    void BindTestActor(CharacterPresentationController controller)
+    {
+        if (testProfile != null)
+        {
+            controller.Bind(testActor, testProfile);
+            return;
+        }
+
+        controller.Bind(testActor);
+    }
+
+    void SwitchPresentation(CharacterPresentationController controller)
+    {
+        float? durationOverride = overrideCrossFadeDuration
+            ? testBlendDuration
+            : null;
+        controller.SwitchAsync(
+            testState,
+            testTransitionMode,
+            durationOverride).Forget();
     }
 
     void PlayFacePresets(CharacterPresentationController controller)

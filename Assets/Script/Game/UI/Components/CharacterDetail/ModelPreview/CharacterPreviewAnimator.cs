@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using Unity.Collections;
 using UnityEngine;
 using UnityEngine.Animations;
@@ -34,6 +36,7 @@ public class CharacterPreviewAnimator : MonoBehaviour
       private float blendTime;
       private float blendTimer;
       private bool isBlending;
+      private Action playableBlendCompleted;
 
   #endregion
     void Awake()
@@ -57,15 +60,20 @@ public class CharacterPreviewAnimator : MonoBehaviour
 
         originalAnimatorController = animator.runtimeAnimatorController;
         originalApplyRootMotion = animator.applyRootMotion;
-        runtimeOverrideController = Instantiate(overrideController);
-        animator.runtimeAnimatorController = runtimeOverrideController;
+        if (overrideController != null)
+        {
+            runtimeOverrideController = Instantiate(overrideController);
+        }
+        animator.runtimeAnimatorController = null;
         animator.applyRootMotion = false; // 防止飞走
         isPlayingStateA = true;
+        InitializePlayableGraph();
     }
 
     public void Unbind()
     {
         StopActiveRoutines();
+        DestroyPlayableGraph();
         if (animator != null)
         {
             animator.runtimeAnimatorController = originalAnimatorController;
@@ -108,13 +116,201 @@ public class CharacterPreviewAnimator : MonoBehaviour
     {
         Unbind();
     }
+
+    void Update()
+    {
+        if (!isBlending || !mixer.IsValid())
+        {
+            return;
+        }
+
+        blendTimer += Time.deltaTime;
+        float progress = blendTime <= 0f
+            ? 1f
+            : Mathf.Clamp01(blendTimer / blendTime);
+        mixer.SetInputWeight(0, 1f - progress);
+        mixer.SetInputWeight(1, progress);
+
+        if (progress >= 1f)
+        {
+            CompletePlayableBlend(true);
+        }
+    }
+
+    void InitializePlayableGraph()
+    {
+        DestroyPlayableGraph();
+        graph = PlayableGraph.Create($"{name}.CharacterPreview");
+        graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
+        mixer = AnimationMixerPlayable.Create(graph, 2);
+        AnimationPlayableOutput output = AnimationPlayableOutput.Create(
+            graph,
+            "CharacterPreview",
+            animator);
+        output.SetSourcePlayable(mixer);
+        mixer.SetInputWeight(0, 0f);
+        mixer.SetInputWeight(1, 0f);
+        graph.Play();
+    }
+
+    void DestroyPlayableGraph()
+    {
+        isBlending = false;
+        playableBlendCompleted = null;
+        currentPlayable = default;
+        nextPlayable = default;
+        if (graph.IsValid())
+        {
+            graph.Destroy();
+        }
+
+        graph = default;
+        mixer = default;
+    }
+
+    AnimationClipPlayable CreatePlayable(AnimationClip clip)
+    {
+        AnimationClipPlayable playable = AnimationClipPlayable.Create(graph, clip);
+        playable.SetApplyFootIK(false);
+        playable.SetApplyPlayableIK(false);
+        playable.SetTime(0d);
+        playable.SetSpeed(1d);
+        return playable;
+    }
+
+    AnimationClipPlayable PlayImmediateWithPlayable(AnimationClip clip)
+    {
+        CancelPlayableBlend();
+        DestroyPlayable(ref currentPlayable, 0);
+        DestroyPlayable(ref nextPlayable, 1);
+
+        currentPlayable = CreatePlayable(clip);
+        graph.Connect(currentPlayable, 0, mixer, 0);
+        mixer.SetInputWeight(0, 1f);
+        mixer.SetInputWeight(1, 0f);
+        graph.Evaluate(0f);
+        return currentPlayable;
+    }
+
+    AnimationClipPlayable CrossFadeWithPlayable(
+        AnimationClip clip,
+        float duration,
+        Action onBlendCompleted)
+    {
+        if (!currentPlayable.IsValid() || duration <= 0f)
+        {
+            AnimationClipPlayable playable = PlayImmediateWithPlayable(clip);
+            onBlendCompleted?.Invoke();
+            return playable;
+        }
+
+        if (isBlending)
+        {
+            CompletePlayableBlend(false);
+        }
+
+        DestroyPlayable(ref nextPlayable, 1);
+        nextPlayable = CreatePlayable(clip);
+        graph.Connect(nextPlayable, 0, mixer, 1);
+        mixer.SetInputWeight(0, 1f);
+        mixer.SetInputWeight(1, 0f);
+        blendTime = duration;
+        blendTimer = 0f;
+        playableBlendCompleted = onBlendCompleted;
+        isBlending = true;
+        return nextPlayable;
+    }
+
+    void CancelPlayableBlend()
+    {
+        if (!isBlending)
+        {
+            return;
+        }
+
+        CompletePlayableBlend(false);
+    }
+
+    void CompletePlayableBlend(bool invokeCallback)
+    {
+        if (!isBlending || !nextPlayable.IsValid())
+        {
+            return;
+        }
+
+        Action completion = playableBlendCompleted;
+        playableBlendCompleted = null;
+        isBlending = false;
+        mixer.SetInputWeight(0, 0f);
+        mixer.SetInputWeight(1, 1f);
+        DestroyPlayable(ref currentPlayable, 0);
+        mixer.DisconnectInput(1);
+        currentPlayable = nextPlayable;
+        nextPlayable = default;
+        graph.Connect(currentPlayable, 0, mixer, 0);
+        mixer.SetInputWeight(0, 1f);
+        mixer.SetInputWeight(1, 0f);
+
+        if (invokeCallback)
+        {
+            completion?.Invoke();
+        }
+    }
+
+    void DestroyPlayable(ref AnimationClipPlayable playable, int inputIndex)
+    {
+        if (!playable.IsValid() || !graph.IsValid())
+        {
+            playable = default;
+            return;
+        }
+
+        mixer.DisconnectInput(inputIndex);
+        graph.DestroyPlayable(playable);
+        playable = default;
+    }
+
+    public async UniTask WaitForClipEndAsync(
+        AnimationClip clip,
+        CancellationToken cancellationToken)
+    {
+        await WaitForClipTransitionAsync(clip, 0f, cancellationToken);
+    }
+
+    internal async UniTask WaitForClipTransitionAsync(
+        AnimationClip clip,
+        float transitionLeadTime,
+        CancellationToken cancellationToken)
+    {
+        if (clip == null || !graph.IsValid())
+        {
+            return;
+        }
+
+        AnimationClipPlayable observedPlayable = isBlending
+            ? nextPlayable
+            : currentPlayable;
+        if (!observedPlayable.IsValid())
+        {
+            return;
+        }
+
+        double transitionTime = Mathf.Max(
+            0f,
+            clip.length - Mathf.Max(0f, transitionLeadTime));
+        await UniTask.WaitUntil(
+            () => !observedPlayable.IsValid()
+                  || observedPlayable.GetTime() >= transitionTime,
+            cancellationToken: cancellationToken);
+    }
+
     // AnimatorOverrideController有问题，先用这个
     public void CrossFadeTo(
         AnimationClip clip,
         float blendDuration,
         Action onBlendCompleted = null)
     {
-        if (animator == null || runtimeOverrideController == null)
+        if (animator == null)
         {
             onBlendCompleted?.Invoke();
             return;
@@ -127,6 +323,18 @@ public class CharacterPreviewAnimator : MonoBehaviour
         }
 
         blendDuration = Mathf.Max(0f, blendDuration);
+
+        if (graph.IsValid())
+        {
+            CrossFadeWithPlayable(clip, blendDuration, onBlendCompleted);
+            return;
+        }
+
+        if (runtimeOverrideController == null)
+        {
+            onBlendCompleted?.Invoke();
+            return;
+        }
 
         // 乒乓切换：如果当前在A，就替换B的Clip并过渡到B；反之亦然。
         if (isPlayingStateA)
@@ -157,9 +365,20 @@ public class CharacterPreviewAnimator : MonoBehaviour
     
     //无过渡切换动作
     //用于初始化动作
+    public void Play(AnimationClip clip, bool crossFade, float blendDuration)
+    {
+        if (crossFade)
+        {
+            CrossFadeTo(clip, blendDuration);
+            return;
+        }
+
+        PlayImmediate(clip);
+    }
+
     public void PlayImmediate(AnimationClip clip)
     {
-        if (animator == null || runtimeOverrideController == null)
+        if (animator == null)
         {
             return;
         }
@@ -171,6 +390,17 @@ public class CharacterPreviewAnimator : MonoBehaviour
         }
 
         if (clip == null)
+        {
+            return;
+        }
+
+        if (graph.IsValid())
+        {
+            PlayImmediateWithPlayable(clip);
+            return;
+        }
+
+        if (runtimeOverrideController == null)
         {
             return;
         }

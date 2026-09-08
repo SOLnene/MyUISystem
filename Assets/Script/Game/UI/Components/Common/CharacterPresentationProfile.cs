@@ -1,6 +1,29 @@
 using System;
 using UnityEngine;
 
+public enum CharacterPresentationState
+{
+    Default,
+    TeamSwitch,
+    WeaponShow,
+    RelicShow
+}
+
+public enum PresentationTransitionMode
+{
+    Immediate,
+    CrossFade,
+    Authored
+}
+
+public enum PresentationPhase
+{
+    None,
+    Exit,
+    Enter,
+    Loop
+}
+
 [Serializable]
 public sealed class CharacterPresentationData
 {
@@ -72,4 +95,16 @@ public sealed class CharacterPresentationProfile : ScriptableObject
     public CharacterPresentationData TeamSwitch => teamSwitch;
     public CharacterPresentationData WeaponShow => weaponShow;
     public CharacterPresentationData RelicShow => relicShow;
+
+    public CharacterPresentationData Get(CharacterPresentationState state)
+    {
+        return state switch
+        {
+            CharacterPresentationState.Default => defaultPresentation,
+            CharacterPresentationState.TeamSwitch => teamSwitch,
+            CharacterPresentationState.WeaponShow => weaponShow,
+            CharacterPresentationState.RelicShow => relicShow,
+            _ => throw new ArgumentOutOfRangeException(nameof(state), state, null)
+        };
+    }
 }
