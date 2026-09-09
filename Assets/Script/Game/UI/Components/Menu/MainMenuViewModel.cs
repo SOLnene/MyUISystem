@@ -1,20 +1,18 @@
 using System;
-using System.Collections.Generic;
 
 public class MainMenuViewModel
 {
-    public IReadOnlyList<MainMenuButtonData> Buttons => buttons;
+    public PlayerSummaryInfo PlayerSummary { get; }
     public IMainMenuRedDotProvider RedDotProvider { get; }
 
-    private readonly IReadOnlyList<MainMenuButtonData> buttons;
     private readonly Action<MainMenuAction> onActionRequested;
 
     public MainMenuViewModel(
-        IReadOnlyList<MainMenuButtonData> buttons,
+        PlayerSummaryInfo playerSummary,
         IMainMenuRedDotProvider redDotProvider,
-        Action<MainMenuAction> onActionRequested = null)
+        Action<MainMenuAction> onActionRequested)
     {
-        this.buttons = buttons;
+        PlayerSummary = playerSummary;
         RedDotProvider = redDotProvider;
         this.onActionRequested = onActionRequested;
     }

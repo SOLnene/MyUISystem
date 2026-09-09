@@ -20,6 +20,7 @@ internal class MainMenuNavigator
             { MainMenuAction.Quest, () => ShowUnavailable(MainMenuAction.Quest) },
             { MainMenuAction.Shop, OpenStore },
             { MainMenuAction.Achievement, OpenAchievement },
+            { MainMenuAction.Friend, OpenFriend },
         };
     }
 
@@ -126,6 +127,58 @@ internal class MainMenuNavigator
             null,
             () => AchievementProgressService.Instance.AddProgress(
                 AchievementProgressKeys.AchievementViewOpen));
+    }
+
+    private void OpenFriend()
+    {
+        // 联机数据源接入前，在页面打开处提供可替换的固定测试数据。
+        var friends = new[]
+        {
+            new FriendInfo(
+                new PlayerSummaryInfo("旅行者", "100000001"),
+                60,
+                "在线",
+                "今天也要认真冒险。"),
+            new FriendInfo(
+                new PlayerSummaryInfo("安柏", "100000002"),
+                58,
+                "在线",
+                "侦察骑士，准备出发！"),
+            new FriendInfo(
+                new PlayerSummaryInfo("凯亚", "100000003"),
+                55,
+                "2分钟前",
+                "偶尔也该认真工作一下。"),
+            new FriendInfo(
+                new PlayerSummaryInfo("诺艾尔", "100000004"),
+                52,
+                "30分钟前",
+                "需要帮忙的话，请尽管告诉我。"),
+            new FriendInfo(
+                new PlayerSummaryInfo("香菱", "100000005"),
+                50,
+                "1小时前",
+                "正在寻找新的食材！"),
+            new FriendInfo(
+                new PlayerSummaryInfo("行秋", "100000006"),
+                48,
+                "昨天",
+                "偷得浮生半日闲。"),
+            new FriendInfo(
+                new PlayerSummaryInfo("砂糖", "100000007"),
+                45,
+                "离线",
+                "实验记录还需要整理。")
+        };
+
+        UIManager.Instance.Open(
+            UIType.FriendView,
+            new FriendViewModel(friends, HandleFriendChatRequested));
+    }
+
+    private void HandleFriendChatRequested(string playerId)
+    {
+        Debug.Log($"请求打开与玩家 {playerId} 的聊天界面。");
     }
 
     private void ShowUnavailable(MainMenuAction action)

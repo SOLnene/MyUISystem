@@ -57,8 +57,8 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
+  m_Name:
+  m_EditorClassIdentifier:
   m_Material: {fileID: 0}
   m_Color: {r: 1, g: 1, b: 1, a: 1}
   m_RaycastTarget: 1
@@ -362,6 +362,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2253329142759759573}
+  - component: {fileID: 9117284659341026317}
   m_Layer: 5
   m_Name: PlayerInfoArea
   m_TagString: Untagged
@@ -392,6 +393,21 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 400}
   m_Pivot: {x: 0.5, y: 1}
+--- !u!114 &9117284659341026317
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2722406855505517191}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 809decb0761f4fa0815cc7a54a8d3c00, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  avatarIcon: {fileID: 247621729878787408}
+  playerNameText: {fileID: 1345429696135968752}
+  playerIdText: {fileID: 876350375497845925}
 --- !u!1 &3491344197900957377
 GameObject:
   m_ObjectHideFlags: 0
@@ -1187,6 +1203,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   defaultSelect: {fileID: 0}
+  playerInfoView: {fileID: 9117284659341026317}
   actionPanel: {fileID: 7077769950636226019}
   defaultButtons:
   - label: "\u89D2\u8272"
@@ -1234,6 +1251,11 @@ MonoBehaviour:
     interactable: 1
     action: 9
     redDotKey: 9
+  - label: "\u597D\u53CB"
+    icon: {fileID: 21300000, guid: b93ac92e0af5b29498755fab2badb5e2, type: 3}
+    interactable: 1
+    action: 10
+    redDotKey: 0
 --- !u!1 &8982484881761005941
 GameObject:
   m_ObjectHideFlags: 0

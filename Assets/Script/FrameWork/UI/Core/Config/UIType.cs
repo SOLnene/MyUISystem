@@ -26,5 +26,6 @@ public enum UIType
 		TeamEditView,
 		LoginView,
 		TutorialOverlayView,
+		FriendView,
 		Max,
 }

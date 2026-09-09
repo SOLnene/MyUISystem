@@ -14,6 +14,7 @@ public enum MainMenuAction
     Quest,
     Shop,
     Achievement,
+    Friend,
 }
 
 public enum MainMenuRedDotKey
@@ -42,27 +43,23 @@ public struct MainMenuButtonData
 
 public class MainMenuView : UIView
 {
+    [SerializeField] private PlayerInfoView playerInfoView;
     [SerializeField] private MenuActionPanel actionPanel;
     [SerializeField] private List<MainMenuButtonData> defaultButtons = new List<MainMenuButtonData>();
 
     private MainMenuViewModel viewModel;
-    private MainMenuRedDotProvider ownedRedDotProvider;
 
     public override void OnOpen(object data)
     {
         base.OnOpen(data);
-        viewModel = data as MainMenuViewModel;
-        if (viewModel == null)
-        {
-            var openParams = data as MainMenuOpenParams;
-            ownedRedDotProvider ??= new MainMenuRedDotProvider();
-            viewModel = new MainMenuViewModel(
-                openParams?.Buttons ?? defaultButtons,
-                openParams?.RedDotProvider ?? ownedRedDotProvider,
-                openParams?.OnActionRequested);
-        }
+        var openParams = (MainMenuOpenParams)data;
+        viewModel = new MainMenuViewModel(
+            openParams.PlayerSummary,
+            openParams.RedDotProvider,
+            openParams.OnActionRequested);
 
-        actionPanel.Bind(viewModel.Buttons, viewModel.RedDotProvider, viewModel.RequestAction);
+        playerInfoView.Bind(viewModel.PlayerSummary);
+        actionPanel.Bind(defaultButtons, viewModel.RedDotProvider, viewModel.RequestAction);
     }
 
     public override void OnClose()
@@ -71,10 +68,4 @@ public class MainMenuView : UIView
         base.OnClose();
     }
 
-    public override void OnRelease()
-    {
-        ownedRedDotProvider?.Dispose();
-        ownedRedDotProvider = null;
-        base.OnRelease();
-    }
 }

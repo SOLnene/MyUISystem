@@ -80,11 +80,17 @@ public partial class HubRoot : UIView
     private void OpenMainMenu()
     {
         mainMenuOpen = true;
+        SaveProfileInfo profile = SaveProfileManager.Instance.ActiveProfile;
+        // 在线账户接入前使用本地档案 ID 的前九位作为稳定展示 ID。
+        var playerSummary = new PlayerSummaryInfo(
+            profile.displayName,
+            profile.profileId.Substring(0, 9));
         UIManager.Instance.Open(
             UIType.MainMenuView,
             new MainMenuOpenParams(
-                HandleMainMenuAction,
-                redDotProvider: mainMenuRedDotProvider));
+                playerSummary,
+                mainMenuRedDotProvider,
+                HandleMainMenuAction));
     }
 
     private void CloseMainMenu(Action callback = null)
