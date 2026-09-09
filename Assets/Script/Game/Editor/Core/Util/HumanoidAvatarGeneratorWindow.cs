@@ -168,20 +168,52 @@ internal sealed class HumanoidAvatarGeneratorWindow : EditorWindow
     static Avatar BuildAvatar(GameObject sourceRoot, Avatar mappingSource)
     {
         Scene previewScene = default;
+        GameObject buildHierarchyRoot = null;
         GameObject buildRoot = null;
 
         try
         {
             previewScene = EditorSceneManager.NewPreviewScene();
-            buildRoot = Instantiate(sourceRoot);
-            buildRoot.name = sourceRoot.name;
-            buildRoot.hideFlags = HideFlags.HideAndDontSave;
+            Transform sourceParent = sourceRoot.transform.parent;
+            GameObject sourceHierarchyRoot = sourceParent != null
+                ? sourceParent.gameObject
+                : sourceRoot;
+            string rootPath = AnimationUtility.CalculateTransformPath(
+                sourceRoot.transform,
+                sourceHierarchyRoot.transform);
+
+            string sourceHierarchyRootName = GetSourceHierarchyRootName(
+                sourceHierarchyRoot.transform,
+                sourceRoot.transform,
+                mappingSource.humanDescription.skeleton);
+
+            buildHierarchyRoot = Instantiate(sourceHierarchyRoot);
+            buildHierarchyRoot.name = sourceHierarchyRootName;
+            buildHierarchyRoot.hideFlags = HideFlags.HideAndDontSave;
 
             // 克隆对象只用于生成 Avatar，避免调整 T Pose 时污染场景或 Prefab 中的原对象。
-            SceneManager.MoveGameObjectToScene(buildRoot, previewScene);
-            buildRoot.transform.localPosition = sourceRoot.transform.localPosition;
-            buildRoot.transform.localRotation = sourceRoot.transform.localRotation;
-            buildRoot.transform.localScale = sourceRoot.transform.localScale;
+            SceneManager.MoveGameObjectToScene(buildHierarchyRoot, previewScene);
+            ApplySkeletonPose(
+                buildHierarchyRoot.transform,
+                mappingSource.humanDescription.skeleton);
+
+            Transform buildRootTransform = string.IsNullOrEmpty(rootPath)
+                ? buildHierarchyRoot.transform
+                : buildHierarchyRoot.transform.Find(rootPath);
+            if (buildRootTransform == null)
+            {
+                throw new InvalidOperationException(
+                    $"克隆层级中找不到所选 Avatar 根节点：{rootPath}");
+            }
+
+            buildRoot = buildRootTransform.gameObject;
+            if (buildRoot != buildHierarchyRoot)
+            {
+                // 提升根节点时保留源 T Pose 的世界变换，将被移除父层的坐标修正烘焙到新根。
+                buildRootTransform.SetParent(null, true);
+                DestroyImmediate(buildHierarchyRoot);
+                buildHierarchyRoot = null;
+            }
 
             HumanDescription description = CreateRootedDescription(
                 buildRoot.transform,
@@ -210,11 +242,61 @@ internal sealed class HumanoidAvatarGeneratorWindow : EditorWindow
                 DestroyImmediate(buildRoot);
             }
 
+            if (buildHierarchyRoot != null)
+            {
+                DestroyImmediate(buildHierarchyRoot);
+            }
+
             if (previewScene.IsValid())
             {
                 EditorSceneManager.ClosePreviewScene(previewScene);
             }
         }
+    }
+
+    static string GetSourceHierarchyRootName(
+        Transform sourceHierarchyRoot,
+        Transform selectedRoot,
+        IReadOnlyList<SkeletonBone> sourceSkeleton)
+    {
+        if (sourceHierarchyRoot == selectedRoot)
+        {
+            return selectedRoot.name;
+        }
+
+        if (sourceSkeleton.Count == 0)
+        {
+            throw new InvalidOperationException("源 Avatar 不包含可复用的 T Pose 骨架数据。");
+        }
+
+        string sourceHierarchyRootName = sourceSkeleton[0].name;
+        bool containsSelectedRoot = false;
+        foreach (SkeletonBone bone in sourceSkeleton)
+        {
+            containsSelectedRoot |= bone.name == selectedRoot.name;
+        }
+
+        if (!NamesReferToSameInstance(sourceHierarchyRootName, sourceHierarchyRoot.name) ||
+            !containsSelectedRoot)
+        {
+            throw new InvalidOperationException(
+                "所选节点及其直接父层必须同时存在于源 Avatar 的 T Pose 骨架中，" +
+                "否则无法安全烘焙被移除父层的坐标修正。");
+        }
+
+        return sourceHierarchyRootName;
+    }
+
+    static bool NamesReferToSameInstance(string sourceName, string sceneName)
+    {
+        const string cloneSuffix = "(Clone)";
+        string normalizedSourceName = sourceName.EndsWith(cloneSuffix, StringComparison.Ordinal)
+            ? sourceName.Substring(0, sourceName.Length - cloneSuffix.Length)
+            : sourceName;
+        string normalizedSceneName = sceneName.EndsWith(cloneSuffix, StringComparison.Ordinal)
+            ? sceneName.Substring(0, sceneName.Length - cloneSuffix.Length)
+            : sceneName;
+        return normalizedSourceName == normalizedSceneName;
     }
 
     static HumanDescription CreateRootedDescription(
@@ -261,9 +343,15 @@ internal sealed class HumanoidAvatarGeneratorWindow : EditorWindow
         var rootedSkeleton = new List<SkeletonBone>(targetTransforms.Count);
         foreach (Transform targetTransform in targetTransforms)
         {
-            if (sourcePoseByName.TryGetValue(targetTransform.name, out SkeletonBone pose))
+            if (sourcePoseByName.ContainsKey(targetTransform.name))
             {
-                rootedSkeleton.Add(pose);
+                rootedSkeleton.Add(new SkeletonBone
+                {
+                    name = targetTransform.name,
+                    position = targetTransform.localPosition,
+                    rotation = targetTransform.localRotation,
+                    scale = targetTransform.localScale
+                });
             }
         }
 
