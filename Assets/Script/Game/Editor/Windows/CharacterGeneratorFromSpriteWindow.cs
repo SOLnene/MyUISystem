@@ -13,7 +13,7 @@ public class CharacterGeneratorFromSpriteWindow : EditorWindow
     private string addressLabel = "character";
     private int generatedCount = 0;
 
-    [MenuItem("Tools/Generator/生成 CharacterDefinition (自动识别类型)")]
+    [MenuItem("Tools/MyUISystem/数据生成/角色/生成 CharacterDefinition（自动识别）", false, 100)]
     public static void ShowWindow()
     {
         GetWindow<CharacterGeneratorFromSpriteWindow>("CharacterDefinition生成器");

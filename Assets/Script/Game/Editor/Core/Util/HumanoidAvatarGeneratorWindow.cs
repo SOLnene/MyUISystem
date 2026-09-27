@@ -8,12 +8,12 @@ using UnityEngine.SceneManagement;
 
 internal sealed class HumanoidAvatarGeneratorWindow : EditorWindow
 {
-    const string MenuPath = "Tools/Character Animation/Humanoid Avatar 生成工具";
+    const string MenuPath = "Tools/MyUISystem/角色展示/Avatar/生成 Humanoid Avatar";
 
     GameObject avatarRoot;
     Avatar sourceAvatar;
 
-    [MenuItem(MenuPath)]
+    [MenuItem(MenuPath, false, 330)]
     static void Open()
     {
         HumanoidAvatarGeneratorWindow window =

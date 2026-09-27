@@ -28,7 +28,7 @@ public class ItemDefinitionGeneratorFromSpriteWindow : EditorWindow
     private string addressLabel = "weapon_icon";
     private int generatedCount = 0;
 
-    [MenuItem("Tools/Generator/生成 ItemDefinitions (自动识别类型)")]
+    [MenuItem("Tools/MyUISystem/数据生成/道具/生成 ItemDefinition（自动识别）", false, 100)]
     public static void ShowWindow()
     {
         GetWindow<ItemDefinitionGeneratorFromSpriteWindow>("ItemDefinition生成器");

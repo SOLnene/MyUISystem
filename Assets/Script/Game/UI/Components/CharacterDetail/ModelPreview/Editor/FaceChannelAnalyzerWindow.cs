@@ -24,7 +24,7 @@ public sealed class FaceChannelAnalyzerWindow : EditorWindow
     bool showChannelList = true;
     bool showDetails = true;
 
-    [MenuItem("Tools/Character/Face Channel Analyzer")]
+    [MenuItem("Tools/MyUISystem/角色展示/表情/分析表情通道", false, 350)]
     static void OpenWindow()
     {
         GetWindow<FaceChannelAnalyzerWindow>("Face Channel Analyzer");

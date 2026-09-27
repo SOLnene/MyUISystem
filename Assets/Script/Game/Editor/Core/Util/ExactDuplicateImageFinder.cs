@@ -9,7 +9,7 @@ using Object = UnityEngine.Object;
 
 internal static class ExactDuplicateImageFinder
 {
-    private const string MenuPath = "Tools/Asset Audit/查找完全重复图片";
+    private const string MenuPath = "Tools/MyUISystem/资源/检查/查找完全重复图片";
     private const int FileCompareBufferSize = 81920;
 
     private static readonly HashSet<string> SupportedExtensions = new(StringComparer.OrdinalIgnoreCase)
@@ -26,7 +26,7 @@ internal static class ExactDuplicateImageFinder
         ".hdr"
     };
 
-    [MenuItem(MenuPath, false, 2000)]
+    [MenuItem(MenuPath, false, 210)]
     private static void FindDuplicates()
     {
         string selectedPath = AssetDatabase.GetAssetPath(Selection.activeObject);

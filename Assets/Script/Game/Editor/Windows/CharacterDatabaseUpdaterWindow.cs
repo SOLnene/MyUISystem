@@ -9,7 +9,7 @@ public class CharacterDatabaseUpdaterWindow : EditorWindow
     private CharacterDatabase database;
         private DefaultAsset folder; // 用于选择 ItemDefinition 文件夹
     
-        [MenuItem("Tools/Database/Character Database Updater")]
+        [MenuItem("Tools/MyUISystem/数据生成/角色/更新 CharacterDatabase", false, 101)]
         public static void ShowWindow()
         {
             var window = GetWindow<CharacterDatabaseUpdaterWindow>("Character Database Updater");

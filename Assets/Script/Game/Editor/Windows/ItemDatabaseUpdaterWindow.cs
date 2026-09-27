@@ -8,7 +8,7 @@ public class ItemDatabaseUpdaterWindow : EditorWindow
     private ItemDatabase database;
     private DefaultAsset folder; // 用于选择 ItemDefinition 文件夹
 
-    [MenuItem("Tools/Database/Item Database Updater")]
+    [MenuItem("Tools/MyUISystem/数据生成/道具/更新 ItemDatabase", false, 101)]
     public static void ShowWindow()
     {
         var window = GetWindow<ItemDatabaseUpdaterWindow>("Item Database Updater");

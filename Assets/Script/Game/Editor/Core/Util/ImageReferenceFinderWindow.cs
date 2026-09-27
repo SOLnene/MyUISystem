@@ -13,7 +13,7 @@ using Object = UnityEngine.Object;
 
 internal sealed class ImageReferenceFinderWindow : EditorWindow
 {
-    private const string MenuPath = "Tools/Asset Audit/图片引用检查";
+    private const string MenuPath = "Tools/MyUISystem/资源/检查/图片引用检查";
 
     private static readonly HashSet<string> ImageExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
@@ -81,7 +81,7 @@ internal sealed class ImageReferenceFinderWindow : EditorWindow
         reverseDependencyIndex = null;
     }
 
-    [MenuItem(MenuPath, false, 2001)]
+    [MenuItem(MenuPath, false, 211)]
     private static void OpenWindow()
     {
         var window = GetWindow<ImageReferenceFinderWindow>();

@@ -9,14 +9,14 @@ using UnityEngine.SceneManagement;
 internal sealed class HumanoidThumbMappingRemovalTool : EditorWindow
 {
     const string MenuPath =
-        "Tools/Character Animation/Humanoid Avatar 拇指映射验证工具";
+        "Tools/MyUISystem/角色展示/Avatar/生成无拇指映射 Avatar（验证）";
 
     static readonly HashSet<string> ThumbHumanBoneNames = CreateThumbHumanBoneNames();
 
     GameObject avatarRoot;
     Avatar sourceAvatar;
 
-    [MenuItem(MenuPath)]
+    [MenuItem(MenuPath, false, 331)]
     static void Open()
     {
         HumanoidThumbMappingRemovalTool window =

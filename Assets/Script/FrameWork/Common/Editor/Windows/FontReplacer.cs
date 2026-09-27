@@ -9,7 +9,7 @@ public class FontReplacer : EditorWindow
     // 用来存放你想选的那种字体
     private TMP_FontAsset targetFont;
 
-    [MenuItem("Tools/批量字体替换工具")]
+    [MenuItem("Tools/MyUISystem/UI/批量替换字体", false, 11)]
     public static void ShowWindow()
     {
         GetWindow<FontReplacer>("字体替换");

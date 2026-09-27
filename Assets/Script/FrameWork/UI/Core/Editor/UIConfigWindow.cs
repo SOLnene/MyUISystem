@@ -24,7 +24,7 @@ public class UIConfigWindow : EditorWindow
         OpenWindow().uiPrefab = Selection.activeObject as GameObject;
     }
 
-    [MenuItem("Tools/管理UI")]
+    [MenuItem("Tools/MyUISystem/UI/UI 配置管理", false, 10)]
     public static UIConfigWindow OpenWindow()
     {
         //不需要判空？
