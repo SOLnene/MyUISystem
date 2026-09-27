@@ -9,6 +9,8 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
 {
     const string OutputMarker = "CharacterAnimation.BindingSource.v1=";
     const string OutputDirectoryPrefsKey = "MyUISystem.AnimationBindingConverter.OutputDirectory";
+    const string PelvisTwistSourcePath = "ModelRoot/Bip001/+PelvisTwist CF A01";
+    const string PelvisTwistTargetPath = "ModelRoot/Bip001/Bip001 Pelvis/+PelvisTwist CF A01";
     readonly List<AnimationClip> clips = new List<AnimationClip>();
     GameObject validationModel;
     DefaultAsset outputDirectoryAsset;
@@ -16,6 +18,7 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
     string outputDirectory = "";
     bool includeComponentCurves;
     bool excludeUpperArmTwistCurves;
+    bool excludePelvisTwistCurves = true;
     string report = "请选择 AnimationClip，然后预览转换。";
     Vector2 scroll;
 
@@ -32,7 +35,7 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
         internal int errors;
     }
 
-    [MenuItem("Tools/Character Animation/动画绑定路径转换")]
+    [MenuItem("Tools/MyUISystem/角色展示/动画/动画绑定路径转换", false, 340)]
     static void Open()
     {
         var window = GetWindow<AnimationBindingConverterWindow>("动画绑定路径转换");
@@ -81,6 +84,7 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
         EditorGUILayout.EndHorizontal();
         includeComponentCurves = EditorGUILayout.Toggle("同时转换模型内其他组件曲线", includeComponentCurves);
         excludeUpperArmTwistCurves = EditorGUILayout.Toggle("排除 UpperArmTwist 曲线（诊断）", excludeUpperArmTwistCurves);
+        excludePelvisTwistCurves = EditorGUILayout.Toggle("排除 PelvisTwist CF 曲线（建议）", excludePelvisTwistCurves);
         using (new EditorGUI.DisabledScope(clips.Count == 0 || EditorApplication.isCompiling ||
             EditorApplication.isPlayingOrWillChangePlaymode))
         {
@@ -147,7 +151,8 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
             text.AppendLine($"【{source.name}】");
             try
             {
-                Plan plan = BuildPlan(source, prefix, includeComponentCurves, excludeUpperArmTwistCurves, validationModel);
+                Plan plan = BuildPlan(source, prefix, includeComponentCurves, excludeUpperArmTwistCurves,
+                    excludePelvisTwistCurves, validationModel);
                 text.Append(plan.report);
                 if (generate)
                 {
@@ -167,7 +172,7 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
     }
 
     static Plan BuildPlan(AnimationClip source, string prefix, bool includeComponents,
-        bool excludeUpperArmTwist, GameObject model)
+        bool excludeUpperArmTwist, bool excludePelvisTwist, GameObject model)
     {
         var plan = new Plan { excludesUpperArmTwist = excludeUpperArmTwist };
         var targets = new HashSet<EditorCurveBinding>();
@@ -205,9 +210,21 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
                 Message($"排除节点 Transform 曲线：{binding.path}");
                 return;
             }
+            if (excludePelvisTwist && binding.type == typeof(Transform) && IsPelvisTwistPath(binding.path))
+            {
+                plan.from.Add(binding);
+                plan.to.Add(default);
+                plan.objectCurves.Add(objectCurve);
+                plan.removeOnly.Add(true);
+                plan.removedBindings++;
+                Message($"排除节点 Transform 曲线：{binding.path}");
+                return;
+            }
 
             EditorCurveBinding target = binding;
             bool candidate = binding.type == typeof(Transform) ||
+                (binding.type == typeof(SkinnedMeshRenderer)
+                 && binding.propertyName.StartsWith("blendShape.", StringComparison.Ordinal)) ||
                 (includeComponents && binding.type != typeof(Animator));
             if (binding.type == typeof(Animator)) candidate = false;
 
@@ -231,6 +248,9 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
                 else if (path == prefix || path.StartsWith(prefix + "/", StringComparison.Ordinal))
                     target.path = ModelRootStandardizerPostprocessor.RootName + path.Substring(prefix.Length);
                 else Message($"警告：路径不匹配指定前缀，保持原样：{path}");
+
+                if (binding.type == typeof(Transform) && target.path == PelvisTwistSourcePath)
+                    target.path = PelvisTwistTargetPath;
             }
             else if (binding.type != typeof(Animator))
                 Message($"警告：未转换组件曲线 {binding.type?.Name}：{binding.path}/{binding.propertyName}");
@@ -278,6 +298,29 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
         string nodeName = separator >= 0 ? path.Substring(separator + 1) : path;
         return nodeName == "+UpperArmTwist L A01" || nodeName == "+UpperArmTwist L A02" ||
             nodeName == "+UpperArmTwist R A01" || nodeName == "+UpperArmTwist R A02";
+    }
+
+    static bool IsPelvisTwistPath(string path)
+    {
+        int separator = path.LastIndexOf('/');
+        string nodeName = separator >= 0 ? path.Substring(separator + 1) : path;
+        return nodeName == "+PelvisTwist CF A01";
+    }
+
+    internal static string ConvertClip(
+        AnimationClip source,
+        string outputDirectory,
+        bool excludeUpperArmTwist)
+    {
+        if (source == null) throw new ArgumentNullException(nameof(source));
+
+        Plan plan = BuildPlan(source, string.Empty, false, excludeUpperArmTwist, true, null);
+        if (plan.errors > 0)
+            throw new InvalidOperationException($"{source.name} 存在 {plan.errors} 个绑定冲突。\n{plan.report}");
+        if (plan.from.Count == 0)
+            throw new InvalidOperationException($"{source.name} 没有需要转换的绑定。");
+
+        return SaveConvertedClip(source, plan, outputDirectory);
     }
 
     static string SaveConvertedClip(AnimationClip source, Plan plan, string selectedOutputDirectory)
