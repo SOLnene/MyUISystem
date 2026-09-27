@@ -13,7 +13,8 @@ public enum PresentationTransitionMode
 {
     Immediate,
     CrossFade,
-    Authored
+    Authored,
+    AuthoredTimedBlend
 }
 
 public enum PresentationPhase
@@ -24,6 +25,13 @@ public enum PresentationPhase
     Loop
 }
 
+internal enum PresentationFaceSource
+{
+    Preset,
+    Embedded,
+    None
+}
+
 [Serializable]
 public sealed class CharacterPresentationData
 {
@@ -32,14 +40,23 @@ public sealed class CharacterPresentationData
     AnimationClip enterBodyClip;
 
     [SerializeField]
+    AnimationClip enterAuxiliaryClip;
+
+    [SerializeField]
     FaceExpressionPreset enterFaceA;
 
     [SerializeField]
     FaceExpressionPreset enterFaceB;
 
+    [SerializeField]
+    PresentationFaceSource enterFaceSource;
+
     [Header("Loop")]
     [SerializeField]
     AnimationClip loopBodyClip;
+
+    [SerializeField]
+    AnimationClip loopAuxiliaryClip;
 
     [SerializeField]
     FaceExpressionPreset loopFaceA;
@@ -47,9 +64,15 @@ public sealed class CharacterPresentationData
     [SerializeField]
     FaceExpressionPreset loopFaceB;
 
+    [SerializeField]
+    PresentationFaceSource loopFaceSource;
+
     [Header("Exit")]
     [SerializeField]
     AnimationClip exitBodyClip;
+
+    [SerializeField]
+    AnimationClip exitAuxiliaryClip;
 
     [SerializeField]
     FaceExpressionPreset exitFaceA;
@@ -57,21 +80,44 @@ public sealed class CharacterPresentationData
     [SerializeField]
     FaceExpressionPreset exitFaceB;
 
+    [SerializeField]
+    PresentationFaceSource exitFaceSource;
+
     // Reserved for blending between presentation states, not AS/Loop/BS phase timing.
     [Min(0f)]
     [SerializeField]
     float crossFadeDuration = 0.15f;
 
+    [SerializeField]
+    bool useDirectSpecialSwitch;
+
+    [Min(0f)]
+    [SerializeField]
+    float directSpecialEnterToLoopTime;
+
+    [Min(0f)]
+    [SerializeField]
+    float directSpecialLoopBlendDuration = 0.12f;
+
     public AnimationClip EnterBodyClip => enterBodyClip;
+    public AnimationClip EnterAuxiliaryClip => enterAuxiliaryClip;
     public FaceExpressionPreset EnterFaceA => enterFaceA;
     public FaceExpressionPreset EnterFaceB => enterFaceB;
+    internal PresentationFaceSource EnterFaceSource => enterFaceSource;
     public AnimationClip LoopBodyClip => loopBodyClip;
+    public AnimationClip LoopAuxiliaryClip => loopAuxiliaryClip;
     public FaceExpressionPreset LoopFaceA => loopFaceA;
     public FaceExpressionPreset LoopFaceB => loopFaceB;
+    internal PresentationFaceSource LoopFaceSource => loopFaceSource;
     public AnimationClip ExitBodyClip => exitBodyClip;
+    public AnimationClip ExitAuxiliaryClip => exitAuxiliaryClip;
     public FaceExpressionPreset ExitFaceA => exitFaceA;
     public FaceExpressionPreset ExitFaceB => exitFaceB;
+    internal PresentationFaceSource ExitFaceSource => exitFaceSource;
     public float CrossFadeDuration => crossFadeDuration;
+    internal bool UseDirectSpecialSwitch => useDirectSpecialSwitch;
+    internal float DirectSpecialEnterToLoopTime => directSpecialEnterToLoopTime;
+    internal float DirectSpecialLoopBlendDuration => directSpecialLoopBlendDuration;
 }
 
 [CreateAssetMenu(

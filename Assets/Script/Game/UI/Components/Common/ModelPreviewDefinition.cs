@@ -18,6 +18,7 @@ public class ModelPreviewDefinition : ScriptableObject
     [SerializeField] Vector3 localEulerAngles;
     [SerializeField] Vector3 localScale = Vector3.one;
     [SerializeField] CameraPreset cameraPreset;
+    [SerializeField] CharacterPresentationProfile presentationProfile;
 
     public ModelPreviewType PreviewType => previewType;
     public string TargetKey => targetKey;
@@ -26,4 +27,5 @@ public class ModelPreviewDefinition : ScriptableObject
     public Vector3 LocalEulerAngles => localEulerAngles;
     public Vector3 LocalScale => localScale;
     public CameraPreset CameraPreset => cameraPreset;
+    public CharacterPresentationProfile PresentationProfile => presentationProfile;
 }

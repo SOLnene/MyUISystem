@@ -48,7 +48,7 @@ public class ResourceManager : Singleton<ResourceManager>
 
     public void Init()
     {
-        instancePool = new InstancePool();
+        instancePool ??= new InstancePool();
     }
 
     /// <summary>
@@ -239,7 +239,7 @@ public class ResourceManager : Singleton<ResourceManager>
     {
         cancellationToken.ThrowIfCancellationRequested();
         // 1. 确保资源已加载
-        var prefab = await LoadAssetAsync<GameObject>(path);
+        var prefab = await LoadAssetAsync<GameObject>(path, cancellationToken);
         if (prefab == null)
         {
             Debug.LogError($"[ResourceManager.InstantiateAsync] 无法实例化: {path}");

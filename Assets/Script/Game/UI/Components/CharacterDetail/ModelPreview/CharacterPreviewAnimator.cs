@@ -29,14 +29,19 @@ public class CharacterPreviewAnimator : MonoBehaviour
 
     #region Playable
       private PlayableGraph graph;
-      private AnimationMixerPlayable mixer;
+      private AnimationLayerMixerPlayable layerMixer;
+      private AnimationMixerPlayable bodyMixer;
+      private AnimationMixerPlayable auxiliaryMixer;
     
-      private AnimationClipPlayable currentPlayable;
-      private AnimationClipPlayable nextPlayable;
+      private AnimationClipPlayable currentBodyPlayable;
+      private AnimationClipPlayable nextBodyPlayable;
+      private AnimationClipPlayable currentAuxiliaryPlayable;
+      private AnimationClipPlayable nextAuxiliaryPlayable;
       private float blendTime;
       private float blendTimer;
       private bool isBlending;
       private Action playableBlendCompleted;
+      readonly HashSet<AnimationClipPlayable> transitionPlayables = new();
 
   #endregion
     void Awake()
@@ -119,7 +124,18 @@ public class CharacterPreviewAnimator : MonoBehaviour
 
     void Update()
     {
-        if (!isBlending || !mixer.IsValid())
+        foreach (AnimationClipPlayable playable in transitionPlayables)
+        {
+            double endTime = Math.Max(0d, playable.GetAnimationClip().length - 0.000001d);
+            if (playable.GetTime() + Time.deltaTime >= endTime)
+            {
+                // 在图本帧求值前停在末帧，避免带 Loop 标记的过渡资源回绕到开头。
+                playable.SetTime(endTime);
+                playable.SetSpeed(0d);
+            }
+        }
+
+        if (!isBlending || !layerMixer.IsValid())
         {
             return;
         }
@@ -128,8 +144,16 @@ public class CharacterPreviewAnimator : MonoBehaviour
         float progress = blendTime <= 0f
             ? 1f
             : Mathf.Clamp01(blendTimer / blendTime);
-        mixer.SetInputWeight(0, 1f - progress);
-        mixer.SetInputWeight(1, progress);
+        SetBlendWeights(
+            bodyMixer,
+            currentBodyPlayable,
+            nextBodyPlayable,
+            progress);
+        SetBlendWeights(
+            auxiliaryMixer,
+            currentAuxiliaryPlayable,
+            nextAuxiliaryPlayable,
+            progress);
 
         if (progress >= 1f)
         {
@@ -142,54 +166,59 @@ public class CharacterPreviewAnimator : MonoBehaviour
         DestroyPlayableGraph();
         graph = PlayableGraph.Create($"{name}.CharacterPreview");
         graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
-        mixer = AnimationMixerPlayable.Create(graph, 2);
+        layerMixer = AnimationLayerMixerPlayable.Create(graph, 2);
+        bodyMixer = AnimationMixerPlayable.Create(graph, 2);
+        auxiliaryMixer = AnimationMixerPlayable.Create(graph, 2);
+        graph.Connect(bodyMixer, 0, layerMixer, 0);
+        graph.Connect(auxiliaryMixer, 0, layerMixer, 1);
+        layerMixer.SetInputWeight(0, 1f);
+        layerMixer.SetInputWeight(1, 0f);
+        // 提取出的辅助动画记录绝对局部变换，不能按增量动画叠加。
+        layerMixer.SetLayerAdditive(1, false);
         AnimationPlayableOutput output = AnimationPlayableOutput.Create(
             graph,
             "CharacterPreview",
             animator);
-        output.SetSourcePlayable(mixer);
-        mixer.SetInputWeight(0, 0f);
-        mixer.SetInputWeight(1, 0f);
+        output.SetSourcePlayable(layerMixer);
+        ResetMixerWeights(bodyMixer);
+        ResetMixerWeights(auxiliaryMixer);
         graph.Play();
     }
 
     void DestroyPlayableGraph()
     {
+        transitionPlayables.Clear();
         isBlending = false;
         playableBlendCompleted = null;
-        currentPlayable = default;
-        nextPlayable = default;
+        currentBodyPlayable = default;
+        nextBodyPlayable = default;
+        currentAuxiliaryPlayable = default;
+        nextAuxiliaryPlayable = default;
         if (graph.IsValid())
         {
             graph.Destroy();
         }
 
         graph = default;
-        mixer = default;
+        layerMixer = default;
+        bodyMixer = default;
+        auxiliaryMixer = default;
     }
 
-    AnimationClipPlayable CreatePlayable(AnimationClip clip)
+    AnimationClipPlayable CreatePlayable(AnimationClip clip, float startTime = 0f)
     {
         AnimationClipPlayable playable = AnimationClipPlayable.Create(graph, clip);
         playable.SetApplyFootIK(false);
         playable.SetApplyPlayableIK(false);
-        playable.SetTime(0d);
+        playable.SetTime(Mathf.Clamp(startTime, 0f, clip.length));
         playable.SetSpeed(1d);
         return playable;
     }
 
     AnimationClipPlayable PlayImmediateWithPlayable(AnimationClip clip)
     {
-        CancelPlayableBlend();
-        DestroyPlayable(ref currentPlayable, 0);
-        DestroyPlayable(ref nextPlayable, 1);
-
-        currentPlayable = CreatePlayable(clip);
-        graph.Connect(currentPlayable, 0, mixer, 0);
-        mixer.SetInputWeight(0, 1f);
-        mixer.SetInputWeight(1, 0f);
-        graph.Evaluate(0f);
-        return currentPlayable;
+        PlayImmediateLayeredWithPlayable(clip, null);
+        return currentBodyPlayable;
     }
 
     AnimationClipPlayable CrossFadeWithPlayable(
@@ -197,11 +226,56 @@ public class CharacterPreviewAnimator : MonoBehaviour
         float duration,
         Action onBlendCompleted)
     {
-        if (!currentPlayable.IsValid() || duration <= 0f)
+        CrossFadeLayeredWithPlayable(
+            clip,
+            null,
+            duration,
+            onBlendCompleted);
+        return isBlending ? nextBodyPlayable : currentBodyPlayable;
+    }
+
+    void PlayImmediateLayeredWithPlayable(
+        AnimationClip bodyClip,
+        AnimationClip auxiliaryClip,
+        float bodyStartTime = 0f,
+        float auxiliaryStartTime = 0f)
+    {
+        CancelPlayableBlend();
+        ReplaceChannelImmediate(
+            bodyMixer,
+            ref currentBodyPlayable,
+            ref nextBodyPlayable,
+            bodyClip,
+            bodyStartTime);
+        ReplaceChannelImmediate(
+            auxiliaryMixer,
+            ref currentAuxiliaryPlayable,
+            ref nextAuxiliaryPlayable,
+            auxiliaryClip,
+            auxiliaryStartTime);
+        UpdateAuxiliaryLayerWeight();
+        graph.Evaluate(0f);
+    }
+
+    void CrossFadeLayeredWithPlayable(
+        AnimationClip bodyClip,
+        AnimationClip auxiliaryClip,
+        float duration,
+        Action onBlendCompleted,
+        float bodyStartTime = 0f,
+        float auxiliaryStartTime = 0f)
+    {
+        bool hasCurrentLayer = currentBodyPlayable.IsValid()
+                               || currentAuxiliaryPlayable.IsValid();
+        if (!hasCurrentLayer || duration <= 0f)
         {
-            AnimationClipPlayable playable = PlayImmediateWithPlayable(clip);
+            PlayImmediateLayeredWithPlayable(
+                bodyClip,
+                auxiliaryClip,
+                bodyStartTime,
+                auxiliaryStartTime);
             onBlendCompleted?.Invoke();
-            return playable;
+            return;
         }
 
         if (isBlending)
@@ -209,16 +283,60 @@ public class CharacterPreviewAnimator : MonoBehaviour
             CompletePlayableBlend(false);
         }
 
-        DestroyPlayable(ref nextPlayable, 1);
-        nextPlayable = CreatePlayable(clip);
-        graph.Connect(nextPlayable, 0, mixer, 1);
-        mixer.SetInputWeight(0, 1f);
-        mixer.SetInputWeight(1, 0f);
+        PrepareChannelBlend(
+            bodyMixer,
+            currentBodyPlayable,
+            ref nextBodyPlayable,
+            bodyClip,
+            bodyStartTime);
+        PrepareChannelBlend(
+            auxiliaryMixer,
+            currentAuxiliaryPlayable,
+            ref nextAuxiliaryPlayable,
+            auxiliaryClip,
+            auxiliaryStartTime);
+        UpdateAuxiliaryLayerWeight();
         blendTime = duration;
         blendTimer = 0f;
         playableBlendCompleted = onBlendCompleted;
         isBlending = true;
-        return nextPlayable;
+    }
+
+    void ReplaceChannelImmediate(
+        AnimationMixerPlayable targetMixer,
+        ref AnimationClipPlayable current,
+        ref AnimationClipPlayable next,
+        AnimationClip clip,
+        float startTime)
+    {
+        DestroyPlayable(targetMixer, ref current, 0);
+        DestroyPlayable(targetMixer, ref next, 1);
+        if (clip != null)
+        {
+            current = CreatePlayable(clip, startTime);
+            graph.Connect(current, 0, targetMixer, 0);
+        }
+
+        targetMixer.SetInputWeight(0, current.IsValid() ? 1f : 0f);
+        targetMixer.SetInputWeight(1, 0f);
+    }
+
+    void PrepareChannelBlend(
+        AnimationMixerPlayable targetMixer,
+        AnimationClipPlayable current,
+        ref AnimationClipPlayable next,
+        AnimationClip clip,
+        float startTime)
+    {
+        DestroyPlayable(targetMixer, ref next, 1);
+        if (clip != null)
+        {
+            next = CreatePlayable(clip, startTime);
+            graph.Connect(next, 0, targetMixer, 1);
+        }
+
+        targetMixer.SetInputWeight(0, current.IsValid() ? 1f : 0f);
+        targetMixer.SetInputWeight(1, 0f);
     }
 
     void CancelPlayableBlend()
@@ -233,7 +351,7 @@ public class CharacterPreviewAnimator : MonoBehaviour
 
     void CompletePlayableBlend(bool invokeCallback)
     {
-        if (!isBlending || !nextPlayable.IsValid())
+        if (!isBlending)
         {
             return;
         }
@@ -241,15 +359,15 @@ public class CharacterPreviewAnimator : MonoBehaviour
         Action completion = playableBlendCompleted;
         playableBlendCompleted = null;
         isBlending = false;
-        mixer.SetInputWeight(0, 0f);
-        mixer.SetInputWeight(1, 1f);
-        DestroyPlayable(ref currentPlayable, 0);
-        mixer.DisconnectInput(1);
-        currentPlayable = nextPlayable;
-        nextPlayable = default;
-        graph.Connect(currentPlayable, 0, mixer, 0);
-        mixer.SetInputWeight(0, 1f);
-        mixer.SetInputWeight(1, 0f);
+        CompleteChannelBlend(
+            bodyMixer,
+            ref currentBodyPlayable,
+            ref nextBodyPlayable);
+        CompleteChannelBlend(
+            auxiliaryMixer,
+            ref currentAuxiliaryPlayable,
+            ref nextAuxiliaryPlayable);
+        UpdateAuxiliaryLayerWeight();
 
         if (invokeCallback)
         {
@@ -257,15 +375,62 @@ public class CharacterPreviewAnimator : MonoBehaviour
         }
     }
 
-    void DestroyPlayable(ref AnimationClipPlayable playable, int inputIndex)
+    void CompleteChannelBlend(
+        AnimationMixerPlayable targetMixer,
+        ref AnimationClipPlayable current,
+        ref AnimationClipPlayable next)
     {
+        DestroyPlayable(targetMixer, ref current, 0);
+        if (next.IsValid())
+        {
+            targetMixer.DisconnectInput(1);
+            current = next;
+            next = default;
+            graph.Connect(current, 0, targetMixer, 0);
+        }
+
+        targetMixer.SetInputWeight(0, current.IsValid() ? 1f : 0f);
+        targetMixer.SetInputWeight(1, 0f);
+    }
+
+    static void SetBlendWeights(
+        AnimationMixerPlayable targetMixer,
+        AnimationClipPlayable current,
+        AnimationClipPlayable next,
+        float progress)
+    {
+        targetMixer.SetInputWeight(
+            0,
+            current.IsValid() ? 1f - progress : 0f);
+        targetMixer.SetInputWeight(1, next.IsValid() ? progress : 0f);
+    }
+
+    static void ResetMixerWeights(AnimationMixerPlayable targetMixer)
+    {
+        targetMixer.SetInputWeight(0, 0f);
+        targetMixer.SetInputWeight(1, 0f);
+    }
+
+    void UpdateAuxiliaryLayerWeight()
+    {
+        bool hasAuxiliary = currentAuxiliaryPlayable.IsValid()
+                            || nextAuxiliaryPlayable.IsValid();
+        layerMixer.SetInputWeight(1, hasAuxiliary ? 1f : 0f);
+    }
+
+    void DestroyPlayable(
+        AnimationMixerPlayable targetMixer,
+        ref AnimationClipPlayable playable,
+        int inputIndex)
+    {
+        transitionPlayables.Remove(playable);
         if (!playable.IsValid() || !graph.IsValid())
         {
             playable = default;
             return;
         }
 
-        mixer.DisconnectInput(inputIndex);
+        targetMixer.DisconnectInput(inputIndex);
         graph.DestroyPlayable(playable);
         playable = default;
     }
@@ -288,8 +453,8 @@ public class CharacterPreviewAnimator : MonoBehaviour
         }
 
         AnimationClipPlayable observedPlayable = isBlending
-            ? nextPlayable
-            : currentPlayable;
+            ? nextBodyPlayable
+            : currentBodyPlayable;
         if (!observedPlayable.IsValid())
         {
             return;
@@ -302,6 +467,98 @@ public class CharacterPreviewAnimator : MonoBehaviour
             () => !observedPlayable.IsValid()
                   || observedPlayable.GetTime() >= transitionTime,
             cancellationToken: cancellationToken);
+    }
+
+    internal async UniTask WaitForLayeredPhaseEndAsync(
+        AnimationClip bodyClip,
+        AnimationClip auxiliaryClip,
+        CancellationToken cancellationToken)
+    {
+        AnimationClip driverClip = bodyClip != null ? bodyClip : auxiliaryClip;
+        AnimationClipPlayable observedPlayable = bodyClip != null
+            ? currentBodyPlayable
+            : currentAuxiliaryPlayable;
+        if (driverClip == null || !observedPlayable.IsValid())
+        {
+            return;
+        }
+
+        await UniTask.WaitUntil(
+            () => !observedPlayable.IsValid()
+                  || observedPlayable.GetTime() >= driverClip.length,
+            cancellationToken: cancellationToken);
+    }
+
+    internal async UniTask WaitForLayeredPhaseTimeAsync(
+        AnimationClip bodyClip,
+        AnimationClip auxiliaryClip,
+        float phaseTime,
+        CancellationToken cancellationToken)
+    {
+        AnimationClip driverClip = bodyClip != null ? bodyClip : auxiliaryClip;
+        AnimationClipPlayable observedPlayable = bodyClip != null
+            ? (isBlending ? nextBodyPlayable : currentBodyPlayable)
+            : (isBlending ? nextAuxiliaryPlayable : currentAuxiliaryPlayable);
+        if (driverClip == null || !observedPlayable.IsValid())
+        {
+            return;
+        }
+
+        double targetTime = Mathf.Clamp(phaseTime, 0f, driverClip.length);
+        await UniTask.WaitUntil(
+            () => !observedPlayable.IsValid()
+                  || observedPlayable.GetTime() >= targetTime,
+            cancellationToken: cancellationToken);
+    }
+
+    internal async UniTask WaitForLayeredBlendCompleteAsync(
+        CancellationToken cancellationToken)
+    {
+        await UniTask.WaitUntil(
+            () => !isBlending,
+            cancellationToken: cancellationToken);
+    }
+
+    internal void PlayLayered(
+        AnimationClip bodyClip,
+        AnimationClip auxiliaryClip,
+        bool crossFade,
+        float blendDuration,
+        float bodyStartTime = 0f,
+        float auxiliaryStartTime = 0f,
+        bool holdAtEnd = false)
+    {
+        if (animator == null || !graph.IsValid())
+        {
+            return;
+        }
+
+        if (crossFade)
+        {
+            CrossFadeLayeredWithPlayable(
+                bodyClip,
+                auxiliaryClip,
+                Mathf.Max(0f, blendDuration),
+                null,
+                bodyStartTime,
+                auxiliaryStartTime);
+        }
+        else
+        {
+            PlayImmediateLayeredWithPlayable(
+                bodyClip,
+                auxiliaryClip,
+                bodyStartTime,
+                auxiliaryStartTime);
+        }
+
+        if (holdAtEnd)
+        {
+            AnimationClipPlayable body = isBlending ? nextBodyPlayable : currentBodyPlayable;
+            AnimationClipPlayable auxiliary = isBlending ? nextAuxiliaryPlayable : currentAuxiliaryPlayable;
+            if (body.IsValid()) transitionPlayables.Add(body);
+            if (auxiliary.IsValid()) transitionPlayables.Add(auxiliary);
+        }
     }
 
     // AnimatorOverrideController有问题，先用这个
