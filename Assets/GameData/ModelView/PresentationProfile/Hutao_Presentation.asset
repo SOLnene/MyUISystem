@@ -1,0 +1,76 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 684f18fd80002724db8bcf4cd00a45b8, type: 3}
+  m_Name: Hutao_Presentation
+  m_EditorClassIdentifier: 
+  defaultPresentation:
+    enterBodyClip: {fileID: 0}
+    enterAuxiliaryClip: {fileID: 0}
+    enterFaceA: {fileID: 0}
+    enterFaceB: {fileID: 0}
+    loopBodyClip: {fileID: 7400000, guid: daccce6cc30261d4ea50429ed3fcb081, type: 2}
+    loopAuxiliaryClip: {fileID: 7400000, guid: 8717cf8c8ef484845a198f67369bc979, type: 2}
+    loopFaceA: {fileID: 11400000, guid: 04ad937512865334e992ce8b556a9e30, type: 2}
+    loopFaceB: {fileID: 0}
+    exitBodyClip: {fileID: 0}
+    exitAuxiliaryClip: {fileID: 0}
+    exitFaceA: {fileID: 0}
+    exitFaceB: {fileID: 0}
+    crossFadeDuration: 0.15
+  teamSwitch:
+    enterBodyClip: {fileID: 7400000, guid: efe15c4e3eef7b74aa261004668509a9, type: 2}
+    enterAuxiliaryClip: {fileID: 0}
+    enterFaceA: {fileID: 11400000, guid: fbc5aa689bd81d941943dc7341dcb15d, type: 2}
+    enterFaceB: {fileID: 0}
+    loopBodyClip: {fileID: 7400000, guid: 90b7986eb0834ed4099dd09439245d67, type: 2}
+    loopAuxiliaryClip: {fileID: 0}
+    loopFaceA: {fileID: 11400000, guid: bbf8fe37741e7e246820f2651f0cec3c, type: 2}
+    loopFaceB: {fileID: 0}
+    exitBodyClip: {fileID: 7400000, guid: 6ea7e107b8a0e7a4e8d29749750314f4, type: 2}
+    exitAuxiliaryClip: {fileID: 0}
+    exitFaceA: {fileID: 11400000, guid: 587cdb9de330c6c43a767194673f0d1c, type: 2}
+    exitFaceB: {fileID: 0}
+    crossFadeDuration: 0.15
+  weaponShow:
+    enterBodyClip: {fileID: 7400000, guid: 2615bad9c4964c1439aa9f7f32b8f6ef, type: 2}
+    enterAuxiliaryClip: {fileID: 7400000, guid: ee547a9c15f459748b118277dd4665fc, type: 2}
+    enterFaceA: {fileID: 11400000, guid: b375b272999652e45a648a07de7f1f7e, type: 2}
+    enterFaceB: {fileID: 0}
+    loopBodyClip: {fileID: 7400000, guid: c31858ce7bf870749b9bece7e64d5abd, type: 2}
+    loopAuxiliaryClip: {fileID: 7400000, guid: a9e52b9fe129d1d4e8a33133a5226e7f, type: 2}
+    loopFaceA: {fileID: 11400000, guid: 96f7157cdf0976642af373f057b07ccb, type: 2}
+    loopFaceB: {fileID: 0}
+    exitBodyClip: {fileID: 7400000, guid: 81550092d6f54e941875403f3e124afa, type: 2}
+    exitAuxiliaryClip: {fileID: 7400000, guid: 3106428015199d446becb27ab64c6827, type: 2}
+    exitFaceA: {fileID: 11400000, guid: e2e17d9d808a3e54a9899523d8df08ad, type: 2}
+    exitFaceB: {fileID: 0}
+    crossFadeDuration: 0.15
+    useDirectSpecialSwitch: 1
+    directSpecialEnterToLoopTime: 0.75
+    directSpecialLoopBlendDuration: 0.12
+  relicShow:
+    enterBodyClip: {fileID: 7400000, guid: 4e07b0efb5a67ba45b231a44072ac909, type: 2}
+    enterAuxiliaryClip: {fileID: 7400000, guid: ab37a8af0f7124349a794a8c3a5c6185, type: 2}
+    enterFaceA: {fileID: 11400000, guid: bb67292f12fa0504b8c02b19ada604bd, type: 2}
+    enterFaceB: {fileID: 0}
+    loopBodyClip: {fileID: 7400000, guid: 1869ccf17cf763d41b843f7ea95297ac, type: 2}
+    loopAuxiliaryClip: {fileID: 7400000, guid: 81b339e7b3c9e4341bbb59d0bc2b6553, type: 2}
+    loopFaceA: {fileID: 11400000, guid: 25586be72c1379a4a85d4c854e1ccdcd, type: 2}
+    loopFaceB: {fileID: 0}
+    exitBodyClip: {fileID: 7400000, guid: a404808fcf02508489cebf644b8c8ede, type: 2}
+    exitAuxiliaryClip: {fileID: 7400000, guid: 7c35857cfe5eb3844bc365813856c6e9, type: 2}
+    exitFaceA: {fileID: 11400000, guid: 58811bfc270e82d4a87bb0b8c6757e11, type: 2}
+    exitFaceB: {fileID: 0}
+    crossFadeDuration: 0.15
+    useDirectSpecialSwitch: 1
+    directSpecialEnterToLoopTime: 0.72
+    directSpecialLoopBlendDuration: 0.12
