@@ -1,4 +1,5 @@
 using System;
+using System.Linq;
 using UnityEditor;
 using UnityEngine;
 
@@ -21,7 +22,7 @@ internal sealed class ModelRootStandardizerPostprocessor : AssetPostprocessor
             {
                 Settings settings = JsonUtility.FromJson<Settings>(line.Substring(Marker.Length));
                 if (settings == null || string.IsNullOrEmpty(settings.sourceNode) ||
-                    settings.sourceNode.Contains("/"))
+                    settings.sourceNode.Split('/').Any(string.IsNullOrEmpty))
                     throw new InvalidOperationException("模型标准化配置损坏，请检查副本的导入配置。");
                 return settings;
             }
@@ -50,6 +51,15 @@ internal sealed class ModelRootStandardizerPostprocessor : AssetPostprocessor
         if (importer.animationType != ModelImporterAnimationType.Human ||
             importer.avatarSetup != ModelImporterAvatarSetup.CreateFromThisModel)
             throw new InvalidOperationException("初版只支持 Humanoid / Create From This Model。");
+
+        if (oldName.Contains("/"))
+        {
+            string[] wrapperNames = oldName.Split('/');
+            foreach (HumanBone bone in importer.humanDescription.human)
+                if (wrapperNames.Contains(bone.boneName) || bone.boneName == RootName)
+                    throw new InvalidOperationException("包装层属于 Humanoid 映射，不能合并：" + bone.boneName);
+            return;
+        }
 
         foreach (HumanBone bone in importer.humanDescription.human)
             if (bone.boneName == oldName || bone.boneName == RootName)
@@ -104,6 +114,66 @@ internal sealed class ModelRootStandardizerPostprocessor : AssetPostprocessor
             ? RootName + path.Substring(oldName.Length) : path;
     }
 
+    internal static Transform[] ValidateWrapperChain(Transform root, string path)
+    {
+        string[] names = path.Split('/');
+        Transform inner = root.Find(path);
+        // 导入回调有时不包含 Unity 生成的最外层资产根，此时路径首段就是回调根本身。
+        if (inner == null && root.name == names[0])
+            inner = root.Find(string.Join("/", names.Skip(1)));
+        if (inner == null || inner.Find("Bip001") == null)
+            throw new InvalidOperationException("找不到直接包含 Bip001 的模型根：" + path);
+        var chain = new Transform[names.Length];
+        for (int i = chain.Length - 1; i >= 0; i--)
+        {
+            if (inner == null || inner.name != names[i])
+                throw new InvalidOperationException("包装层路径与导入层级不一致：" + path);
+            chain[i] = inner;
+            if ((i < chain.Length - 1 && inner.childCount != 1) ||
+                inner.GetComponents<Component>().Any(component => component is not Transform))
+                throw new InvalidOperationException("包装层包含额外分支或组件，不能自动移除：" + names[i]);
+            inner = inner.parent;
+        }
+        if (chain[0] != root && (chain[0].parent != root || root.childCount != 1))
+            throw new InvalidOperationException("模型根存在其他并列节点，不能安全合并为唯一 ModelRoot。");
+        foreach (SkinnedMeshRenderer renderer in root.GetComponentsInChildren<SkinnedMeshRenderer>(true))
+            if (chain.Contains(renderer.rootBone) || renderer.bones.Any(chain.Contains))
+                throw new InvalidOperationException("包装层被蒙皮引用，不能自动移除：" + renderer.name);
+        return chain;
+    }
+
+    static void AppendPose(ref Vector3 position, ref Quaternion rotation, ref Vector3 scale,
+        Vector3 nextPosition, Quaternion nextRotation, Vector3 nextScale)
+    {
+        Matrix4x4 expected = Matrix4x4.TRS(position, rotation, scale) *
+            Matrix4x4.TRS(nextPosition, nextRotation, nextScale);
+        position += rotation * Vector3.Scale(scale, nextPosition);
+        rotation *= nextRotation;
+        scale = Vector3.Scale(scale, nextScale);
+        Matrix4x4 actual = Matrix4x4.TRS(position, rotation, scale);
+        for (int i = 0; i < 16; i++)
+            if (Mathf.Abs(expected[i] - actual[i]) > 0.00001f)
+                throw new InvalidOperationException("包装层变换包含无法无损合并的缩放/旋转组合。");
+    }
+
+    static void CollapseWrapperChain(GameObject root, string path)
+    {
+        Transform[] chain = ValidateWrapperChain(root.transform, path);
+        Vector3 position = Vector3.zero;
+        Quaternion rotation = Quaternion.identity;
+        Vector3 scale = Vector3.one;
+        foreach (Transform node in chain)
+            AppendPose(ref position, ref rotation, ref scale, node.localPosition, node.localRotation, node.localScale);
+        Transform top = chain[0];
+        Transform inner = chain[chain.Length - 1];
+        // 合并包装层自身的变换，实际骨骼/网格保持原 local TRS，辅助动画仍使用同一坐标系。
+        top.SetLocalPositionAndRotation(position, rotation);
+        top.localScale = scale;
+        while (inner.childCount > 0) inner.GetChild(0).SetParent(top, false);
+        UnityEngine.Object.DestroyImmediate(chain[1].gameObject);
+        top.name = RootName;
+    }
+
     void OnPreprocessModel()
     {
         Settings settings = ReadSettings(assetImporter);
@@ -115,6 +185,12 @@ internal sealed class ModelRootStandardizerPostprocessor : AssetPostprocessor
     {
         Settings settings = ReadSettings(assetImporter);
         if (settings == null) return;
+
+        if (settings.sourceNode.Contains("/"))
+        {
+            CollapseWrapperChain(root, settings.sourceNode);
+            return;
+        }
 
         Transform target = root.transform.Find(settings.sourceNode);
         // 此回调可能收到源 FBX 根，而不是 Unity 后续添加的资产包装根。
