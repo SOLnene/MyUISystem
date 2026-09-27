@@ -82,9 +82,9 @@ public static class CsEmoDatImporter
         { 14, new ChannelBinding(68, "Mouth_Line01") },
         { 30, new ChannelBinding(18, "Mouth_Line02") },
         { 31, new ChannelBinding(84, "Mouth_BigTongue01") },
-        { 44, new ChannelBinding(4028, "Eye_Default") },
-        { 45, new ChannelBinding(4029, "Eye_WinkA_L") },
-        { 46, new ChannelBinding(4085, "Eye_WinkA_R") },
+        { 44, new ChannelBinding(4028, "Eye_WinkA_L") },
+        { 45, new ChannelBinding(4029, "Eye_WinkA_R") },
+        { 46, new ChannelBinding(4085, "Eye_Default") },
         { 47, new ChannelBinding(4030, "Eye_WinkB_L") },
         { 48, new ChannelBinding(4031, "Eye_WinkB_R") },
         { 49, new ChannelBinding(4086, "Eye_WinkC_L") },
@@ -114,13 +114,13 @@ public static class CsEmoDatImporter
         { 73, new ChannelBinding(5093, "Brow_Squeeze_R") }
     };
 
-    [MenuItem("Tools/Character/Import Cs Emo DAT Folder")]
+    [MenuItem("Tools/MyUISystem/角色展示/表情/导入 CsEmo DAT 文件夹", false, 351)]
     static void SelectAndImportFolder()
     {
         CsEmoDatImporterWindow.ShowWindow();
     }
 
-    [MenuItem("Tools/Character/Migrate Cs Emo Preset Names")]
+    [MenuItem("Tools/MyUISystem/角色展示/表情/迁移 CsEmo 预设名称", false, 352)]
     static void MigratePresetNames()
     {
         string[] presetGuids = AssetDatabase.FindAssets("t:FaceExpressionPreset", new[] { DefaultOutputFolder });
@@ -445,15 +445,20 @@ public static class CsEmoDatImporter
 
     static CompositeMouthEncoding DetectCompositeMouthEncoding(IReadOnlyList<ParsedCurve> curves)
     {
+        // 复合表情允许省略未参与播放的嘴部控制器；省略项由播放端重置为中性值 0。
+        bool hasSparseControllerIndexes = curves.Count > 0
+            && curves.Count <= CompositeMouthCurveCount
+            && curves.All(curve => curve.ControllerIndex is >= 0 and < CompositeMouthCurveCount)
+            && curves.Select(curve => curve.ControllerIndex).Distinct().Count() == curves.Count;
+        if (hasSparseControllerIndexes && curves.All(curve => curve.ChannelId == 0))
+        {
+            return CompositeMouthEncoding.ControllerIndexOnly;
+        }
+
         if (curves.Count != CompositeMouthCurveCount
             || !HasControllerRange(curves, 0, 31))
         {
             throw new InvalidDataException("DAT 包含额外数据，但首段不符合复合嘴部曲线格式。");
-        }
-
-        if (curves.All(curve => curve.ChannelId == 0))
-        {
-            return CompositeMouthEncoding.ControllerIndexOnly;
         }
 
         if (HasStandardMouthChannels(curves))
@@ -498,7 +503,12 @@ public static class CsEmoDatImporter
 
     static void ValidateCompositeUpperFaceCurves(IReadOnlyList<ParsedCurve> curves)
     {
-        if (curves.Count != CompositeUpperFaceCurveCount || !HasControllerRange(curves, 32, 73))
+        bool hasCompleteRange = curves.Count == CompositeUpperFaceCurveCount
+            && HasControllerRange(curves, 32, 73);
+        // 部分退出表情省略未使用的 32-43，只保留实际参与播放的眼睛和眉毛通道。
+        bool hasEyesAndBrowsOnly = curves.Count == 30
+            && HasControllerRange(curves, 44, 73);
+        if (!hasCompleteRange && !hasEyesAndBrowsOnly)
         {
             throw new InvalidDataException("复合 DAT 的眼眉曲线格式异常。");
         }

@@ -48,6 +48,30 @@ public class FaceController : MonoBehaviour
     float curveElapsedTime;
     float curveDuration;
     float curveIntensity;
+    double curveStartedAt;
+    double faceBlendStartedAt;
+    float faceBlendDuration;
+    readonly Dictionary<string, float> activeWeights = new();
+    FaceBlendSource blendSource;
+    bool presentationFacePlaybackEnabled = true;
+    internal bool IsPresentationFacePlaybackEnabled => presentationFacePlaybackEnabled;
+
+    sealed class FaceBlendSource
+    {
+        internal readonly Dictionary<string, float> Weights = new();
+        internal readonly List<FaceExpressionPreset.CurveData> Curves = new();
+        internal double StartedAt;
+        internal float Duration;
+        internal float Intensity;
+
+        internal void Sample(double now)
+        {
+            float time = Mathf.Clamp((float)(now - StartedAt), 0f, Duration);
+            foreach (var curve in Curves)
+                Weights[curve.blendShapeName] = EvaluateFaceCurve(curve, time) * Intensity;
+        }
+    }
+
     [Header("眨眼参数")]
     [SerializeField, Tooltip("两次眨眼之间的最小间隔（秒）")]
     private float minBlinkInterval = 2.5f;
@@ -96,6 +120,7 @@ public class FaceController : MonoBehaviour
         }
 
         CacheAllExpressions();
+        presentationFacePlaybackEnabled = true;
     }
 
     public void Unbind()
@@ -104,10 +129,26 @@ public class FaceController : MonoBehaviour
         StopBlink();
         faceRenderers.Clear();
         expressionMap.Clear();
+        presentationFacePlaybackEnabled = true;
     }
 
-    void Update()
+    internal void SetPresentationFacePlayback(bool enabled)
     {
+        if (presentationFacePlaybackEnabled == enabled)
+        {
+            if (!enabled) ResetAll();
+            return;
+        }
+        StopBlink();
+        ResetAll();
+        allowedBlinkEyes = BlinkEyes.None;
+        presentationFacePlaybackEnabled = enabled;
+    }
+
+    void LateUpdate()
+    {
+        if (!presentationFacePlaybackEnabled) return;
+        // Animator may also target facial renderers during a body crossfade; presentation ownership wins before rendering.
         if (isPlayingCurvePreset)
         {
             UpdateCurvePreset();
@@ -316,15 +357,17 @@ public class FaceController : MonoBehaviour
     void ApplyCurvePresets(
         FaceExpressionPreset firstPreset,
         FaceExpressionPreset secondPreset,
-        float intensity)
+        float intensity,
+        float startTime = 0f,
+        float blendDuration = 0f)
     {
-        StopBlink();
-        ResetAll();
+        BeginFaceTransition(blendDuration);
 
         int unresolvedCount = 0;
         int missingBlendShapeCount = 0;
         // 组合播放必须只重置一次，再收集两个区域的曲线，否则后一个预设会清掉前一个。
-        AddPresetCurves(firstPreset, ref unresolvedCount, ref missingBlendShapeCount);
+        if (firstPreset != null)
+            AddPresetCurves(firstPreset, ref unresolvedCount, ref missingBlendShapeCount);
         if (secondPreset != null)
         {
             AddPresetCurves(secondPreset, ref unresolvedCount, ref missingBlendShapeCount);
@@ -336,28 +379,81 @@ public class FaceController : MonoBehaviour
                 $"表情曲线存在未应用通道：未解析 {unresolvedCount}，模型缺少 BlendShape {missingBlendShapeCount}");
         }
 
-        if (activeCurves.Count == 0)
+        if (activeCurves.Count == 0 && firstPreset != null
+            && firstPreset.playbackMode == FacePresetPlaybackMode.CurveAnimation
+            && (secondPreset == null || secondPreset.playbackMode == FacePresetPlaybackMode.CurveAnimation))
         {
             Debug.LogWarning("曲线表情预设没有可应用到当前模型的通道");
-            return;
         }
 
         allowedBlinkEyesAfterCurve = GetAllowedBlinkEyes(firstPreset, secondPreset);
-        curveElapsedTime = 0f;
-        curveDuration = Mathf.Max(firstPreset.duration, secondPreset == null ? 0f : secondPreset.duration);
+        curveDuration = Mathf.Max(
+            firstPreset != null && firstPreset.playbackMode == FacePresetPlaybackMode.CurveAnimation ? firstPreset.duration : 0f,
+            secondPreset != null && secondPreset.playbackMode == FacePresetPlaybackMode.CurveAnimation ? secondPreset.duration : 0f);
         if (curveDuration <= 0f)
         {
             curveDuration = GetCurveDuration();
         }
 
         curveIntensity = intensity;
+        curveElapsedTime = Mathf.Clamp(startTime, 0f, curveDuration);
+        curveStartedAt = Time.timeAsDouble - curveElapsedTime;
         isPlayingCurvePreset = true;
-        ApplyCurveFrame(0f);
+        ApplyCurveFrame(curveElapsedTime);
 
-        if (curveDuration <= 0f)
+        if (curveElapsedTime >= curveDuration && blendSource == null)
         {
             CompleteCurvePreset();
         }
+    }
+
+    // 展示阶段共用身体的起播时间与混合时长；保留旧 public 接口供单项测试使用。
+    internal void PlayPresentationFace(
+        FaceExpressionPreset firstPreset,
+        FaceExpressionPreset secondPreset,
+        float startTime,
+        float blendDuration)
+    {
+        if (firstPreset != null && secondPreset != null
+            && (firstPreset.regions & secondPreset.regions) != FaceRegion.None)
+        {
+            Debug.LogWarning("Overlapping presentation face regions; transition was not applied.");
+            return;
+        }
+
+        ApplyCurvePresets(firstPreset, secondPreset, 1f, startTime, blendDuration);
+    }
+
+    void BeginFaceTransition(float duration)
+    {
+        // 身体的交接回调可能早于本组件 Update；先结算已结束的混合，再保留来源曲线。
+        if (blendSource != null && Time.timeAsDouble - faceBlendStartedAt >= faceBlendDuration)
+            UpdateCurvePreset();
+
+        FaceBlendSource source = null;
+        if (duration > 0f)
+        {
+            source = new FaceBlendSource();
+            foreach (var pair in expressionMap)
+                source.Weights[pair.Key] = pair.Value[0].currentWeight;
+
+            // 普通交接继续采样旧曲线；混合被强制打断时保留当前合成结果，避免回跳。
+            if (blendSource == null && isPlayingCurvePreset)
+            {
+                source.Curves.AddRange(activeCurves);
+                source.StartedAt = curveStartedAt;
+                source.Duration = curveDuration;
+                source.Intensity = curveIntensity;
+            }
+        }
+
+        StopBlink();
+        StopCurvePreset();
+        foreach (string name in expressionMap.Keys)
+            activeWeights[name] = 0f;
+        blendSource = source;
+        faceBlendDuration = Mathf.Max(0f, duration);
+        faceBlendStartedAt = Time.timeAsDouble;
     }
 
     void AddPresetCurves(
@@ -365,6 +461,22 @@ public class FaceController : MonoBehaviour
         ref int unresolvedCount,
         ref int missingBlendShapeCount)
     {
+        if (preset.playbackMode == FacePresetPlaybackMode.StaticBlend)
+        {
+            if (preset.blends != null)
+            {
+                foreach (var blend in preset.blends)
+                {
+                    if (string.IsNullOrEmpty(blend.blendShapeName) || !activeWeights.ContainsKey(blend.blendShapeName))
+                        missingBlendShapeCount++;
+                    else
+                        activeWeights[blend.blendShapeName] = blend.weight * 100f;
+                }
+            }
+            return;
+        }
+
+        if (preset.curves == null) return;
         foreach (FaceExpressionPreset.CurveData curve in preset.curves)
         {
             if (curve.bindingType == FaceCurveBindingType.Unresolved)
@@ -385,6 +497,11 @@ public class FaceController : MonoBehaviour
                 continue;
             }
 
+            if (curve.curve == null || curve.curve.length == 0)
+            {
+                unresolvedCount++;
+                continue;
+            }
             activeCurves.Add(curve);
         }
     }
@@ -393,7 +510,7 @@ public class FaceController : MonoBehaviour
         FaceExpressionPreset firstPreset,
         FaceExpressionPreset secondPreset)
     {
-        BlinkEyes firstEyes = ResolveBlinkEyes(firstPreset);
+        BlinkEyes firstEyes = firstPreset == null ? BlinkEyes.Both : ResolveBlinkEyes(firstPreset);
         BlinkEyes secondEyes = secondPreset == null
             ? BlinkEyes.Both
             : ResolveBlinkEyes(secondPreset);
@@ -450,7 +567,7 @@ public class FaceController : MonoBehaviour
             float finalTime = preset.duration > 0f
                 ? preset.duration
                 : curve.curve.keys[^1].time;
-            return curve.curve.Evaluate(finalTime);
+            return EvaluateFaceCurve(curve, finalTime);
         }
 
         return 0f;
@@ -458,10 +575,10 @@ public class FaceController : MonoBehaviour
 
     void UpdateCurvePreset()
     {
-        curveElapsedTime = Mathf.Min(curveElapsedTime + Time.deltaTime, curveDuration);
+        curveElapsedTime = Mathf.Clamp((float)(Time.timeAsDouble - curveStartedAt), 0f, curveDuration);
         ApplyCurveFrame(curveElapsedTime);
 
-        if (curveElapsedTime >= curveDuration)
+        if (curveElapsedTime >= curveDuration && blendSource == null)
         {
             CompleteCurvePreset();
         }
@@ -472,8 +589,28 @@ public class FaceController : MonoBehaviour
         // DAT 曲线已经描述完整时间变化，直接写入才能避免再次平滑造成相位和幅度偏差。
         foreach (FaceExpressionPreset.CurveData curve in activeCurves)
         {
-            SetExpressionImmediate(curve.blendShapeName, curve.curve.Evaluate(time) * curveIntensity);
+            activeWeights[curve.blendShapeName] = EvaluateFaceCurve(curve, time) * curveIntensity;
         }
+
+        double now = Time.timeAsDouble;
+        float progress = blendSource == null ? 1f
+            : Mathf.Clamp01((float)(now - faceBlendStartedAt) / faceBlendDuration);
+        blendSource?.Sample(now);
+        // 缺失通道的目标为零；只在合成完成后写入，切换中不先清空整张脸。
+        foreach (var pair in activeWeights)
+        {
+            float weight = blendSource == null ? pair.Value
+                : Mathf.Lerp(blendSource.Weights[pair.Key], pair.Value, progress);
+            SetExpressionImmediate(pair.Key, weight);
+        }
+        if (progress >= 1f) blendSource = null;
+    }
+
+    static float EvaluateFaceCurve(FaceExpressionPreset.CurveData data, float time)
+    {
+        // 短曲线保持末帧，不能因原曲线的循环外推设置在阶段结束前重新播放。
+        Keyframe lastKey = data.curve[data.curve.length - 1];
+        return time >= lastKey.time ? lastKey.value : data.curve.Evaluate(time);
     }
 
     void SetExpressionImmediate(string expressionName, float weight)
@@ -510,6 +647,9 @@ public class FaceController : MonoBehaviour
     void StopCurvePreset()
     {
         activeCurves.Clear();
+        activeWeights.Clear();
+        blendSource = null;
+        faceBlendDuration = 0f;
         isPlayingCurvePreset = false;
         allowedBlinkEyesAfterCurve = BlinkEyes.None;
         curveElapsedTime = 0f;
