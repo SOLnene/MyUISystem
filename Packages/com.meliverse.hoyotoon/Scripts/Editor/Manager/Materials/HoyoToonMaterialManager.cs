@@ -294,6 +294,37 @@ namespace HoyoToon
                 HoyoToonLogs.WarningDebug($"No m_TexEnvs found in material JSON for '{material.name}'");
             }
 
+            // Enable only layers declared by this source JSON; reused materials may retain old properties.
+            if (material.HasProperty("_UseEyeLayers") && properties.m_Floats != null)
+            {
+                bool layer1 = properties.m_Floats.TryGetValue("_ParallaxLayer1", out var enabled1)
+                    && enabled1 > 0.5f && material.GetTexture("_ParallaxLayer1Tex") != null;
+                bool layer3 = properties.m_Floats.TryGetValue("_ParallaxLayer3", out var enabled3)
+                    && enabled3 > 0.5f && material.GetTexture("_ParallaxLayer3Tex") != null;
+                material.SetFloat("_ParallaxLayer1", layer1 ? 1f : 0f);
+                material.SetFloat("_ParallaxLayer3", layer3 ? 1f : 0f);
+                material.SetFloat("_UseEyeLayers", layer1 || layer3 ? 1f : 0f);
+            }
+
+            if (material.HasProperty("_UseEyeHighlights"))
+            {
+                // Source declarations prevent a reused material from retaining another eye's highlights.
+                bool hasMask = properties.m_TexEnvs != null
+                    && properties.m_TexEnvs.TryGetValue("_EyeMaskWithMatcap", out var maskInfo)
+                    && !string.IsNullOrEmpty(maskInfo?.m_Texture?.Name)
+                    && material.GetTexture("_EyeMaskWithMatcap") != null;
+                bool hasRamp = hasMask && properties.m_Floats != null
+                    && properties.m_Floats.TryGetValue("_UseHighlightRamp", out var useRamp) && useRamp > 0.5f
+                    && properties.m_TexEnvs.TryGetValue("_PackedHighlightRampTex", out var rampInfo)
+                    && !string.IsNullOrEmpty(rampInfo?.m_Texture?.Name)
+                    && material.GetTexture("_PackedHighlightRampTex") != null;
+                material.SetFloat("_UseEyeHighlights", hasMask ? 1f : 0f);
+                material.SetFloat("_UseEyeMatcap", hasMask ? 1f : 0f);
+                material.SetFloat("_UseHighlightRamp", hasRamp ? 1f : 0f);
+                if (properties.m_Colors != null && properties.m_Colors.TryGetValue("_HighlightColor", out var eyeColor))
+                    material.SetColor("_EyeHighlightColor", eyeColor.ToColor());
+            }
+
             // Apply shader-specific texture assignments from HoyoToonDataManager
             ApplyShaderSpecificTextureAssignments(material, shader, loadedTexturePaths);
         }
@@ -524,6 +555,21 @@ namespace HoyoToon
                     
                     // Apply shader-specific texture import settings immediately
                     HoyoToonTextureManager.SetTextureImportSettings(new[] { texturePath }, HoyoToonDataManager.GetShaderKey(material));
+                    if (material.HasProperty("_UseEyeHighlights")
+                        && (propertyName == "_EyeMaskWithMatcap" || propertyName == "_PackedHighlightRampTex"))
+                    {
+                        // Mask is linear data; the color ramp must retain its narrow gradient rows.
+                        var importer = AssetImporter.GetAtPath(texturePath) as TextureImporter;
+                        if (importer != null)
+                        {
+                            importer.textureType = TextureImporterType.Default;
+                            importer.sRGBTexture = propertyName == "_PackedHighlightRampTex";
+                            importer.mipmapEnabled = false;
+                            importer.wrapMode = TextureWrapMode.Clamp;
+                            importer.textureCompression = TextureImporterCompression.Uncompressed;
+                            importer.SaveAndReimport();
+                        }
+                    }
                 }
 
                 material.SetTextureScale(propertyName, textureInfo.m_Scale.ToVector2());

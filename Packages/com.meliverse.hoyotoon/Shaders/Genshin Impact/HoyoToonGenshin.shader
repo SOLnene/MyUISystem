@@ -100,6 +100,42 @@ Shader "HoyoToon/Genshin/Character"
         [HideInInspector] end_main ("", Float) = 0
         //Main End
 
+        [HideInInspector] start_eyelayers ("Pupil Layers--{reference_property:_UseEyeLayers}", Float) = 0
+            [Toggle] _UseEyeLayers ("Enable Pupil Layers", Float) = 0
+            [Toggle] _UseEyeLayerParallax ("Enable Layer Parallax", Float) = 0
+            [Helpbox] _EyeLayersHelp ("Alpha-masked approximation. Does not reproduce the game's refraction, caustics or SDF highlights.", Float) = 0
+            [Toggle] _ParallaxLayer1 ("Enable Pupil Layer 1", Float) = 0
+            [SmallTexture] _ParallaxLayer1Tex ("Pupil Layer 1 (Pupil02)", 2D) = "black" {}
+            _ParallaxLayer1Tint ("Layer 1 Tint", Color) = (1,1,1,1)
+            _ParallaxLayer1Intensity ("Layer 1 Intensity", Range(0,2)) = 1
+            _ParallaxLayer1ParallaxScale ("Layer 1 Parallax Scale", Range(-0.1,0.1)) = 0.01
+            [Toggle] _ParallaxLayer3 ("Enable Pupil Layer 3", Float) = 0
+            [SmallTexture] _ParallaxLayer3Tex ("Pupil Layer 3 (Pupil03)", 2D) = "black" {}
+            _ParallaxLayer3Tint ("Layer 3 Tint", Color) = (1,1,1,1)
+            _ParallaxLayer3Intensity ("Layer 3 Intensity", Range(0,2)) = 1
+            _ParallaxLayer3ParallaxScale ("Layer 3 Parallax Scale", Range(-0.1,0.1)) = -0.025
+        [HideInInspector] end_eyelayers ("", Float) = 0
+
+        [HideInInspector] start_eyehighlights ("Pupil Highlights--{reference_property:_UseEyeHighlights}", Float) = 0
+            [Toggle] _UseEyeHighlights ("Enable Pupil Highlights", Float) = 0
+            [Helpbox] _EyeHighlightsHelp ("Experimental MatCap approximation. Packed RG supplies the normal; B modes test normal strength or reflection strength, not verified game behavior. Use a linear Default texture, not a Unity Normal Map.", Float) = 0
+            [Toggle] _UseEyeMatcap ("Enable Eye MatCap", Float) = 0
+            [Toggle] _UseEyePackedNormal ("Use Packed RG Normal (MatCap Only)", Float) = 0
+            [NoScaleOffset] _BaseMatcapPackedTex ("Pupil Packed Normal (RG, Linear)", 2D) = "gray" {}
+            [Toggle] _EyePackedNormalFlipY ("Flip Packed Normal G", Float) = 0
+            [Enum(Ignore B,0,Normal Strength,1,Reflection Strength,2)] _EyePackedBMode ("Packed B Mode (Requires Packed RG)", Float) = 0
+            [SmallTexture] _EyeMaskWithMatcap ("Eye MatCap Mask (R)", 2D) = "black" {}
+            [HDR] _EyeMatcapTint ("Eye MatCap Tint", Color) = (1,1,1,1)
+            _EyeMatcapIntensity ("Eye MatCap Intensity", Range(0,4)) = 1
+            _EyeMatcapSphericalNormalLerp ("Eye Curvature", Range(0,1)) = 0.63
+            _EyeMatcapInvertUV ("MatCap Flip UV (XY)", Vector) = (0,0,0,0)
+            [Toggle] _UseHighlightRamp ("Enable Eye Highlight Ramp", Float) = 0
+            [SmallTexture] _PackedHighlightRampTex ("Eye Highlight Ramp", 2D) = "white" {}
+            [HDR] _EyeHighlightColor ("Eye Highlight Color", Color) = (1,1,1,1)
+            _HighlightIntensity ("Eye Highlight Intensity", Range(0,4)) = 1
+            _HighlightRampWidth ("Eye Highlight Ramp Width", Range(0.1,2)) = 1
+        [HideInInspector] end_eyehighlights ("", Float) = 0
+
         //Normal Map
         //ifex _UseBumpMap == 0
         [HideInInspector] start_normalmap ("Normal Map--{reference_property:_UseBumpMap}", Float) = 0

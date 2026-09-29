@@ -523,6 +523,34 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
 
     // SAMPLE TEXTURES : 
     float4 diffuse = _MainTex.Sample(sampler_MainTex, uv_a);
+    [branch] if(_UseEyeLayers > 0.5f)
+    {
+        float2 eyeOffset = 0.0f;
+        if(_UseEyeLayerParallax > 0.5f)
+        {
+            // Use the eye mesh's tangent frame, not world axes, so the layers follow head rotation.
+            float3 eyeTangent = i.tangent.xyz - normal * dot(i.tangent.xyz, normal);
+            eyeTangent *= rsqrt(max(dot(eyeTangent, eyeTangent), 0.000001f));
+            float3 eyeBitangent = cross(normal, eyeTangent) * i.tangent.w;
+            // Bound grazing-angle offsets to prevent the iris layers sliding out of the eye.
+            eyeOffset = float2(dot(view, eyeTangent), dot(view, eyeBitangent)) / max(abs(dot(view, normal)), 0.25f);
+        }
+        // Approximate straight-alpha composition. Keep base alpha for existing clipping/emission rules.
+        if(_ParallaxLayer1 > 0.5f)
+        {
+            float2 layerUV = uv_a * _ParallaxLayer1Tex_ST.xy + _ParallaxLayer1Tex_ST.zw;
+            layerUV += eyeOffset * _ParallaxLayer1ParallaxScale;
+            float4 layer = _ParallaxLayer1Tex.Sample(sampler_linear_clamp, layerUV) * _ParallaxLayer1Tint;
+            diffuse.rgb = lerp(diffuse.rgb, layer.rgb * _ParallaxLayer1Intensity, saturate(layer.a));
+        }
+        if(_ParallaxLayer3 > 0.5f)
+        {
+            float2 layerUV = uv_a * _ParallaxLayer3Tex_ST.xy + _ParallaxLayer3Tex_ST.zw;
+            layerUV += eyeOffset * _ParallaxLayer3ParallaxScale;
+            float4 layer = _ParallaxLayer3Tex.Sample(sampler_linear_clamp, layerUV) * _ParallaxLayer3Tint;
+            diffuse.rgb = lerp(diffuse.rgb, layer.rgb * _ParallaxLayer3Intensity, saturate(layer.a));
+        }
+    }
     float4 lightmap = _LightMapTex.Sample(sampler_linear_repeat, uv_a);
 
     // MATERIAL REGION 
@@ -671,6 +699,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
             if(_UseCharacterStockings && (material_id  == 4)) 
             {
                 float2 stocking_uv = uv_b.xy * _StockingsDetailTilingNear; 
+                /* Previous implementation retained for rollback.
                 // stocking normal logic
                 float3 stocking_normal;
                 stocking_normal.z = 1.0f;
@@ -685,6 +714,16 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
                 normal_mapping(stocking_normal, normalize(i.view), _StockingsDetailScale, uv_b.xy, normal_stock, tangent, bitangent);
 
                 // normal = normalize(normal_stock);
+                */
+
+                float2 stocking_rg = _StockingsDetailTex.Sample(sampler_linear_repeat, stocking_uv).rg;
+                // Keep RG encoded for normal_mapping's single decode. Scale around neutral 0.5;
+                // use scale=0 there to keep tangent-space Z=1 and apply strength only once.
+                float3 stocking_normal = float3((stocking_rg - 0.5f) * _StockingsDetailScale + 0.5f, 1.0f);
+                float3 tangent_stock;
+                float3 bitangent_stock;
+                // Update the outer normal used by character_stocking, without replacing the body frame.
+                normal_mapping(stocking_normal, ws_pos.xyz, 0.0f, uv_b.xy, normal_stock, tangent_stock, bitangent_stock);
             }
         #endif
         // do this after the bump mapping to ensure that the normals are updated 
@@ -930,8 +969,69 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         out_color.xyz = lerp(out_color.xyz, emis_color, ((mask * emis_color.w) * emis_check));
         out_color.xyz = lerp(out_color.xyz, emis_color_eye, (eye_mask * emis_check_eye) * emis_color_eye.w);
 
+        [branch] if(_UseEyeHighlights > 0.5f)
+        {
+            // A UV hemisphere supplies curvature for flat pupil meshes. Keep it in the
+            // skinned tangent frame so both the head and the camera can move independently.
+            float3 eyeNormal = normalize(i.normal);
+            float3 eyeTangent = i.tangent.xyz - eyeNormal * dot(i.tangent.xyz, eyeNormal);
+            eyeTangent *= rsqrt(max(dot(eyeTangent, eyeTangent), 0.000001f));
+            float3 eyeBitangent = cross(eyeNormal, eyeTangent) * i.tangent.w;
+            float2 eyePlane = uv_a.xy * 2.0f - 1.0f;
+            float eyeRadiusSquared = dot(eyePlane, eyePlane);
+            float3 sphereNormal = normalize(eyeTangent * eyePlane.x + eyeBitangent * eyePlane.y
+                + eyeNormal * sqrt(max(1.0f - eyeRadiusSquared, 0.001f)));
+            float3 matcapNormal = normalize(lerp(eyeNormal, sphereNormal, _EyeMatcapSphericalNormalLerp));
+            float packedReflectionStrength = 1.0f;
+            [branch] if(_UseEyePackedNormal > 0.5f && _UseEyeMatcap > 0.5f)
+            {
+                // Experimental RG decode in linear data space. B modes are alternative hypotheses.
+                // Replace only the reflection normal; preserve layer UVs and the authored glint.
+                float3 packedData = _BaseMatcapPackedTex.Sample(sampler_linear_clamp, uv_a.xy).rgb;
+                float2 packedXY = packedData.rg * 2.0f - 1.0f;
+                packedXY.y *= 1.0f - 2.0f * saturate(_EyePackedNormalFlipY);
+                float3 packedNormal = normalize(float3(packedXY, sqrt(saturate(1.0f - dot(packedXY, packedXY)))));
+                if(_EyePackedBMode > 0.5f && _EyePackedBMode < 1.5f)
+                {
+                    // B=0 means an unperturbed tangent-space normal, not the UV hemisphere.
+                    packedNormal = normalize(lerp(float3(0.0f, 0.0f, 1.0f), packedNormal, saturate(packedData.b)));
+                }
+                else if(_EyePackedBMode > 1.5f)
+                {
+                    packedReflectionStrength = saturate(packedData.b);
+                }
+                matcapNormal = normalize(eyeTangent * packedNormal.x + eyeBitangent * packedNormal.y
+                    + eyeNormal * packedNormal.z);
+            }
+            float2 matcapUV = mul((float3x3)UNITY_MATRIX_V, matcapNormal).xy * 0.5f + 0.5f;
+            matcapUV = lerp(matcapUV, 1.0f - matcapUV, saturate(_EyeMatcapInvertUV.xy));
+            float eyeHighlightMask = _EyeMaskWithMatcap.SampleLevel(sampler_linear_clamp, matcapUV, 0).r;
+            float eyeCoverage = saturate((1.0f - eyeRadiusSquared) * 20.0f);
 
-        #if defined(can_debug)  
+            // Adapt the separate mask/bright-core ramps in Gacha Setup's Highlight group.
+            // This is a color overlay in the base pass, not an extra transparent draw call.
+            // The authored glint uses pupil UVs; only the soft MatCap reflection follows the view.
+            float authoredHighlightMask = _EyeMaskWithMatcap.SampleLevel(sampler_linear_clamp, uv_a.xy, 0).r;
+            float highlightCoverage = saturate(authoredHighlightMask / 0.2f) * eyeCoverage;
+            float highlightCore = saturate((authoredHighlightMask - 0.25f) / 0.45f);
+            if(_UseEyeMatcap > 0.5f)
+            {
+                float3 reflection = _EyeMatcapTint.rgb * _EyeMatcapIntensity;
+                // Mask the overlay weight, not its color: B=0 must preserve the underlying iris.
+                out_color.rgb = lerp(out_color.rgb, reflection, saturate(eyeHighlightMask) * eyeCoverage * packedReflectionStrength);
+            }
+            if(_UseHighlightRamp > 0.5f)
+            {
+                float rampU = saturate(highlightCore / max(_HighlightRampWidth, 0.001f));
+                // The 256x8 pupil ramp stores its color gradient in the top two rows; sample their center.
+                float3 ramp = _PackedHighlightRampTex.SampleLevel(sampler_linear_clamp, float2(rampU, 0.875f), 0).rgb;
+                float3 highlightColor = ramp * _EyeHighlightColor.rgb * _HighlightIntensity;
+                out_color.rgb = lerp(out_color.rgb, highlightColor, highlightCoverage * highlightCore);
+            }
+        }
+
+
+        #if defined(can_debug)
             if(_DebugMode) // debuuuuuug
             {
                 if(_DebugLighting == 1) return float4(ndotl.xxx, 1.0f);

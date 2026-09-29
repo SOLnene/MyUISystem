@@ -1,5 +1,35 @@
 // textures : 
 Texture2D _MainTex; // this is the diffuse color texture
+Texture2D _ParallaxLayer1Tex;
+Texture2D _ParallaxLayer3Tex;
+float4 _ParallaxLayer1Tex_ST;
+float4 _ParallaxLayer3Tex_ST;
+float4 _ParallaxLayer1Tint;
+float4 _ParallaxLayer3Tint;
+float _UseEyeLayers;
+float _UseEyeLayerParallax;
+float _ParallaxLayer1;
+float _ParallaxLayer3;
+float _ParallaxLayer1Intensity;
+float _ParallaxLayer3Intensity;
+float _ParallaxLayer1ParallaxScale;
+float _ParallaxLayer3ParallaxScale;
+Texture2D _EyeMaskWithMatcap;
+Texture2D _PackedHighlightRampTex;
+Texture2D _BaseMatcapPackedTex;
+float _UseEyePackedNormal;
+float _EyePackedNormalFlipY;
+float _EyePackedBMode;
+float _UseEyeHighlights;
+float _UseEyeMatcap;
+float _UseHighlightRamp;
+float _EyeMatcapIntensity;
+float _EyeMatcapSphericalNormalLerp;
+float _HighlightIntensity;
+float _HighlightRampWidth;
+float4 _EyeMatcapTint;
+float4 _EyeMatcapInvertUV;
+float4 _EyeHighlightColor;
 Texture2D _LightMapTex; // this is both the body/hair lightmap texture and the faceshadow texture
 #if defined(faceishadow)
     Texture2D _FaceMapTex; // this is the facelightmap texture
