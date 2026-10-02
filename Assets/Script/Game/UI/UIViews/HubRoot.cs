@@ -15,6 +15,8 @@ public partial class HubRoot : UIView
     private MainMenuNavigator mainMenuNavigator;
     private MainMenuRedDotProvider mainMenuRedDotProvider;
     [SerializeField]
+    private Button menuButton;
+    [SerializeField]
     private TextAsset characterEnhanceTutorialConfig;
     private TutorialScheduler tutorialScheduler;
     
@@ -79,6 +81,11 @@ public partial class HubRoot : UIView
 
     private void OpenMainMenu()
     {
+        if (mainMenuOpen)
+        {
+            return;
+        }
+
         mainMenuOpen = true;
         SaveProfileInfo profile = SaveProfileManager.Instance.ActiveProfile;
         // 在线账户接入前使用本地档案 ID 的前九位作为稳定展示 ID。
@@ -124,10 +131,12 @@ public partial class HubRoot : UIView
     public override void OnAddListener()
     {
         base.OnAddListener();
+        menuButton.onClick.AddListener(OpenMainMenu);
     }
 
     public override void OnRemoveListener()
     {
+        menuButton.onClick.RemoveListener(OpenMainMenu);
         base.OnRemoveListener();
     }
 
