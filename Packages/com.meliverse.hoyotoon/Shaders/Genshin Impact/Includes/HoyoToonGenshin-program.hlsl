@@ -476,10 +476,89 @@ shadow_out vs_shadow(shadow_in v)
 
 // ====================================================================
 // PIXEL SHADERS
+float pupil_radial_depth(float2 uv)
+{
+    // Odette's original center/radius; this is procedural depth, not a height texture.
+    float2 radialUV = (uv - 0.5f) / 0.46f;
+    return pow(saturate(dot(radialUV, radialUV)), 0.5f * _DepthPower);
+}
+
+float2 pupil_refraction_uv(float2 uv, float3 viewInEye)
+{
+    if(abs(viewInEye.z) <= 0.0001f || _ParallaxScale <= 0.0f) return uv;
+    if(_UseOriginalEyeFrame < 0.5f && viewInEye.z < 0.0f) return uv;
+    float2 rayUV = -viewInEye.xy * (_ParallaxScale / viewInEye.z);
+    int steps = (int)ceil(16.0f - 12.0f * saturate(abs(viewInEye.z)));
+    float upperDepth = 1.0f;
+    float upperError = upperDepth - pupil_radial_depth(uv);
+    if(upperError <= 0.01f) return uv;
+    float lowerDepth = upperDepth;
+    float lowerError = upperError;
+
+    // Bracket the ray/depth crossing with 4-16 arithmetic steps; no texture reads in the search.
+    [loop] for(int stepIndex = 1; stepIndex <= steps; ++stepIndex)
+    {
+        lowerDepth = 1.0f - (float)stepIndex / steps;
+        lowerError = lowerDepth - pupil_radial_depth(uv + rayUV * (1.0f - lowerDepth));
+        if(lowerError <= 0.0f) break;
+        upperDepth = lowerDepth;
+        upperError = lowerError;
+    }
+
+    float intersectionDepth = lowerDepth;
+    [unroll] for(int refinement = 0; refinement < 3; ++refinement)
+    {
+        intersectionDepth = lerp(lowerDepth, upperDepth,
+            saturate(-lowerError / max(upperError - lowerError, 0.000001f)));
+        float error = intersectionDepth - pupil_radial_depth(uv + rayUV * (1.0f - intersectionDepth));
+        if(abs(error) <= 0.01f) break;
+        if(error > 0.0f)
+        {
+            upperDepth = intersectionDepth;
+            upperError = error;
+        }
+        else
+        {
+            lowerDepth = intersectionDepth;
+            lowerError = error;
+        }
+    }
+    return uv + rayUV * (1.0f - intersectionDepth);
+}
+
+void pupil_head_frame(float3 normalWS, float3 positionWS,
+    out float3 headU, out float3 headV, out bool positiveSide)
+{
+    // Match cb0[252..254]: mesh tangents are not the game's eye coordinate frame.
+    headU = normalize(-_CharacterHeadCenterXDirWS
+        - normalWS * dot(-_CharacterHeadCenterXDirWS, normalWS));
+    headV = normalize(cross(headU, normalWS));
+    positiveSide = dot(positionWS - _CharacterHeadCenterWorldPosition,
+        cross(_CharacterHeadCenterXDirWS, normalize(_CharacterFaceWorldDirection))) > 0.0f;
+}
+
+float pupil_light_angle(float2 direction)
+{
+    // Preserve the compiled shader's atan approximation and quadrant selection.
+    float length2D = length(direction);
+    direction = length2D > 0.001f ? direction / length2D : float2(0.0f, 1.0f);
+    float ratio = min(abs(direction.x), abs(direction.y)) / max(abs(direction.x), abs(direction.y));
+    float ratio2 = ratio * ratio;
+    float polynomial = (((0.0208350997f * ratio2 - 0.0851330012f) * ratio2
+        + 0.180141002f) * ratio2 - 0.330299497f) * ratio2 + 0.999866009f;
+    float angle = ratio * polynomial;
+    if(abs(direction.y) < abs(direction.x)) angle = 1.57079637f - angle;
+    if(direction.y < 0.0f) angle -= 3.141593f;
+    if(min(direction.x, direction.y) < 0.0f && max(direction.x, direction.y) >= 0.0f) angle = -angle;
+    return angle;
+}
+
 float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
 {
     UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
     modelFadeClip(i.ss_pos);
+    // R marks overlapping highlight geometry, not another copy of the iris surface.
+    if(_UseEyeRegionRouting > 0.5f) clip(0.5f - i.v_col.r);
 
     // get the world space position now, might be more expensive here but concerving vertex outputs
     float4 ws_pos = mul(unity_ObjectToWorld, i.ws_pos);
@@ -522,7 +601,55 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
     }
 
     // SAMPLE TEXTURES : 
-    float4 diffuse = _MainTex.Sample(sampler_MainTex, uv_a);
+    float2 irisUV = uv_a;
+    [branch] if(_UseEyeRefraction > 0.5f && i.v_col.r < 0.5f)
+    {
+        // Match the existing skinned eye frame; leave decorative layers and outer reflection UVs unchanged.
+        float3 refractionTangent = i.tangent.xyz - normal * dot(i.tangent.xyz, normal);
+        refractionTangent *= rsqrt(max(dot(refractionTangent, refractionTangent), 0.000001f));
+        float3 refractionBitangent = cross(normal, refractionTangent) * i.tangent.w;
+        float3 viewInEye = float3(dot(view, refractionTangent), dot(view, refractionBitangent), dot(view, normal));
+        if(_UseOriginalEyeFrame > 0.5f)
+        {
+            float3 headU, headV;
+            bool positiveSide;
+            pupil_head_frame(i.normal, ws_pos.xyz, headU, headV, positiveSide);
+            if(!positiveSide && _isUVMirror < 0.5f) headV = -headV;
+            viewInEye = float3(dot(view, headV) * (positiveSide ? -1.0f : 1.0f),
+                dot(view, headU), dot(view, i.normal));
+        }
+        irisUV = pupil_refraction_uv(uv_a, viewInEye);
+    }
+    float4 diffuse = _MainTex.Sample(sampler_MainTex, irisUV);
+    [branch] if(_UseEyeHighlights > 0.5f && _UseDecodedEyeMatcap > 0.5f && i.v_col.r < 0.5f)
+    {
+        // Decode RG at iris UVs, then sample B at independent view-normal UVs.
+        // The previous mesh frame remains available only for A/B comparison.
+        float3 baseTangent = i.tangent.xyz - normal * dot(i.tangent.xyz, normal);
+        baseTangent *= rsqrt(max(dot(baseTangent, baseTangent), 0.000001f));
+        float3 baseBitangent = cross(normal, baseTangent) * i.tangent.w;
+        float2 packedXY = _BaseMatcapPackedTex.Sample(sampler_linear_clamp, irisUV).rg * 2.0f - 1.0f;
+        float3 packedNormal = normalize(float3(packedXY, sqrt(max(0.0f, 1.0f - dot(packedXY, packedXY)))));
+        float3 baseNormal = normalize(baseTangent * packedNormal.x + baseBitangent * packedNormal.y
+            + normal * packedNormal.z);
+        if(_UseOriginalEyeFrame > 0.5f)
+        {
+            float3 headU, headV;
+            bool positiveSide;
+            pupil_head_frame(i.normal, ws_pos.xyz, headU, headV, positiveSide);
+            if(!positiveSide && _isUVMirror < 0.5f)
+            {
+                headV = -headV;
+                packedXY.x = -packedXY.x;
+            }
+            baseNormal = normalize(headV * packedXY.x + headU * packedXY.y
+                + i.normal * sqrt(max(0.0f, 1.0f - dot(packedXY, packedXY))));
+        }
+        float2 baseMatcapUV = mul((float3x3)UNITY_MATRIX_V, baseNormal).xy * (0.5f * _BaseMatcapSize) + 0.5f;
+        float baseReflection = _BaseMatcapPackedTex.Sample(sampler_linear_clamp, baseMatcapUV).b;
+        // Odette's original BaseMatcapBlendMode is additive (0), before the iris layers.
+        diffuse.rgb += baseReflection * _BaseMatcapTint.rgb * _BaseMatcapIntensity;
+    }
     [branch] if(_UseEyeLayers > 0.5f)
     {
         float2 eyeOffset = 0.0f;
@@ -983,7 +1110,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
                 + eyeNormal * sqrt(max(1.0f - eyeRadiusSquared, 0.001f)));
             float3 matcapNormal = normalize(lerp(eyeNormal, sphereNormal, _EyeMatcapSphericalNormalLerp));
             float packedReflectionStrength = 1.0f;
-            [branch] if(_UseEyePackedNormal > 0.5f && _UseEyeMatcap > 0.5f)
+            [branch] if(_UseDecodedEyeMatcap < 0.5f && _UseEyePackedNormal > 0.5f && _UseEyeMatcap > 0.5f)
             {
                 // Experimental RG decode in linear data space. B modes are alternative hypotheses.
                 // Replace only the reflection normal; preserve layer UVs and the authored glint.
@@ -1016,11 +1143,34 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
             float highlightCore = saturate((authoredHighlightMask - 0.25f) / 0.45f);
             if(_UseEyeMatcap > 0.5f)
             {
-                float3 reflection = _EyeMatcapTint.rgb * _EyeMatcapIntensity;
-                // Mask the overlay weight, not its color: B=0 must preserve the underlying iris.
-                out_color.rgb = lerp(out_color.rgb, reflection, saturate(eyeHighlightMask) * eyeCoverage * packedReflectionStrength);
+                [branch] if(_UseDecodedEyeMatcap > 0.5f)
+                {
+                    // RGB contains the outer reflection; A is an iris-UV mask, not a MatCap-UV strength.
+                    // Radius/feather are Odette's original 0.46/0.127 values for this comparison.
+                    float2 irisPlane = (uv_a - 0.5f) / 0.46f;
+                    float irisRadiusSquared = dot(irisPlane, irisPlane);
+                    float discMask = 1.0f - smoothstep(1.0f - 0.127f, 1.0f, irisRadiusSquared);
+                    float irisMask = discMask * saturate(_EyeMaskWithMatcap.Sample(sampler_linear_clamp, uv_a).a);
+                    float2 spherePlane = irisPlane * (1.0f - 2.0f * step(0.5f, _EyeMatcapInvertUV.xy));
+                    float3 outerSphere = normalize(eyeTangent * spherePlane.x + eyeBitangent * spherePlane.y
+                        + eyeNormal * sqrt(max(1.0f - irisRadiusSquared, 0.000001f)));
+                    float3 outerNormal = normalize(lerp(eyeNormal, outerSphere, _EyeMatcapSphericalNormalLerp));
+                    outerNormal = irisRadiusSquared <= 1.0f ? outerNormal : eyeNormal;
+                    float2 outerUV = mul((float3x3)UNITY_MATRIX_V, outerNormal).xy * 0.5f + 0.5f;
+                    float3 reflection = _EyeMaskWithMatcap.Sample(sampler_linear_clamp, outerUV).rgb
+                        * _EyeMatcapTint.rgb * _EyeMatcapIntensity;
+                    // Odette's original EyeMatcapBlendMode is 1: add reflection modulated by iris color.
+                    float3 reflectedColor = out_color.rgb + reflection * out_color.rgb;
+                    out_color.rgb = lerp(out_color.rgb, reflectedColor, irisMask);
+                }
+                else
+                {
+                    float3 reflection = _EyeMatcapTint.rgb * _EyeMatcapIntensity;
+                    // Mask the overlay weight, not its color: B=0 must preserve the underlying iris.
+                    out_color.rgb = lerp(out_color.rgb, reflection, saturate(eyeHighlightMask) * eyeCoverage * packedReflectionStrength);
+                }
             }
-            if(_UseHighlightRamp > 0.5f)
+            if(_UseHighlightRamp > 0.5f && _UseEyeRegionRouting < 0.5f)
             {
                 float rampU = saturate(highlightCore / max(_HighlightRampWidth, 0.001f));
                 // The 256x8 pupil ramp stores its color gradient in the top two rows; sample their center.
@@ -1144,9 +1294,48 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
     return out_color; 
 }
 
+float4 ps_pupil_highlight(vs_out i) : SV_TARGET
+{
+    UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);
+    clip(_UseEyeRegionRouting - 0.5f);
+    clip(_UseEyeHighlights - 0.5f);
+    clip(i.v_col.r - 0.5f);
+    modelFadeClip(i.ss_pos);
+
+    float2 highlightUV = i.uv_a.xy;
+    if(_UseOriginalEyeFrame > 0.5f)
+    {
+        float3 headU, headV;
+        bool positiveSide;
+        pupil_head_frame(i.normal, mul(unity_ObjectToWorld, i.ws_pos).xyz, headU, headV, positiveSide);
+        float3 lightDirection = normalize(_WorldSpaceLightPos0.xyz) + _LightDirectionOffset;
+        float lightAngle = pupil_light_angle(float2(dot(headU, lightDirection), dot(headV, lightDirection)));
+        float angle = _RotationAngle - lightAngle * _LightInfluence;
+        angle = frac((angle + 3.14159274f) * 0.159154937f) * 6.28318548f - 3.14159274f;
+        float sine, cosine;
+        sincos(angle, sine, cosine);
+        float2 centeredUV = highlightUV - _EyeCenterUV;
+        highlightUV = float2(centeredUV.x * cosine + centeredUV.y * sine,
+            centeredUV.y * cosine - centeredUV.x * sine) + _EyeCenterUV;
+    }
+    // Odette disables time jitter, but retains light-dependent rotation.
+    float sdf = _SDFGradientMap.Sample(sampler_linear_clamp, highlightUV).r;
+    if(_UseOriginalEyeFrame > 0.5f && _InvertSDFMap > 0.5f) sdf = 1.0f - sdf;
+    float distanceFromEdge = sdf - saturate(_SDFCenterValue);
+    clip(distanceFromEdge - 0.000001f);
+    float3 highlight = 1.0f;
+    if(_UseHighlightRamp > 0.5f)
+    {
+        float rampU = saturate(distanceFromEdge / max(_HighlightRampWidth, 0.01f));
+        highlight = _PackedHighlightRampTex.Sample(sampler_linear_clamp, float2(rampU, 0.875f)).rgb;
+    }
+    return float4(highlight * _EyeHighlightColor.rgb * _HighlightIntensity, 1.0f);
+}
+
 float4 ps_edge(vs_out i, bool vface : SV_ISFRONTFACE) : SV_TARGET
 {
     modelFadeClip(i.ss_pos);
+    if(_UseEyeRegionRouting > 0.5f) clip(0.5f - i.v_col.r);
     float4 out_color = (float4)1.0f;
     #if defined(can_shift)
         float outline_mask = packed_channel_picker(sampler_linear_repeat, _HueMaskTexture, i.uv_a.xy, _OutlineMaskSource);

@@ -103,6 +103,9 @@ Shader "HoyoToon/Genshin/Character"
         [HideInInspector] start_eyelayers ("Pupil Layers--{reference_property:_UseEyeLayers}", Float) = 0
             [Toggle] _UseEyeLayers ("Enable Pupil Layers", Float) = 0
             [Toggle] _UseEyeLayerParallax ("Enable Layer Parallax", Float) = 0
+            [Toggle] _UseEyeRefraction ("Enable Eye Refraction (Comparison)", Float) = 0
+            _ParallaxScale ("Iris Refraction Scale", Range(0,0.3)) = 0.15
+            _DepthPower ("Iris Depth Power", Range(0.05,2)) = 0.35
             [Helpbox] _EyeLayersHelp ("Alpha-masked approximation. Does not reproduce the game's refraction, caustics or SDF highlights.", Float) = 0
             [Toggle] _ParallaxLayer1 ("Enable Pupil Layer 1", Float) = 0
             [SmallTexture] _ParallaxLayer1Tex ("Pupil Layer 1 (Pupil02)", 2D) = "black" {}
@@ -118,6 +121,23 @@ Shader "HoyoToon/Genshin/Character"
 
         [HideInInspector] start_eyehighlights ("Pupil Highlights--{reference_property:_UseEyeHighlights}", Float) = 0
             [Toggle] _UseEyeHighlights ("Enable Pupil Highlights", Float) = 0
+            [Toggle] _UseDecodedEyeMatcap ("Use Decoded Eye MatCaps (Comparison)", Float) = 0
+            [Toggle] _UseEyeRegionRouting ("Separate Iris / SDF Highlight (Comparison)", Float) = 0
+            [Toggle] _UseOriginalEyeFrame ("Use Head-Based Eye Frame (Comparison)", Float) = 0
+            [HideInInspector] _CharacterHeadCenterWorldPosition ("Head Center WS", Vector) = (0,0,0,0)
+            [HideInInspector] _CharacterHeadCenterXDirWS ("Head X Axis WS", Vector) = (0,-1,0,0)
+            [HideInInspector] _CharacterFaceWorldDirection ("Face Direction WS", Vector) = (0,0,1,0)
+            [Toggle] _isUVMirror ("Original Eye UV Mirror", Float) = 0
+            _RotationAngle ("Highlight Rotation (Radians)", Float) = 0
+            _LightInfluence ("Highlight Light Influence", Range(0,1)) = 0.1
+            _LightDirectionOffset ("Highlight Light Direction Offset", Vector) = (0,0.7,0,0)
+            _EyeCenterUV ("Highlight UV Center", Vector) = (0.5,0.5,0,0)
+            [Toggle] _InvertSDFMap ("Invert Highlight SDF", Float) = 0
+            [NoScaleOffset] _SDFGradientMap ("Eye Highlight SDF (R, Linear)", 2D) = "black" {}
+            _SDFCenterValue ("Eye Highlight SDF Threshold", Range(0,1)) = 0.5
+            [HDR] _BaseMatcapTint ("Internal MatCap Tint", Color) = (0.3868404,0.6918327,0.992647,1)
+            _BaseMatcapIntensity ("Internal MatCap Intensity", Range(0,4)) = 1.2
+            _BaseMatcapSize ("Internal MatCap Size", Range(0.1,2)) = 1
             [Helpbox] _EyeHighlightsHelp ("Experimental MatCap approximation. Packed RG supplies the normal; B modes test normal strength or reflection strength, not verified game behavior. Use a linear Default texture, not a Unity Normal Map.", Float) = 0
             [Toggle] _UseEyeMatcap ("Enable Eye MatCap", Float) = 0
             [Toggle] _UseEyePackedNormal ("Use Packed RG Normal (MatCap Only)", Float) = 0
@@ -1271,6 +1291,22 @@ Shader "HoyoToon/Genshin/Character"
             #include "Includes/HoyoToonGenshin-program.hlsl"
             ENDHLSL
         }      
+
+        // Keep highlight geometry out of the opaque iris/depth draw. This pass only overlays the SDF shape.
+        Pass
+        {
+            Name "Pupil SDF Highlight Pass"
+            Tags{ "LightMode" = "Always" }
+            Cull [_Cull]
+            ZWrite Off
+            ZTest LEqual
+            Blend SrcAlpha OneMinusSrcAlpha
+            HLSLPROGRAM
+            #pragma vertex vs_model
+            #pragma fragment ps_pupil_highlight
+            #include "Includes/HoyoToonGenshin-program.hlsl"
+            ENDHLSL
+        }
 
         Pass // Eye Stencil Pass
         {
