@@ -17,6 +17,15 @@ namespace Game.UI.Components.CharacterDetail
             CharacterExitEnd
         }
 
+        enum DetailOperation
+        {
+            None,
+            SwitchingTab,
+            SwitchingCharacter,
+            PlayingResult,
+            NavigatingToEquip
+        }
+
         //UIControlData
     #region 控件绑定变量声明，自动生成请勿手改
 		#pragma warning disable 0649
@@ -72,14 +81,33 @@ namespace Game.UI.Components.CharacterDetail
         CharacterDetailViewModel vm;
 
         int currentIndex = -1;
-        bool isSwitchingTab;
-        bool isPlayingResultFlow;
+        DetailOperation currentOperation;
+        int operationVersion;
         bool isClosing;
-        bool isNavigatingToEquipDetail;
         bool isTalentDetailMode;
         CancellationTokenSource equipEnhanceTransitionCancellation;
         CompositeDisposable disposable = new CompositeDisposable();
         CompositeDisposable characterDisposable = new CompositeDisposable();
+
+        // 页面操作结束不代表模型已完成交接；模型侧的状态仍由 ModelViewer 管理。
+        bool CanStartPresentationChange =>
+            !isClosing
+            && currentOperation == DetailOperation.None
+            && (ModelViewer.Instance == null || !ModelViewer.Instance.IsInTransition);
+
+        int BeginOperation(DetailOperation operation)
+        {
+            currentOperation = operation;
+            return ++operationVersion;
+        }
+
+        void CompleteOperation(int version)
+        {
+            // 关闭或重新打开后，旧任务的 finally 不得解除新操作的限制。
+            if (version == operationVersion)
+                currentOperation = DetailOperation.None;
+        }
+
         public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
         {
             base.OnInit(uiControlData,handle);
@@ -88,10 +116,11 @@ namespace Game.UI.Components.CharacterDetail
         public override void OnOpen(object data)
         {
             base.OnOpen(data);
+            ++operationVersion;
+            currentOperation = DetailOperation.None;
             CancelEquipEnhanceTransition();
             ModelViewer.Instance.PlayStarFieldParticles();
             isClosing = false;
-            isNavigatingToEquipDetail = false;
             vm = data as CharacterDetailViewModel;
             Bind(vm);
             ShowInitialCharacterPreviewAsync(vm.model).Forget();
@@ -100,17 +129,20 @@ namespace Game.UI.Components.CharacterDetail
         public override void OnResume()
         {
             base.OnResume();
+            bool returningFromEquip = currentOperation == DetailOperation.NavigatingToEquip;
             bool restoredFromEquip =
-                isNavigatingToEquipDetail
+                returningFromEquip
                 && ModelViewer.Instance.IsCharacterPreviewActive;
+            if (returningFromEquip)
+                CompleteOperation(operationVersion);
+
             if (!restoredFromEquip && vm != null && !isClosing)
             {
                 ShowInitialCharacterPreviewAsync(vm.model).Forget();
             }
 
-            if (isNavigatingToEquipDetail)
+            if (returningFromEquip)
             {
-                isNavigatingToEquipDetail = false;
                 ShowMainPanels(false).Forget();
             }
         }
@@ -179,7 +211,7 @@ namespace Game.UI.Components.CharacterDetail
 
         void RequestCharacterSwitch(CharacterModel character)
         {
-            if (character == null || character == vm.model || isClosing)
+            if (character == null || character == vm.model || !CanStartPresentationChange)
             {
                 return;
             }
@@ -189,22 +221,40 @@ namespace Game.UI.Components.CharacterDetail
 
         async UniTask SwitchCharacterAsync(CharacterModel character)
         {
-            bool previewReady = await ModelViewer.Instance.TryShowPreviewAsync(
-                ModelPreviewType.Character,
-                character.Definition.key);
-            if (!previewReady || isClosing || vm == null)
+            int version = BeginOperation(DetailOperation.SwitchingCharacter);
+            try
             {
-                return;
-            }
+                bool previewReady = await ModelViewer.Instance.TryShowPreviewAsync(
+                    ModelPreviewType.Character,
+                    character.Definition.key);
+                if (!previewReady || isClosing || vm == null || version != operationVersion)
+                    return;
 
-            vm.SelectCharacter(character);
+                vm.SelectCharacter(character);
+            }
+            finally
+            {
+                CompleteOperation(version);
+            }
         }
 
         async UniTask ShowInitialCharacterPreviewAsync(CharacterModel character)
         {
-            await ModelViewer.Instance.TryShowPreviewAsync(
-                ModelPreviewType.Character,
-                character.Definition.key);
+            bool ownsOperation = currentOperation == DetailOperation.None;
+            int version = ownsOperation
+                ? BeginOperation(DetailOperation.SwitchingCharacter)
+                : operationVersion;
+            try
+            {
+                await ModelViewer.Instance.TryShowPreviewAsync(
+                    ModelPreviewType.Character,
+                    character.Definition.key);
+            }
+            finally
+            {
+                if (ownsOperation)
+                    CompleteOperation(version);
+            }
         }
     
         void RefreshUpgradeOrPromotePanel()
@@ -336,14 +386,16 @@ namespace Game.UI.Components.CharacterDetail
 
         async UniTask PlayEnhanceResultFlow(EnhanceResultData result)
         {
-            if (isSwitchingTab || isPlayingResultFlow)
+            if (isClosing || currentOperation != DetailOperation.None)
                 return;
 
-            isPlayingResultFlow = true;
+            int version = BeginOperation(DetailOperation.PlayingResult);
             try
             {
                 enhancePanelView.ShowEnhanceProcessing();
                 await enhancePanelView.PlayEnhanceExpProgress(result);
+                if (isClosing || version != operationVersion)
+                    return;
 
                 if (result.oldLevel == result.newLevel)
                 {
@@ -364,35 +416,47 @@ namespace Game.UI.Components.CharacterDetail
                     ? () => enhancePanelView.ShowEnhanceMaxLevelText("已达到当前等级上限")
                     : () => enhancePanelView.ShowEnhanceNormal(true);
 
-                await enhancePanelView.PlayEnhanceLevelResult(result, onNewLevelShown);
+                await enhancePanelView.PlayEnhanceLevelResult(result, () =>
+                {
+                    if (!isClosing && version == operationVersion)
+                        onNewLevelShown();
+                });
+                if (isClosing || version != operationVersion)
+                    return;
 
                 if (result.needSwitchContent)
                     await RefreshUpgradeOrPromotePanelAsync(false);
             }
             finally
             {
-                isPlayingResultFlow = false;
+                CompleteOperation(version);
             }
         }
 
         async UniTask PlayPromoteResultFlow(PromoteLevelResultData result)
         {
-            if (isSwitchingTab || isPlayingResultFlow)
+            if (isClosing || currentOperation != DetailOperation.None)
                 return;
 
-            isPlayingResultFlow = true;
+            int version = BeginOperation(DetailOperation.PlayingResult);
             try
             {
                 promotePanelView.ShowPromoteProcessing();
 
                 Action onNewStateShown = () => promotePanelView.ShowPromoteResultText("突破成功");
 
-                await promotePanelView.PlayPromoteResult(result, onNewStateShown);
+                await promotePanelView.PlayPromoteResult(result, () =>
+                {
+                    if (!isClosing && version == operationVersion)
+                        onNewStateShown();
+                });
+                if (isClosing || version != operationVersion)
+                    return;
                 await RefreshUpgradeOrPromotePanelAsync(false);
             }
             finally
             {
-                isPlayingResultFlow = false;
+                CompleteOperation(version);
             }
         }
 
@@ -432,12 +496,7 @@ namespace Game.UI.Components.CharacterDetail
                 return false;
             }
 
-            if (isSwitchingTab)
-            {
-                return false;
-            }
-
-            return ModelViewer.Instance == null || !ModelViewer.Instance.IsInTransition;
+            return CanStartPresentationChange;
         }
 
         void SwitchTab(int index, bool instant)
@@ -447,22 +506,26 @@ namespace Game.UI.Components.CharacterDetail
 
         async UniTask SwitchTabAsync(int index, bool instant)
         {
-            if (currentIndex >= 0 && currentIndex < tabItems.Length)
-            {
-                tabItems[currentIndex].SetSelected(false, instant);
-            }
-
-            currentIndex = index;
-            tabItems[currentIndex].SetSelected(true, instant);
-
-            isSwitchingTab = true;
+            // 切角色时会内部重置默认页，这个子步骤不能覆盖外层角色切换的状态。
+            bool ownsOperation = currentOperation == DetailOperation.None;
+            int version = ownsOperation
+                ? BeginOperation(DetailOperation.SwitchingTab)
+                : operationVersion;
             try
             {
+                if (currentIndex >= 0 && currentIndex < tabItems.Length)
+                {
+                    tabItems[currentIndex].SetSelected(false, instant);
+                }
+
+                currentIndex = index;
+                tabItems[currentIndex].SetSelected(true, instant);
                 await ApplyCurrentTab(instant);
             }
             finally
             {
-                isSwitchingTab = false;
+                if (ownsOperation)
+                    CompleteOperation(version);
             }
         }
 
@@ -493,7 +556,7 @@ namespace Game.UI.Components.CharacterDetail
 
         public override void OnCancel()
         {
-            if (isClosing || isNavigatingToEquipDetail)
+            if (isClosing || currentOperation == DetailOperation.NavigatingToEquip)
                 return;
 
             CloseWithTransition().Forget();
@@ -501,7 +564,7 @@ namespace Game.UI.Components.CharacterDetail
 
         internal void OpenEquipEnhance(EquipItemViewModel weapon)
         {
-            if (weapon == null || isClosing || isNavigatingToEquipDetail)
+            if (weapon == null || !CanStartPresentationChange)
                 return;
 
             CancelEquipEnhanceTransition();
@@ -515,8 +578,9 @@ namespace Game.UI.Components.CharacterDetail
             EquipItemViewModel weapon,
             CancellationTokenSource transitionCancellation)
         {
-            isNavigatingToEquipDetail = true;
+            int version = BeginOperation(DetailOperation.NavigatingToEquip);
             CancellationToken cancellationToken = transitionCancellation.Token;
+            bool completed = false;
 
             try
             {
@@ -530,14 +594,18 @@ namespace Game.UI.Components.CharacterDetail
                 {
                     await PlayEquipEnterAnchoredTransitionAsync(weapon, cancellationToken);
                 }
+                // 成功跳转后保持导航状态，直到 OnResume 恢复角色界面。
+                completed = true;
             }
             catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
             {
-                ModelViewer.Instance.CancelPendingPreviewLoad();
-                isNavigatingToEquipDetail = false;
+                if (version == operationVersion)
+                    ModelViewer.Instance.CancelPendingPreviewLoad();
             }
             finally
             {
+                if (!completed)
+                    CompleteOperation(version);
                 if (equipEnhanceTransitionCancellation == transitionCancellation)
                 {
                     equipEnhanceTransitionCancellation = null;
@@ -638,6 +706,9 @@ namespace Game.UI.Components.CharacterDetail
         async UniTask CloseWithTransition()
         {
             isClosing = true;
+            int version = ++operationVersion;
+            currentOperation = DetailOperation.None;
+            ModelViewer.Instance.CancelPendingPreviewLoad();
 
             if (enhancePanelView.gameObject.activeSelf || promotePanelView.gameObject.activeSelf)
             {
@@ -648,16 +719,19 @@ namespace Game.UI.Components.CharacterDetail
                 await HideMainPanels(false);
             }
 
-            base.OnCancel();
+            if (version == operationVersion)
+                base.OnCancel();
         }
         
         
         public override void OnClose()
         {
+            isClosing = true;
+            ++operationVersion;
+            currentOperation = DetailOperation.None;
             CancelEquipEnhanceTransition();
             ModelViewer.Instance.CancelPendingPreviewLoad();
             ModelViewer.Instance.StopStarFieldParticles();
-            isNavigatingToEquipDetail = false;
             base.OnClose();
             // 子 ViewModel 的生命周期由 CharacterDetailViewModel 统一管理
             characterDisposable.Clear();
@@ -669,6 +743,9 @@ namespace Game.UI.Components.CharacterDetail
 
         public override void OnRelease()
         {
+            isClosing = true;
+            ++operationVersion;
+            currentOperation = DetailOperation.None;
             CancelEquipEnhanceTransition();
             base.OnRelease();
             characterDisposable.Dispose();
