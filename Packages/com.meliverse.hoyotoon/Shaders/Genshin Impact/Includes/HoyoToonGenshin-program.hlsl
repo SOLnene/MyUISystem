@@ -485,33 +485,48 @@ float pupil_radial_depth(float2 uv)
 
 float2 pupil_refraction_uv(float2 uv, float3 viewInEye)
 {
-    if(abs(viewInEye.z) <= 0.0001f || _ParallaxScale <= 0.0f) return uv;
-    if(_UseOriginalEyeFrame < 0.5f && viewInEye.z < 0.0f) return uv;
+    bool originalEye = _UseOriginalEyeFrame > 0.5f;
+    if(!originalEye && (abs(viewInEye.z) <= 0.0001f || _ParallaxScale <= 0.0f || viewInEye.z < 0.0f)) return uv;
     float2 rayUV = -viewInEye.xy * (_ParallaxScale / viewInEye.z);
-    int steps = (int)ceil(16.0f - 12.0f * saturate(abs(viewInEye.z)));
+    int steps = (int)ceil(16.0f - 12.0f * (originalEye ? abs(viewInEye.z) : saturate(abs(viewInEye.z))));
+    float depthStep = 1.0f / steps;
     float upperDepth = 1.0f;
     float upperError = upperDepth - pupil_radial_depth(uv);
-    if(upperError <= 0.01f) return uv;
+    if(!originalEye && upperError <= 0.01f) return uv;
     float lowerDepth = upperDepth;
     float lowerError = upperError;
+    float2 coarseOffset = 0.0f;
 
     // Bracket the ray/depth crossing with 4-16 arithmetic steps; no texture reads in the search.
     [loop] for(int stepIndex = 1; stepIndex <= steps; ++stepIndex)
     {
-        lowerDepth = 1.0f - (float)stepIndex / steps;
-        lowerError = lowerDepth - pupil_radial_depth(uv + rayUV * (1.0f - lowerDepth));
-        if(lowerError <= 0.0f) break;
-        upperDepth = lowerDepth;
-        upperError = lowerError;
+        if(originalEye)
+        {
+            // The source steps even at an exact depth match, stopping only after crossing.
+            if(lowerError < 0.0f) break;
+            upperDepth = lowerDepth;
+            upperError = lowerError;
+            lowerDepth -= depthStep;
+            coarseOffset += rayUV * depthStep;
+        }
+        else lowerDepth = 1.0f - (float)stepIndex / steps;
+        lowerError = lowerDepth - pupil_radial_depth(uv + (originalEye ? coarseOffset : rayUV * (1.0f - lowerDepth)));
+        if(!originalEye)
+        {
+            if(lowerError <= 0.0f) break;
+            upperDepth = lowerDepth;
+            upperError = lowerError;
+        }
     }
 
     float intersectionDepth = lowerDepth;
     [unroll] for(int refinement = 0; refinement < 3; ++refinement)
     {
-        intersectionDepth = lerp(lowerDepth, upperDepth,
-            saturate(-lowerError / max(upperError - lowerError, 0.000001f)));
+        intersectionDepth = originalEye
+            ? (upperDepth * lowerError - upperError * lowerDepth) / (lowerError - upperError)
+            : lerp(lowerDepth, upperDepth, saturate(-lowerError / max(upperError - lowerError, 0.000001f)));
         float error = intersectionDepth - pupil_radial_depth(uv + rayUV * (1.0f - intersectionDepth));
-        if(abs(error) <= 0.01f) break;
+        if(abs(error) <= 0.01f) return uv + rayUV * (1.0f - intersectionDepth);
         if(error > 0.0f)
         {
             upperDepth = intersectionDepth;
@@ -523,7 +538,8 @@ float2 pupil_refraction_uv(float2 uv, float3 viewInEye)
             lowerError = error;
         }
     }
-    return uv + rayUV * (1.0f - intersectionDepth);
+    // The source keeps the coarse hit unless one of the three refinements converges.
+    return uv + (originalEye ? coarseOffset : rayUV * (1.0f - intersectionDepth));
 }
 
 void pupil_head_frame(float3 normalWS, float3 positionWS,
@@ -551,6 +567,44 @@ float pupil_light_angle(float2 direction)
     if(direction.y < 0.0f) angle -= 3.141593f;
     if(min(direction.x, direction.y) < 0.0f && max(direction.x, direction.y) >= 0.0f) angle = -angle;
     return angle;
+}
+
+float3 pupil_caustic(float2 uv, float2 refractedUV, float refractedAlpha,
+    float3 normalWS, float3 positionWS, float3 lightDirectionWS, out float irisMask)
+{
+    // Pupil_019 computes both UV modes; the caller selects pre-layer or post-MatCap addition.
+    // The noise-texture branch is not used by Odette.
+    float2 disc = (uv - 0.5f) / 0.46f;
+    irisMask = (1.0f - smoothstep(1.0f - 0.127f, 1.0f, dot(disc, disc)))
+        * saturate(_EyeMaskWithMatcap.Sample(sampler_linear_clamp, uv).a);
+    if(irisMask <= 0.01f) return 0.0f;
+
+    float3 headU, headV;
+    bool positiveSide;
+    pupil_head_frame(normalWS, positionWS, headU, headV, positiveSide);
+    // The decoded caustic side test is cross(face, headX), independent of the MatCap comparison frame.
+    positiveSide = dot(positionWS - _CharacterHeadCenterWorldPosition,
+        cross(-_CharacterHeadCenterXDirWS, normalize(_CharacterFaceWorldDirection))) > 0.0f;
+    headV = normalize(headV);
+    if(!positiveSide && _isUVMirror < 0.5f) headV = -headV;
+    float3 causticLight = normalize(normalize(lightDirectionWS) + _CausticLightDirectionOffset);
+    float2 lightInEye = float2(dot(headV, causticLight), dot(headU, causticLight));
+    float2 causticUV = lerp(uv, refractedUV, _CausticUseRefractedUV);
+    float2 radial = (causticUV - _CausticCenter) * 2.0f;
+    radial.x *= positiveSide ? -1.0f : 1.0f;
+    // UV center and an axial light have no 2D direction; avoid undefined rsqrt(0).
+    radial *= rsqrt(max(dot(radial, radial), 0.000001f));
+    lightInEye *= rsqrt(max(dot(lightInEye, lightInEye), 0.000001f));
+    float directionResponse = pow(saturate(dot(radial, -lightInEye)), _CausticDirectionSharpness);
+    float facing = dot(normalize(normalWS), causticLight);
+    float front = smoothstep(-_CausticFrontBackTransition, _CausticFrontBackTransition, facing);
+    float angleResponse = pow(saturate(1.0f - abs(facing)), _CausticAngleResponse) * front;
+    float response = 1.0f + _CausticLightInfluence * (directionResponse * angleResponse - 1.0f);
+    response = max(response, _CausticBackLightMin * (1.0f - front));
+    response = lerp(response, step(_CausticThreshold, response), _CausticBinary);
+    // Source alpha weights both modes; only the non-refracted final addition uses irisMask.
+    float sourceAlpha = lerp(_MainTex.Sample(sampler_MainTex, uv).a, refractedAlpha, _CausticUseRefractedUV);
+    return _CausticColor.rgb * (sourceAlpha * response);
 }
 
 float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
@@ -615,12 +669,24 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
             bool positiveSide;
             pupil_head_frame(i.normal, ws_pos.xyz, headU, headV, positiveSide);
             if(!positiveSide && _isUVMirror < 0.5f) headV = -headV;
-            viewInEye = float3(dot(view, headV) * (positiveSide ? -1.0f : 1.0f),
+            // The source ray uses the opposite side convention when UV mirroring is enabled.
+            float mirrorDirection = _isUVMirror < 0.5f ? 1.0f : -1.0f;
+            viewInEye = float3(dot(view, headV) * (positiveSide ? -1.0f : 1.0f) * mirrorDirection,
                 dot(view, headU), dot(view, i.normal));
         }
         irisUV = pupil_refraction_uv(uv_a, viewInEye);
     }
     float4 diffuse = _MainTex.Sample(sampler_MainTex, irisUV);
+    float3 unrefractedIris = diffuse.rgb;
+    float irisCompositionMask = 1.0f;
+    if(_UseOriginalEyeFrame > 0.5f)
+    {
+        float2 disc = (uv_a - 0.5f) / 0.46f;
+        irisCompositionMask = (1.0f - smoothstep(1.0f - 0.127f, 1.0f, dot(disc, disc)))
+            * saturate(_EyeMaskWithMatcap.Sample(sampler_linear_clamp, uv_a).a);
+        irisCompositionMask = irisCompositionMask > 0.01f ? irisCompositionMask : 0.0f;
+        unrefractedIris = _MainTex.Sample(sampler_MainTex, uv_a).rgb;
+    }
     [branch] if(_UseEyeHighlights > 0.5f && _UseDecodedEyeMatcap > 0.5f && i.v_col.r < 0.5f)
     {
         // Decode RG at iris UVs, then sample B at independent view-normal UVs.
@@ -650,8 +716,19 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         // Odette's original BaseMatcapBlendMode is additive (0), before the iris layers.
         diffuse.rgb += baseReflection * _BaseMatcapTint.rgb * _BaseMatcapIntensity;
     }
+    #ifdef _IS_PASS_BASE
+    float3 pupilCausticColor = 0.0f;
+    float pupilCausticMask = 0.0f;
+    [branch] if(_UseEyeCaustics > 0.5f && i.v_col.r < 0.5f)
+    {
+        pupilCausticColor = pupil_caustic(uv_a, irisUV, diffuse.a, i.normal, ws_pos.xyz, light, pupilCausticMask);
+        if(_CausticUseRefractedUV > 0.5f) diffuse.rgb += pupilCausticColor;
+    }
+    #endif
     [branch] if(_UseEyeLayers > 0.5f)
     {
+        bool originalEye = _UseOriginalEyeFrame > 0.5f;
+        float irisMask = irisCompositionMask;
         float2 eyeOffset = 0.0f;
         if(_UseEyeLayerParallax > 0.5f)
         {
@@ -661,23 +738,42 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
             float3 eyeBitangent = cross(normal, eyeTangent) * i.tangent.w;
             // Bound grazing-angle offsets to prevent the iris layers sliding out of the eye.
             eyeOffset = float2(dot(view, eyeTangent), dot(view, eyeBitangent)) / max(abs(dot(view, normal)), 0.25f);
+            if(originalEye)
+            {
+                float3 headU, headV;
+                bool positiveSide;
+                pupil_head_frame(i.normal, ws_pos.xyz, headU, headV, positiveSide);
+                if(!positiveSide && _isUVMirror < 0.5f) headV = -headV;
+                float mirrorDirection = _isUVMirror < 0.5f ? 1.0f : -1.0f;
+                float2 eyeView = float2(dot(view, headV) * (positiveSide ? -1.0f : 1.0f) * mirrorDirection, dot(view, headU));
+                eyeOffset = -eyeView * irisMask / max(dot(view, i.normal), 0.00001f);
+            }
         }
-        // Approximate straight-alpha composition. Keep base alpha for existing clipping/emission rules.
+        // Odette uses mode 0: strength weights both layer RGB and alpha; the disc masks the blend.
+        // Keep the comparison path and base alpha unchanged for existing clipping/emission rules.
         if(_ParallaxLayer1 > 0.5f)
         {
             float2 layerUV = uv_a * _ParallaxLayer1Tex_ST.xy + _ParallaxLayer1Tex_ST.zw;
             layerUV += eyeOffset * _ParallaxLayer1ParallaxScale;
-            float4 layer = _ParallaxLayer1Tex.Sample(sampler_linear_clamp, layerUV) * _ParallaxLayer1Tint;
-            diffuse.rgb = lerp(diffuse.rgb, layer.rgb * _ParallaxLayer1Intensity, saturate(layer.a));
+            float4 layer = _ParallaxLayer1Tex.Sample(sampler_linear_clamp, layerUV);
+            float weight = originalEye ? saturate(layer.a * _ParallaxLayer1Intensity) * irisMask
+                : saturate(layer.a * _ParallaxLayer1Tint.a);
+            diffuse.rgb = lerp(diffuse.rgb, layer.rgb * _ParallaxLayer1Tint.rgb * _ParallaxLayer1Intensity, weight);
         }
         if(_ParallaxLayer3 > 0.5f)
         {
             float2 layerUV = uv_a * _ParallaxLayer3Tex_ST.xy + _ParallaxLayer3Tex_ST.zw;
             layerUV += eyeOffset * _ParallaxLayer3ParallaxScale;
-            float4 layer = _ParallaxLayer3Tex.Sample(sampler_linear_clamp, layerUV) * _ParallaxLayer3Tint;
-            diffuse.rgb = lerp(diffuse.rgb, layer.rgb * _ParallaxLayer3Intensity, saturate(layer.a));
+            float4 layer = _ParallaxLayer3Tex.Sample(sampler_linear_clamp, layerUV);
+            float weight = originalEye ? saturate(layer.a * _ParallaxLayer3Intensity) * irisMask
+                : saturate(layer.a * _ParallaxLayer3Tint.a);
+            diffuse.rgb = lerp(diffuse.rgb, layer.rgb * _ParallaxLayer3Tint.rgb * _ParallaxLayer3Intensity, weight);
         }
     }
+    // Pupil_019 blends the whole inner composite back to the original-UV color before outer reflection.
+    // This mask is separate from each layer's alpha weight; preserve alpha for the existing passes.
+    if(_UseOriginalEyeFrame > 0.5f && i.v_col.r < 0.5f)
+        diffuse.rgb = lerp(unrefractedIris, diffuse.rgb, irisCompositionMask);
     float4 lightmap = _LightMapTex.Sample(sampler_linear_repeat, uv_a);
 
     // MATERIAL REGION 
@@ -1154,14 +1250,27 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
                     float2 spherePlane = irisPlane * (1.0f - 2.0f * step(0.5f, _EyeMatcapInvertUV.xy));
                     float3 outerSphere = normalize(eyeTangent * spherePlane.x + eyeBitangent * spherePlane.y
                         + eyeNormal * sqrt(max(1.0f - irisRadiusSquared, 0.000001f)));
-                    float3 outerNormal = normalize(lerp(eyeNormal, outerSphere, _EyeMatcapSphericalNormalLerp));
-                    outerNormal = irisRadiusSquared <= 1.0f ? outerNormal : eyeNormal;
+                    float3 outerBaseNormal = eyeNormal;
+                    if(_UseOriginalEyeFrame > 0.5f)
+                    {
+                        // Pupil_019 uses the head axes here, not the projected per-pixel eye frame.
+                        float3 headRight = cross(_CharacterFaceWorldDirection, _CharacterHeadCenterXDirWS);
+                        float3 headUp = -_CharacterHeadCenterXDirWS;
+                        float3 headForward = cross(headRight, headUp);
+                        float3 sphereLocal = normalize(float3(spherePlane, sqrt(max(0.0f, 1.0f - irisRadiusSquared))));
+                        outerSphere = normalize(headRight * sphereLocal.x + headUp * sphereLocal.y + headForward * sphereLocal.z);
+                        outerBaseNormal = i.normal;
+                    }
+                    float3 outerNormal = normalize(lerp(outerBaseNormal, outerSphere, _EyeMatcapSphericalNormalLerp));
+                    outerNormal = irisRadiusSquared <= 1.0f ? outerNormal : outerBaseNormal;
                     float2 outerUV = mul((float3x3)UNITY_MATRIX_V, outerNormal).xy * 0.5f + 0.5f;
                     float3 reflection = _EyeMaskWithMatcap.Sample(sampler_linear_clamp, outerUV).rgb
                         * _EyeMatcapTint.rgb * _EyeMatcapIntensity;
                     // Odette's original EyeMatcapBlendMode is 1: add reflection modulated by iris color.
                     float3 reflectedColor = out_color.rgb + reflection * out_color.rgb;
-                    out_color.rgb = lerp(out_color.rgb, reflectedColor, irisMask);
+                    // The source gates this block at mask > 0.01; it does not scale the reflection by it again.
+                    float reflectionWeight = _UseOriginalEyeFrame > 0.5f ? (irisMask > 0.01f ? 1.0f : 0.0f) : irisMask;
+                    out_color.rgb = lerp(out_color.rgb, reflectedColor, reflectionWeight);
                 }
                 else
                 {
@@ -1180,6 +1289,11 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
             }
         }
 
+        // Pupil_019 lines 950-952: non-refracted caustics bypass the layers and outer reflection.
+        [branch] if(_UseEyeCaustics > 0.5f && _CausticUseRefractedUV < 0.5f)
+        {
+            out_color.rgb += pupilCausticColor * pupilCausticMask;
+        }
 
         #if defined(can_debug)
             if(_DebugMode) // debuuuuuug

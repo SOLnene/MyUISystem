@@ -54,6 +54,7 @@ namespace HoyoToon
         private bool _wasUsed = false;
         private bool _doReloadNextDraw = false;
         private bool _didSwapToShader = false;
+        private string[] _propertyOrder;
 
         //EditorData
         public MaterialEditor Editor;
@@ -263,6 +264,7 @@ namespace HoyoToon
 
             //load display names from file if it exists
             MaterialProperty[] props = Properties;
+            _propertyOrder = props.Select(p => p.name).ToArray();
             Dictionary<string, string> labels = LoadDisplayNamesFromFile();
             LoadLocales();
 
@@ -495,6 +497,16 @@ namespace HoyoToon
             IsFirstCall = true;
         }
 
+        private bool HasPropertyOrderChanged(MaterialProperty[] props)
+        {
+            if (_propertyOrder == null || _propertyOrder.Length != props.Length) return true;
+            for (int i = 0; i < props.Length; i++)
+            {
+                if (_propertyOrder[i] != props[i].name) return true;
+            }
+            return false;
+        }
+
         public override void OnGUI(MaterialEditor materialEditor, MaterialProperty[] props)
         {
 #if UNITY_2022_1_OR_NEWER
@@ -503,7 +515,9 @@ namespace HoyoToon
 
             IsDrawing = true;
             //Init
-            bool reloadUI = _isFirstOnGUICall || (_doReloadNextDraw && Event.current.type == EventType.Layout) || (materialEditor.target as Material).shader != Shader;
+            // Reimports can reorder foldout markers without changing the Shader instance.
+            bool reloadUI = _isFirstOnGUICall || (_doReloadNextDraw && Event.current.type == EventType.Layout) || (materialEditor.target as Material).shader != Shader
+                || (Event.current.type == EventType.Layout && HasPropertyOrderChanged(props));
             if (reloadUI)
             {
                 InitEditorData(materialEditor);

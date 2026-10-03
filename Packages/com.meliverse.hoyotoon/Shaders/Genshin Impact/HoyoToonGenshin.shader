@@ -154,6 +154,22 @@ Shader "HoyoToon/Genshin/Character"
             [HDR] _EyeHighlightColor ("Eye Highlight Color", Color) = (1,1,1,1)
             _HighlightIntensity ("Eye Highlight Intensity", Range(0,4)) = 1
             _HighlightRampWidth ("Eye Highlight Ramp Width", Range(0.1,2)) = 1
+
+            [HideInInspector] start_eyecaustics ("Iris Caustics--{reference_property:_UseEyeCaustics}", Float) = 0
+                [Toggle] _UseEyeCaustics ("Enable Iris Caustics", Float) = 0
+                [Helpbox] _EyeCausticsHelp ("Original non-noise branch. Refracted UV adds before iris layers; original UV adds after outer reflection, weighted by the iris mask.", Float) = 0
+                [Toggle] _CausticUseRefractedUV ("Use Refracted UV", Float) = 0
+                _CausticCenter ("Caustic UV Center", Vector) = (0.5,0.5,0,0)
+                [HDR] _CausticColor ("Caustic Color", Color) = (0.8451967,0.5068663,0.9191176,1)
+                _CausticDirectionSharpness ("Direction Sharpness", Range(0.01,8)) = 1.77
+                _CausticAngleResponse ("Angle Response", Range(0.01,8)) = 2.63
+                _CausticLightInfluence ("Light Influence", Range(0,1)) = 0.707
+                _CausticFrontBackTransition ("Front / Back Transition", Range(0.001,1)) = 0.079
+                _CausticBackLightMin ("Back Light Minimum", Range(0,1)) = 0.5
+                _CausticLightDirectionOffset ("Light Direction Offset", Vector) = (0,0,0,0)
+                [Toggle] _CausticBinary ("Binary Caustic Response", Float) = 0
+                _CausticThreshold ("Binary Threshold", Range(0,1)) = 0.5
+            [HideInInspector] end_eyecaustics ("", Float) = 0
         [HideInInspector] end_eyehighlights ("", Float) = 0
 
         //Normal Map

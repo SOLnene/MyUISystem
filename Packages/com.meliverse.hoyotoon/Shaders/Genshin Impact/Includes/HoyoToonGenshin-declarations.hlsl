@@ -50,6 +50,18 @@ float _HighlightRampWidth;
 float4 _EyeMatcapTint;
 float4 _EyeMatcapInvertUV;
 float4 _EyeHighlightColor;
+float _UseEyeCaustics;
+float _CausticUseRefractedUV;
+float2 _CausticCenter;
+float4 _CausticColor;
+float _CausticDirectionSharpness;
+float _CausticAngleResponse;
+float _CausticLightInfluence;
+float _CausticFrontBackTransition;
+float _CausticBackLightMin;
+float3 _CausticLightDirectionOffset;
+float _CausticBinary;
+float _CausticThreshold;
 Texture2D _LightMapTex; // this is both the body/hair lightmap texture and the faceshadow texture
 #if defined(faceishadow)
     Texture2D _FaceMapTex; // this is the facelightmap texture
