@@ -4,6 +4,16 @@ float materialID(float alpha)
 
     float material = 1.0f;
 
+    // Authored regions have exclusive upper bounds; retain legacy boundaries outside native modes.
+    if (_UseNativeBodyResponse > 0.5f || _ShiningMaterialBranch > 0.5f)
+    {
+        material = (_UseMaterial2 && region >= 0.8f) ? 2.0f : material;
+        material = (_UseMaterial3 && region >= 0.4f && region < 0.6f) ? 3.0f : material;
+        material = (_UseMaterial4 && region >= 0.2f && region < 0.4f) ? 4.0f : material;
+        material = (_UseMaterial5 && region >= 0.6f && region < 0.8f) ? 5.0f : material;
+        return material;
+    }
+
     material = (_UseMaterial2 && (region >= 0.8f)) ? 2.0f : 1.0f;
     material = (_UseMaterial3 && (region >= 0.4f && region <= 0.6f)) ? 3.0f : material;
     material = (_UseMaterial4 && (region >= 0.2f && region <= 0.4f)) ? 4.0f : material;
@@ -420,6 +430,42 @@ void normal_mapping(float3 normalmap, float3 vertexws, float scale, float2 uv, i
 }
 
 
+void cloth_normal_mapping(float3 packedNormal, float3 derivativePosition, float2 uv,
+    float3 geometryNormal, inout float3 normal, out float3 tangent, out float3 bitangent)
+{
+    // The native clothing branch reconstructs Z from encoded RG, not decoded/scaled XY.
+    float3 bump = float3((packedNormal.rg * 2.0f - 1.0f) * _BumpScale,
+        sqrt(1.0f - min(1.0f, dot(packedNormal.rg, packedNormal.rg))));
+    if (_DummyFixedForNormal < 0.5f)
+        bump = normalize(float3(packedNormal.rg * 2.0f - 1.0f, max(1.0f - _BumpScale, 0.001f)));
+
+    float3 p_dx = ddx(derivativePosition.yzx);
+    float3 p_dy = ddy(derivativePosition.zxy);
+    float2 uv_dx = ddx(uv);
+    float2 uv_dy = ddy(uv);
+    float3 t_base = p_dy.zxy * geometryNormal.zxy - p_dy * geometryNormal.yzx;
+    float3 b_base = geometryNormal.yzx * p_dx.yzx - p_dx * geometryNormal.zxy;
+    tangent = t_base * uv_dx.x + b_base * uv_dy.x;
+    bitangent = t_base * uv_dx.y + b_base * uv_dy.y;
+    float basisLength = max(dot(tangent, tangent), dot(bitangent, bitangent));
+    // Collapsed UV triangles cannot define a frame; retain their authored mesh normal.
+    if (basisLength <= 1e-20f)
+    {
+        tangent = 0.0f;
+        bitangent = 0.0f;
+        normal = geometryNormal;
+        return;
+    }
+    float invLength = rsqrt(basisLength);
+    tangent *= invLength;
+    bitangent *= invLength;
+    tangent *= rsqrt(max(0.001f, dot(tangent, tangent)));
+    bitangent *= rsqrt(max(0.001f, dot(bitangent, bitangent)));
+    normal = bump.z <= 0.99f
+        ? normalize(tangent * bump.x + bitangent * bump.y + geometryNormal * bump.z)
+        : geometryNormal;
+}
+
 void detail_line(float2 sspos, float sdf, inout float3 diffuse)
 {
     float3 line_color = (_TextureLineMultiplier.xyz * diffuse.xyz - diffuse.xyz) * _TextureLineMultiplier.www;
@@ -491,7 +537,8 @@ float3 shadow_area_ramp(float lightmapao, float vertexao, float vertexwidth, flo
     float shadow_bright = 0.95f < shadow_thresh;
     float shadow_dark = shadow_thresh < 0.05f;
 
-    float shadow_area = (shadow_bright) ? 1.0f : ((ndotl * 0.5f + 0.5f) + shadow_thresh) * 0.5f;
+    float lightScale = (_UseNativeBodyResponse > 0.5f || _ShiningMaterialBranch > 0.5f) ? 0.4975f : 0.5f;
+    float shadow_area = (shadow_bright) ? 1.0f : ((ndotl * lightScale + 0.5f) + shadow_thresh) * 0.5f;
     shadow_area = (shadow_dark) ? 0.0f : shadow_area;
 
     float shadow_check = shadow_area < _LightArea;
@@ -646,6 +693,19 @@ void shadow_color(in float lightmapao, in float vertexao, in float customao, in 
             float3 nightramp = _PackedShadowRampTex.SampleLevel(sampler_linear_clamp, night_ramp_coords, 0.0f);
             float3 ramp = lerp(dayramp, nightramp, night_shift);
             color = lerp(1.0f, ramp, saturate(shadow.y + (1.0f - ao)));
+            // This native Ramp composition assumes no external occlusion; retain the existing AO/cast-shadow path otherwise.
+            if((_UseNativeBodyResponse > 0.5f || _ShiningMaterialBranch > 0.5f) && ao == 1.0f)
+            {
+                float soft_enabled[5] = {_useShadowSoft, _useShadowSoft2, _useShadowSoft3, _useShadowSoft4, _useShadowSoft5};
+                float soft_range[5] = {_shadowSoftRange, _shadowSoftRange2, _shadowSoftRange3, _shadowSoftRange4, _shadowSoftRange5};
+                int index = (int)get_index(material_id);
+                // Original flags are nonzero booleans: e.g. Body region 4 stores 0.2, not a blend weight.
+                if(soft_enabled[index] != 0.0f)
+                {
+                    float weight = min(1.0f, saturate(2.0f * ramp.r * ramp.g * ramp.b - 1.0f) / max(0.001f, soft_range[index]));
+                    color = lerp(ramp, 1.0f, weight);
+                }
+            }
             #endif
         }
         else if(_UseFaceMapNew)
@@ -657,6 +717,43 @@ void shadow_color(in float lightmapao, in float vertexao, in float customao, in 
             color = lerp(1.0f, outcolor, shadow.x);
         }
     #endif
+}
+
+// Native Body and cloth keep the metal base and highlight separate until additive composition.
+void native_body_metal(float3 normal, float3 view, float3 light, float shadowMask,
+    float shadowTransition, float environmentShadow, float specularArea,
+    inout float3 color, out float3 specular)
+{
+    // Body01's older compiled branch has neither offset/mirrored specular nor optional metal AO.
+    bool body01Metal = _UseNativeBodyResponse <= 0.5f && _ShiningMaterialBranch > 0.5f && _ShiningMaterialBranch < 1.5f;
+    float3 cameraNormal = mul(normal, (float3x3)UNITY_MATRIX_I_V);
+    cameraNormal.y += body01Metal ? 0.0f : _MTSpecularOffset;
+    cameraNormal = normalize(cameraNormal);
+    float2 matcapUV = float2(cameraNormal.x * _MTMapTileScale, cameraNormal.y) * 0.5f + 0.5f;
+    float matcap = saturate(_MTMap.Sample(sampler_linear_repeat, matcapUV).r * _MTMapBrightness);
+    color *= lerp(_MTMapDarkColor.rgb, _MTMapLightColor.rgb, matcap);
+
+    float3 halfVector = normalize(light + view);
+    float power = pow(max(0.001f, dot(normal, halfVector)), _MTShininess);
+    float intensity = saturate(power * _MTSpecularScale);
+    float3 highlight = _MTUseSpecularRamp > 0.0f
+        ? _MTSpecularRamp.Sample(sampler_linear_clamp, float2(intensity, 0.5f)).rgb
+        : intensity * _MTSpecularColor.rgb;
+    specular = intensity > _MTSharpLayerOffset ? _MTSharpLayerColor.rgb : highlight * specularArea;
+    if (!body01Metal)
+    {
+        float3 mirroredHalf = normalize(light * float3(-1.0f, 1.0f, -1.0f) + view);
+        float mirrored = min(1.0f, pow(max(0.001f, dot(normal, mirroredHalf)), _MTShininess * 10.0f));
+        specular += mirrored * _MTSpecularShadowScale * specularArea;
+    }
+    specular *= 1.0f + environmentShadow * (_MTSpecularAttenInShadow - 1.0f);
+
+    // The approved Unity adapter supplies the missing native character-level environment state.
+    shadowMask = max(shadowMask, environmentShadow > 0.00001f ? 1.0f : 0.0f);
+    float3 shadowTint = _UseShadowTransition > 0.0f
+        ? lerp(1.0f, _MTShadowMultiColor.rgb, shadowTransition) : _MTShadowMultiColor.rgb;
+    color *= shadowMask > 0.0f ? shadowTint : 1.0f;
+    if (body01Metal || _MTSpecularAO > 0.0f) specular *= 1.0f - shadowMask;
 }
 
 void metalics(in float3 shadow, in float3 normal, float3 ndoth, float speculartex, float backfacing, inout float3 color)
@@ -746,11 +843,21 @@ void specular_color(in float ndoth, in float3 shadow, in float lightmapspec, in 
             _SpecularColor5, 
         };
         
-        float term = ndoth;
-        term = pow(max(ndoth, 0.001f), spec_array[get_index(material_id)].x);
-        float check = term > (-lightmaparea + 1.015);
-        specular = term * (color_array[get_index(material_id)] * spec_array[get_index(material_id)].y) * lightmapspec; 
-        specular = lerp((float3)0.0f, specular * (float3)0.5f, check);
+        bool native_response = _ShiningMaterialBranch > 0.5f || _UseNativeBodyResponse > 0.5f;
+        float term = pow(max(ndoth, native_response ? 0.0001f : 0.001f), spec_array[get_index(material_id)].x);
+        if (native_response)
+        {
+            // Native toon specular uses the power only as a cutoff, not an extra intensity falloff.
+            specular = term > (1.0f - lightmaparea)
+                ? color_array[get_index(material_id)].rgb * spec_array[get_index(material_id)].y * lightmapspec
+                : 0.0f;
+        }
+        else
+        {
+            float check = term > (-lightmaparea + 1.015);
+            specular = term * (color_array[get_index(material_id)] * spec_array[get_index(material_id)].y) * lightmapspec;
+            specular = lerp((float3)0.0f, specular * (float3)0.5f, check);
+        }
     #endif 
 }
 
@@ -1708,9 +1815,325 @@ void nbr (in float3 normal, in float3 view, in float3 light, in float4 lightmap,
     #endif
 }
 
-// even if i dont push this for the january update, id like to get the back end started
-void character_stocking(in float3 normal, in float3 view, in float3 light, in float2 uv, in float4 lightmap, inout float4 color)
+float silk_cell_hash(float2 cell)
 {
+    float2 value = frac(cell * float2(123.34f, 456.21f));
+    value += dot(value, value + 45.32f);
+    return frac(value.x * value.y);
+}
+
+float silk_thread_noise(float2 uv)
+{
+    float2 cell = floor(uv);
+    float2 weight = frac(uv);
+    weight = weight * weight * (3.0f - 2.0f * weight);
+    return lerp(lerp(silk_cell_hash(cell), silk_cell_hash(cell + float2(1,0)), weight.x),
+                lerp(silk_cell_hash(cell + float2(0,1)), silk_cell_hash(cell + 1.0f), weight.x), weight.y);
+}
+
+float silk_anisotropic_lobe(float3 normal, float3 tangent, float3 bitangent,
+    float3 view, float3 light, float3 halfVector, float roughness, float anisotropy)
+{
+    float aspect = sqrt(1.0f - 0.9f * min(abs(anisotropy), 0.99f));
+    float2 axes = roughness * ((anisotropy < 0.0f) ? float2(aspect, rcp(aspect)) : float2(rcp(aspect), aspect));
+    float nh = saturate(dot(normal, halfVector));
+    float nl = max(0.0f, dot(normal, light));
+    float nv = max(0.00001f, dot(normal, view));
+    float3 ellipse = float3(dot(tangent, halfVector) / axes.x, dot(bitangent, halfVector) / axes.y, nh);
+    float ellipseLength = dot(ellipse, ellipse);
+    float distribution = rcp(max(0.0000001f, 3.14159265f * axes.x * axes.y * ellipseLength * ellipseLength));
+    float viewLength = length(float3(axes.x * dot(tangent, view), axes.y * dot(bitangent, view), nv));
+    float lightLength = length(float3(axes.x * dot(tangent, light), axes.y * dot(bitangent, light), nl));
+    return distribution * (0.5f / max(0.00001f, nl * viewLength + nv * lightLength));
+}
+
+// Body_003 builds the thread frame around the combined body/stocking normal.
+// RG, B and A have distinct roles, not a Unity normal-map encoding.
+float3 character_silk(float2 uv, float3 positionWS, float3 surfaceNormal,
+    float3 view, float3 light, float4 lightmap, float3 inputColor)
+{
+    float specularMask = (_AnisoSilkUseMatTypeAsSpecMask > 0.5f) ? lightmap.r : 1.0f;
+    uv = uv * _AnisoSilkThreadMapST.xy + _AnisoSilkThreadMapST.zw;
+    float4 packed = _AnisoSilkThreadMap.Sample(sampler_linear_repeat, uv);
+    float mask = (_AnisoSilkUseThreadMapMask > 0.5f) ? saturate(packed[(int)_AnisoSilkMaskChannel]) : 1.0f;
+    if (specularMask <= 0.0f || mask <= 0.0f) return 0.0f;
+
+    float2 noise = float2(silk_thread_noise(uv * _AnisoSilkThreadNoiseTiling),
+        silk_thread_noise((uv + float2(17.13f, 41.57f)) * (_AnisoSilkThreadNoiseTiling * 1.37f)));
+    float2 threadUV = uv + (noise - 0.5f) * (_AnisoSilkThreadNoiseStrength * 0.05f);
+    float2 xy = _AnisoSilkThreadMap.Sample(sampler_linear_repeat, threadUV).rg * 2.0f - 1.0f;
+    float z = sqrt(max(0.0f, 1.0f - dot(xy, xy)));
+    float3 threadNormal = normalize(float3(xy * _AnisoSilkThreadNormalStrength,
+        lerp(1.0f, z, _AnisoSilkThreadNormalStrength)));
+
+    float3 normal = normalize(surfaceNormal);
+    float3 dx = ddx(positionWS);
+    float3 dy = ddy(positionWS);
+    float2 uvDx = ddx(uv);
+    float2 uvDy = ddy(uv);
+    float3 dxPerpendicular = cross(normal, dx);
+    float3 dyPerpendicular = cross(dy, normal);
+    float3 tangent = dxPerpendicular * uvDy.x + dyPerpendicular * uvDx.x;
+    float3 bitangent = dxPerpendicular * uvDy.y + dyPerpendicular * uvDx.y;
+    float frameScale = rsqrt(max(dot(tangent, tangent), dot(bitangent, bitangent)) + 0.00000001f);
+    tangent = normalize(tangent * frameScale);
+    bitangent = normalize(bitangent * frameScale);
+    if (_AnisoSilkSwapTB > 0.5f) { float3 previousTangent = tangent; tangent = bitangent; bitangent = previousTangent; }
+    normal = normalize(tangent * threadNormal.x + bitangent * threadNormal.y + normal * threadNormal.z);
+
+    view = normalize(view);
+    light = normalize(light);
+    if (_AnisoSilkUseCameraDirAsLightDir > 0.5f)
+    {
+        float3 reflectedView = reflect(-view, normal);
+        light = normalize(lerp(light, reflectedView, _AnisoSilkCameraLightDirBlend));
+    }
+    tangent = normalize(tangent - normal * dot(normal, tangent));
+    bitangent = normalize(cross(normal, tangent));
+    float smoothness = saturate(lerp(_AnisoSilkSmoothnessMin, _AnisoSilkSmoothnessMax, lightmap.b)
+        + (packed.b * 2.0f - 1.0f) * _AnisoSilkThreadSmoothnessScale);
+    float roughness = max(0.01f, (1.0f - smoothness) * (1.0f - smoothness));
+    float3 tint = _AnisoSilkSpecularColor.rgb;
+    if (_AnisoSilkUseInputColorForFColor > 0.5f) tint = lerp(tint, saturate(inputColor), _AnisoSilkInputColorBlendStrength);
+    float luminance = max(0.000001f, dot(tint, float3(0.299f, 0.587f, 0.114f)));
+    float nl = max(0.0f, dot(normal, light));
+    float3 response = 0.0f;
+    if (nl > 0.0f)
+    {
+        float3 halfVector = normalize(view + light);
+        float lobe = silk_anisotropic_lobe(normal, tangent, bitangent, view, light, halfVector, roughness, _AnisoSilkAnisotropy);
+        if (_AnisoSilkUseSecondLobe > 0.5f)
+            lobe += _AnisoSilkSecondLobeStrength * silk_anisotropic_lobe(normal, tangent, bitangent, view, light, halfVector,
+                max(0.01f, roughness * _AnisoSilkSecondLobeRoughnessScale), _AnisoSilkAnisotropy * 0.5f);
+        response = lobe * (tint / luminance) * nl;
+    }
+    // Preserve the original derivative-based highlight softening before amplitude and mask.
+    float peak = max(response.r, max(response.g, response.b));
+    float width = max(0.0001f, abs(ddx(peak)) + abs(ddy(peak)));
+    float coverage = min(1.0f, (peak + width) / (1.0f + 2.0f * width));
+    response *= coverage * coverage * (3.0f - 2.0f * coverage);
+    response *= luminance * (_AnisoSilkSpecularIntensity * specularMask) * mask;
+
+    float colorIDMin = _AnisoSilkThreadIDColorSelect * 0.2f;
+    if (_AnisoSilkUseThreadIDColor > 0.5f && mask >= colorIDMin && mask < colorIDMin + 0.2f)
+        response = dot(response, float3(0.2126f, 0.7152f, 0.0722f)) * _AnisoSilkThreadIDColor.rgb;
+    float grey = dot(response, float3(0.2126f, 0.7152f, 0.0722f));
+    response = max(0.0f, lerp(grey.xxx, response, _AnisoSilkSpecularSaturation));
+    return min(64.0f, response * _AnisoSilkSpecularFinalIntensity);
+}
+
+float4 body_shining_hash(float2 cell)
+{
+    float4 p = frac(cell.xyxy * float4(0.0973f, 0.103f, 0.1031f, 0.0973f));
+    p += dot(p.zyxw, p.wxzy + 33.33f);
+    return frac(p.zzxx * p.yyww + p * float4(0.618309915f, 0.367879391f, 0.525f, 0.525f));
+}
+
+float3 body_shining_dot(float2 localUV, float2 center, float4 random, float cameraDistance, float time)
+{
+    float size = _ShiningSize_V2 * (0.5f + random.z);
+    float2 offset = localUV - center;
+    float coverage = saturate((size - dot(offset, offset)) / (size + 0.00001f));
+    float phase = ((1.0f - random.w) / _ShiningDensity_V2 + cameraDistance) * 6.28318501f;
+    float pulse = sin(phase + time * _ShiningFrequency_V2);
+    return random.xyz * max(0.0f, coverage * pulse) * step(1.0f - _ShiningDensity_V2, random.w);
+}
+
+float3 body_shining_dots(float2 uv, float3 cameraOffset, float time)
+{
+    uv *= _ShiningTiling_ID1;
+    float2 cell = floor(uv);
+    float2 localUV = frac(uv);
+    float4 jitterSeed = frac(cell.xyxy * float4(0.1031f, 0.103f, 0.0973f, 0.0973f));
+    float3 mixed = jitterSeed.xyz + dot(jitterSeed, jitterSeed.wzxy + 33.33f);
+    float2 jitter = frac(mixed.xx * mixed.yy + mixed.zy * float2(0.618309915f, 0.367879391f)) * 2.0f - 1.0f;
+    float4 first = body_shining_hash(cell + 0.5f);
+    float4 second = body_shining_hash(cell + jitter);
+    float distance = length(cameraOffset * float3(_CameraOffsetShining_ID1, _CameraOffsetShining_ID1, 1.0f));
+    float3 dots = body_shining_dot(localUV, min(0.75f, first.xy + 0.5f), first, distance, time);
+    dots += body_shining_dot(localUV, clamp(second.xy + jitter, 0.25f, 0.75f), second, distance, time);
+    dots *= _ShiningIntensity_V2 * _ShiningColor_V2.rgb;
+    return max(0.0f, lerp(dots, dot(dots, float3(0.2125f, 0.7154f, 0.0721f)).xxx, _ShiningColorBlend_V2));
+}
+
+float3 body_shining_shape(float shape, float4 random, float cameraScale,
+    float density, float frequency, float3 tint, float3 cameraOffset, float time)
+{
+    float distance = length(cameraOffset * float3(cameraScale, cameraScale, 1.0f));
+    float phase = ((1.0f - random.w) / density + distance) * 6.28318501f + time * frequency;
+    float pulse = (sin(phase) * 0.5f + 0.5f) * step(1.0f - density, random.w);
+    return max(0.0f, (random.xyz * 0.5f + 0.5f) * shape * pulse * tint);
+}
+
+// Body_003's enabled V2 branch uses shared ID samplers, not each V2 group's UV fields.
+// This Body specialization uses packed normal B for regions; Lightmap B suppresses group 1.
+float3 character_body_shining(float2 dotUV, float2 shape1UV, float2 shape2UV,
+    float2 masks, float3 cameraOffset, float time)
+{
+    // Keep the two shared samplers together, before the V2 region gates.
+    float4 tiled = float4(shape1UV, shape2UV) * float4(_ShiningTiling_ID3.xx, _ShiningTiling_ID4.xx);
+    float4 cells = floor(tiled);
+    float4 shapeUVs = frac(tiled) - 0.5f;
+    shapeUVs.xy = shapeUVs.xy / _ShiningCustomIDTextureRectSizeOffset_ID3.xy + 0.5f + _ShiningCustomIDTextureRectSizeOffset_ID3.zw;
+    // Sample ID3 across the quad, then mask the rectangle; this preserves atlas mip gradients.
+    // Native mode retains its authored implicit sampling; explicit gradients stabilize only legacy mode.
+    float shape1Mask = _UseNativeBodyResponse > 0.5f
+        ? _ShiningCustomIDMask_V2.Sample(sampler_linear_repeat, saturate(shapeUVs.xy)).b
+        : _ShiningCustomIDMask_V2.SampleGrad(sampler_linear_repeat, saturate(shapeUVs.xy),
+            ddx(saturate(shapeUVs.xy)), ddy(saturate(shapeUVs.xy))).b;
+    shape1Mask *= all(shapeUVs.xy >= 0.0f) && all(shapeUVs.xy <= 1.0f);
+    shapeUVs.xy = shapeUVs.zw / _ShiningCustomIDTextureRectSizeOffset_ID4.xy + 0.5f + _ShiningCustomIDTextureRectSizeOffset_ID4.zw;
+    float shape2Mask = 0.0f;
+    // Keep quad gradients outside the rectangle branch so unrelated shader branches cannot alter its LOD.
+    float2 shape2dx = ddx(saturate(shapeUVs.xy));
+    float2 shape2dy = ddy(saturate(shapeUVs.xy));
+    if (all(shapeUVs.xy >= 0.0f) && all(shapeUVs.xy <= 1.0f))
+    {
+        shapeUVs.xy = saturate(shapeUVs.xy);
+        shape2Mask = _UseNativeBodyResponse > 0.5f
+            ? _ShiningCustomIDMask_V2.Sample(sampler_linear_repeat, shapeUVs.xy).b
+            : _ShiningCustomIDMask_V2.SampleGrad(sampler_linear_repeat, shapeUVs.xy, shape2dx, shape2dy).b;
+    }
+    float3 shape1 = body_shining_shape(shape1Mask, body_shining_hash(cells.xy),
+        _CameraOffsetShining_ID3, _ShiningDensity_V2_CopyID_1, _ShiningFrequency_V2_CopyID_1,
+        _ShiningIntensity_V2_CopyID_1 * _ShiningColor_V2_CopyID_1.rgb, cameraOffset, time);
+    float3 shape2 = body_shining_shape(shape2Mask, body_shining_hash(cells.zw),
+        _CameraOffsetShining_ID4, _ShiningDensity_V2_CopyID_2, _ShiningFrequency_V2_CopyID_2,
+        _ShiningIntensity_V2_CopyID_2 * _ShiningColor_V2_CopyID_2.rgb, cameraOffset, time);
+    float3 result = 0.0f;
+    if (masks.x >= 0.8f)
+    {
+        if (_ShiningSize_V2 > 0.0f) result += body_shining_dots(dotUV, cameraOffset, time);
+        if (_UseCharacterShining_V2_CopyID_2 > 0.5f)
+            result += shape2;
+    }
+    if (masks.x >= 0.4f && masks.x < 0.6f && masks.y <= 0.0f && _UseCharacterShining_V2_CopyID_1 > 0.5f)
+        result += shape1;
+    return result;
+}
+
+struct ClothShiningSample
+{
+    float4 random;
+    float shape;
+    float densityMask;
+};
+
+ClothShiningSample cloth_shining_sample(float2 uv, float tiling, float vertexMask,
+    float4 rect, int id, int channel)
+{
+    float2 tiled = uv * tiling;
+    float2 cell = floor(tiled);
+    float2 local = frac(tiled);
+    ClothShiningSample result;
+    result.random = body_shining_hash(cell);
+
+    // Native density is evaluated at the UV cell center, not at each covered fragment.
+    // Default derivatives retain the package's Shader Model 4 compilation target.
+    float2 dx = ddx(tiled), dy = ddy(tiled);
+    float dcx = ddx(vertexMask), dcy = ddy(vertexMask);
+    float det = dx.x * dy.y - dx.y * dy.x;
+    float centerMask = vertexMask;
+    if (abs(det) > 0.000001f)
+        centerMask += dot(float2(dcx * dy.y - dcy * dx.y, dcy * dx.x - dcx * dy.x) / det, 0.5f - local);
+    float2 seed = cell + (result.random.xy - 0.5f) * _ShiningClothSeedJitter[id] + 300.0f;
+    float4 p = frac(seed.xyxy * float4(0.1031f, 0.103f, 0.0973f, 0.0973f));
+    p.xyz += dot(p, p.wzxy + 33.33f);
+    result.densityMask = step(frac(p.x * p.y + 0.618309915f * p.z), saturate(centerMask));
+
+    float angle = radians(_ShiningClothRotation[id]) + (result.random.x - 0.5f) * 6.28318501f * _ShiningClothRandomRotation[id];
+    // ID1 and ID4 have mirrored fixed rotations on the two authored UV islands.
+    if (id == 0 || id == 3) angle *= uv.x >= 0.14f ? 1.0f : -1.0f;
+    float s, c;
+    sincos(angle, s, c);
+    float2 offset = local - 0.5f;
+    offset = float2(offset.x * c - offset.y * s, offset.y * c + offset.x * s);
+    float size = lerp(1.0f, lerp(_ShiningClothRandomSizeMin[id], _ShiningClothRandomSizeMax[id], result.random.z), _ShiningClothRandomSize[id]);
+    float2 shapeUV = offset / (rect.xy * size) + 0.5f + rect.zw;
+    result.shape = 0.0f;
+    if (all(shapeUV >= 0.0f) && all(shapeUV <= 1.0f))
+    {
+        shapeUV = saturate(shapeUV);
+        if (id == 0) shapeUV.y *= 0.9f;
+        result.shape = _ShiningCustomIDMask_V2.Sample(sampler_linear_repeat, shapeUV)[channel];
+    }
+    return result;
+}
+
+float cloth_shining_highlight(float2 viewXZ, float2 lightXZ, float4 settings)
+{
+    float vl = length(viewXZ), ll = length(lightXZ);
+    viewXZ = vl > 0.001f ? viewXZ / vl : float2(0.0f, 1.0f);
+    lightXZ = ll > 0.001f ? lightXZ / ll : float2(0.0f, 1.0f);
+    float2 halfXZ = viewXZ + lightXZ;
+    // Opposing XZ directions otherwise normalize zero and contaminate the color with NaN.
+    halfXZ *= rsqrt(max(dot(halfXZ, halfXZ), 0.000001f));
+    float value = smoothstep(1.0f - settings.x - settings.y, 1.0f - settings.x + settings.y, saturate(dot(viewXZ, halfXZ)));
+    return settings.z + value * (1.0f - settings.z + value * settings.w);
+}
+
+float3 cloth_shining_group(ClothShiningSample sampleData, float cameraScale,
+    float density, float frequency, float intensity, float3 tint, float colorBlend,
+    float saturation, float vertexMask, float facing, float highlight,
+    float3 cameraOffset, float time)
+{
+    float distance = length(cameraOffset * float3(cameraScale, cameraScale, 1.0f));
+    float phase = ((1.0f - sampleData.random.w) / density + distance) * 6.28318501f + time * frequency;
+    float pulse = (sin(phase) * 0.5f + 0.5f) * step(1.0f - density, sampleData.random.w);
+    float3 color = (sampleData.random.xyz * 0.5f + 0.5f) * sampleData.shape * pulse * facing * highlight;
+    color *= sampleData.densityMask * intensity * tint;
+    color = lerp(color, dot(color, float3(0.2125f, 0.7154f, 0.0721f)) * tint, colorBlend);
+    color = lerp(dot(color, float3(0.2125f, 0.7154f, 0.0721f)).xxx, color, saturation);
+    return max(0.0f, color) * saturate(vertexMask);
+}
+
+// Body01 and Dress01 share four shape samplers, but not Body's B-channel/dot routing.
+float3 character_cloth_shining(float2 uv1, float2 uv2, float2 uv3, float2 uv4,
+    float4 vertexColor, float packedRegion, float3 normal, float3 view, float3 light,
+    float3 cameraOffset, float time)
+{
+    // Sample before region gates so cell-center derivatives remain defined across the quad.
+    ClothShiningSample id1 = cloth_shining_sample(uv1, _ShiningTiling_ID1, vertexColor.g, _ShiningCustomIDTextureRectSizeOffset_ID1, 0, 0);
+    ClothShiningSample id2 = cloth_shining_sample(uv2, _ShiningTiling_ID2, vertexColor.r, _ShiningCustomIDTextureRectSizeOffset_ID2, 1, 3);
+    ClothShiningSample id3 = cloth_shining_sample(uv3, _ShiningTiling_ID3, vertexColor.r, _ShiningCustomIDTextureRectSizeOffset_ID3, 2, 1);
+    ClothShiningSample id4 = cloth_shining_sample(uv4, _ShiningTiling_ID4, vertexColor.g, _ShiningCustomIDTextureRectSizeOffset_ID4, 3, 0);
+    float facing = smoothstep(0.4f, 0.6f, saturate(dot(normal, view)));
+    float3 result = 0.0f;
+    if (packedRegion < 0.2f)
+    {
+        float3 tint = _ShiningColor_V2.rgb;
+        if (_ShiningMaterialBranch > 1.5f)
+        {
+            float distanceBlend = smoothstep(_ShiningColor_V2_DistanceMin, _ShiningColor_V2_DistanceMax, length(cameraOffset));
+            tint = lerp(tint, _ShiningColor_V2_Far.rgb, distanceBlend);
+        }
+        result += cloth_shining_group(id4, _CameraOffsetShining_ID4, _ShiningDensity_V2, _ShiningFrequency_V2,
+            _ShiningIntensity_V2, tint, _ShiningColorBlend_V2, _ShiningClothSaturation.x,
+            vertexColor.r, facing, cloth_shining_highlight(view.xz, light.xz, _ShiningClothHighlightMain), cameraOffset, time);
+        if (_UseCharacterShining_V2_CopyID_3 > 0.5f)
+            result += cloth_shining_group(id1, _CameraOffsetShining_ID1, _ShiningDensity_V2_CopyID_3, _ShiningFrequency_V2_CopyID_3,
+                _ShiningIntensity_V2_CopyID_3, _ShiningColor_V2_CopyID_3.rgb, _ShiningColorBlend_V2_CopyID_3, _ShiningClothSaturation.w,
+                vertexColor.g, facing, cloth_shining_highlight(view.xz, float2(0.0f, 1.0f), _ShiningClothHighlight3), cameraOffset, time);
+    }
+    if (packedRegion >= 0.4f && packedRegion < 0.6f)
+    {
+        if (_UseCharacterShining_V2_CopyID_1 > 0.5f)
+            result += cloth_shining_group(id2, _CameraOffsetShining_ID2, _ShiningDensity_V2_CopyID_1, _ShiningFrequency_V2_CopyID_1,
+                _ShiningIntensity_V2_CopyID_1, _ShiningColor_V2_CopyID_1.rgb, _ShiningColorBlend_V2_CopyID_1, _ShiningClothSaturation.y,
+                vertexColor.g, facing, 1.0f, cameraOffset, time);
+        if (_UseCharacterShining_V2_CopyID_2 > 0.5f)
+            result += cloth_shining_group(id3, _CameraOffsetShining_ID3, _ShiningDensity_V2_CopyID_2, _ShiningFrequency_V2_CopyID_2,
+                _ShiningIntensity_V2_CopyID_2, _ShiningColor_V2_CopyID_2.rgb, _ShiningColorBlend_V2_CopyID_2, _ShiningClothSaturation.z,
+                vertexColor.g, facing, cloth_shining_highlight(view.xz, float2(0.0f, 1.0f), _ShiningClothHighlight2), cameraOffset, time);
+    }
+    return result;
+}
+
+// even if i dont push this for the january update, id like to get the back end started
+void character_stocking(in float3 normal, in float3 view, in float3 light, in float2 uv, in float4 lightmap,
+    in float viewDistance, in float shadowAttenuation, inout float4 color, out float3 clothSpecular)
+{
+    clothSpecular = 0.0f;
     // need to make sure the logic doesnt escape at all
     #if defined(use_stockings) 
     if(_UseCharacterStockings)
@@ -1727,13 +2150,27 @@ void character_stocking(in float3 normal, in float3 view, in float3 light, in fl
         detail_specular = smoothstep(0.5f, _StockingsSpecularDetailSharpe, detail_specular) * _StockingsSpecularDetailScale;
         detail_specular = detail_specular * _StockingsSpecularDetailColor;
 
-        float ndotv = max(dot(normal, stock_view), 0.0001f);
+        // Native Body and clothing shift only the specular direction, not the base view response.
+        bool native_response = _ShiningMaterialBranch > 0.5f || _UseNativeBodyResponse > 0.5f;
+        float ndotv = native_response ? max(dot(normal, view), 0.001f) : max(dot(normal, stock_view), 0.0001f);
         float stocking_shadow = pow(ndotv, _StockingsShadowRange);
         float stocking_light  = pow(ndotv, _StockingsLightRange);
         stocking_shadow = 1.0f - min(stocking_shadow, 1.0f);
         stocking_light  = min(stocking_light, 1.0f);
+        float3 stocking_shadow_tint = _StockingsShadowColor.rgb;
+        if (native_response && _UseSecondFresnel > 0.5f)
+        {
+            float second_shadow = 1.0f - min(pow(ndotv, _StockingsSecondShadowRange), 1.0f);
+            // Body_003 uses Soft twice; replacing this with smoothstep changes the source response.
+            second_shadow += _StockingsSecondShadowSoft *
+                (step(0.5f, second_shadow) * _StockingsSecondShadowSoft - second_shadow);
+            stocking_shadow = saturate(stocking_shadow + second_shadow);
+            stocking_shadow_tint = lerp(_StockingsShadowColor.rgb, _StockingsSecondShadowColor.rgb, second_shadow);
+        }
 
         float specular_dist = saturate(pow(length(view) + -_StockingsSpecularDistance, 2.0f)) * (_StockingsSpecularFade + -1.0) + 1.0f;
+        if (native_response)
+            specular_dist = lerp(1.0f, _StockingsSpecularFade, saturate((viewDistance - _StockingsSpecularDistance) * 2.0f));
 
         // the shit that shows up on escoffiers tights now: 
         float2 shining_uv = uv * _StockingShiningTiling;
@@ -1787,7 +2224,8 @@ void character_stocking(in float3 normal, in float3 view, in float3 light, in fl
         shine_color *= _StockingsSpecularScale * _StockingsSpecularColor.xyz;
         shine_color *= shine_color * stocking_light;
         shine_color *= _StockingShiningColorBlend;
-        float3 stocking_shine = shining_sum * shine_color;
+        // V2 replaces only the old sparkles; stocking shading and pattern stay intact.
+        float3 stocking_shine = (_UseCharacterShining_V2 > 0.5f) ? 0.0f : shining_sum * shine_color;
 
         // sample the pattern texture
         float2 pattern_uv = uv * _StockingsDetailPattenTiling;
@@ -1799,9 +2237,21 @@ void character_stocking(in float3 normal, in float3 view, in float3 light, in fl
         pattern = saturate(pattern + 1.0f); 
 
         float3 pattern_color = lerp(_StockingsDetailPattenColor, 1.0f, pattern);
+        float3 specular_pattern = pattern_color;
         float s_light = stocking_light * ((-lightmap.z) + 1.0); 
 
         float3 stock_light = lerp(color.xyz, saturate((color.xyz * _StockingsLightColor.xyz) * _StockingsLightScale), s_light); 
+        if (native_response)
+        {
+            // Body_003 cb0[216], cb0[219..220]: choose environment tint/scale before the view-response blend.
+            // Unity's filtered per-pixel shadow substitutes for the native character-level sensor; retain the dark override.
+            float environment_shadow = max(_NativeStockingEnvironmentShadow, 1.0f - shadowAttenuation);
+            float3 light_tint = _StockingsLightColor.rgb + environment_shadow *
+                (_StockingsLightDarkColor.rgb - _StockingsLightColor.rgb);
+            float light_scale = _StockingsLightScale + environment_shadow *
+                (_StockingsLightScaleInShadow - _StockingsLightScale);
+            stock_light = color.xyz + s_light * (saturate(light_tint * color.xyz * light_scale) - color.xyz);
+        }
 
         float3 something = pattern_color * stock_light; 
 
@@ -1813,6 +2263,38 @@ void character_stocking(in float3 normal, in float3 view, in float3 light, in fl
         pattern_color = stocking_shadow *  stock_light  + pattern_color;
 
         float3 specular = (lightmap.xxx * (stocking_specular * _StockingsSpecularColor.xyz + detail_specular)) * specular_dist; 
+
+        // Native cloth highlights include the pattern tint, but are added after body shadowing.
+        if (native_response)
+        {
+            // The source shadows the lit/patterned color once; the legacy path multiplies the base color again.
+            float3 cloth_color = something;
+            if (_StockingsWHite > 0.5f)
+            {
+                float pattern_value = lerp(1.0f, pattern_tex, _StockingsDetailPattenScale);
+                float pattern_minimum = min(specular_pattern.r, min(specular_pattern.g, specular_pattern.b));
+                float white_weight = pattern_minimum * saturate((1.0f - pattern_value) * blend_tex);
+                cloth_color = lerp(cloth_color, specular_pattern, white_weight);
+            }
+            if (_UseGradientStocking > 0.0f)
+            {
+                // Native cb0[210..212]: color-gradient mode, after white treatment and before shadowing.
+                // The source swaps UV axes; YArc/XArc retain its 1 - t * (1 - t) response.
+                float2 gradient_uv = saturate((uv.yx - 0.5f) * _StockingsGradientLength + 0.5f);
+                float gradient = 1.0f;
+                if (_StockingsGradientTypeChoose == 0.0f) gradient = gradient_uv.x;
+                else if (_StockingsGradientTypeChoose == 1.0f) gradient = 1.0f - gradient_uv.x;
+                else if (_StockingsGradientTypeChoose == 2.0f) gradient = 1.0f - gradient_uv.x * (1.0f - gradient_uv.x);
+                else if (_StockingsGradientTypeChoose == 3.0f) gradient = 1.0f - gradient_uv.y * (1.0f - gradient_uv.y);
+                else if (_StockingsGradientTypeChoose == 4.0f) gradient = 1.0f - gradient_uv.y;
+                float3 gradient_color = _StockingsGradientLightColor.rgb + gradient *
+                    (_StockingsGradientDarkColor.rgb - _StockingsGradientLightColor.rgb);
+                cloth_color += _StockingsGradientStrength * (gradient_color - cloth_color);
+            }
+            color.xyz = saturate(lerp(cloth_color, cloth_color * stocking_shadow_tint, stocking_shadow)) + stocking_shine;
+            clothSpecular = specular * specular_pattern;
+            return;
+        }
 
         color.xyz = color * pattern_color + (stocking_shine + specular);
     }

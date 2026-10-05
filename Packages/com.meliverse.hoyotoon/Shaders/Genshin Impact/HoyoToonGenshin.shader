@@ -273,6 +273,16 @@ Shader "HoyoToon/Genshin/Character"
                 //_EnvironmentLightingStrength ("Environment Lighting Strength", Range(0.0, 1.0)) = 1.0
                 _LightArea ("Shadow Position", Range(0.0, 2.0)) = 0.55
                 _ShadowRampWidth ("Ramp Width", Range(0.2, 3.0)) = 1.0
+                [Toggle] _useShadowSoft ("Native Shadow Soft 1--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0}", Float) = 0
+                _shadowSoftRange ("Native Shadow Soft Range 1--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_useShadowSoft!=0}", Float) = 1
+                [Toggle] _useShadowSoft2 ("Native Shadow Soft 2--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial2!=0}", Float) = 0
+                _shadowSoftRange2 ("Native Shadow Soft Range 2--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial2!=0&&_useShadowSoft2!=0}", Float) = 1
+                [Toggle] _useShadowSoft3 ("Native Shadow Soft 3--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial3!=0}", Float) = 0
+                _shadowSoftRange3 ("Native Shadow Soft Range 3--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial3!=0&&_useShadowSoft3!=0}", Float) = 1
+                [Toggle] _useShadowSoft4 ("Native Shadow Soft 4--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial4!=0}", Float) = 0
+                _shadowSoftRange4 ("Native Shadow Soft Range 4--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial4!=0&&_useShadowSoft4!=0}", Float) = 1
+                [Toggle] _useShadowSoft5 ("Native Shadow Soft 5--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial5!=0}", Float) = 0
+                _shadowSoftRange5 ("Native Shadow Soft Range 5--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial5!=0&&_useShadowSoft5!=0}", Float) = 1
                 [Toggle] _CustomAOEnable ("Enable Custom AO", Float) = 0	
                 [SmallTexture]_CustomAO ("Custom AO Texture--{condition_show:{type:PROPERTY_BOOL,data:_CustomAOEnable==1.0}}",2D)= "white"{ }
                 [Enum(Repeat, 0, Clamp, 1)] _AOSamplerType ("Custom AO Sampler Type--{condition_show:{type:PROPERTY_BOOL,data:_CustomAOEnable==1.0}}", Int) = 0
@@ -384,6 +394,9 @@ Shader "HoyoToon/Genshin/Character"
                     _MTSpecularScale ("Metallic Specular Scale--{condition_show:{type:PROPERTY_BOOL,data:_MetalMaterial==1.0}}", Float) = 15.0 
                     _MTMapTileScale ("Metallic Matcap Tile Scale--{condition_show:{type:PROPERTY_BOOL,data:_MetalMaterial==1.0}}", Range(0.0, 2.0)) = 1.0
                     _MTSpecularAttenInShadow ("Metallic Specular Power in Shadow--{condition_show:{type:PROPERTY_BOOL,data:_MetalMaterial==1.0}}", Range(0.0, 1.0)) = 0.2
+                    _MTSpecularOffset ("Native Metal Matcap Offset--{condition_show:{type:PROPERTY_BOOL,data:_UseNativeBodyResponse==1}}", Float) = 0
+                    _MTSpecularShadowScale ("Native Metal Mirrored Specular Scale--{condition_show:{type:PROPERTY_BOOL,data:_UseNativeBodyResponse==1}}", Float) = 0
+                    [Toggle] _MTSpecularAO ("Native Metal Specular Shadow Mask--{condition_show:{type:PROPERTY_BOOL,data:_UseNativeBodyResponse==1}}", Float) = 1
                     _MTSharpLayerOffset ("Metallic Sharp Layer Offset--{condition_show:{type:PROPERTY_BOOL,data:_MetalMaterial==1.0}}", Range(0.001, 1.0)) = 1.0
                     // Metal Color
                     [HideInInspector] start_metallicscolor("Metallic Colors--{condition_show:{type:PROPERTY_BOOL,data:_MetalMaterial==1.0}}", Int) = 0
@@ -458,6 +471,100 @@ Shader "HoyoToon/Genshin/Character"
                 [HideInInspector] end_leather("", Float) = 0
             //endex
 
+            [HideInInspector] start_anisosilk("Silk Anisotropy--{reference_property:_EnableCharacterSilksAnisotropy}", Float) = 0
+                [Toggle] _EnableCharacterSilksAnisotropy ("Enable Silk Anisotropy", Float) = 0
+                _AnisoSilkThreadMap ("Thread Packed Texture (RG Normal, B Smoothness, A Mask)", 2D) = "black" {}
+                _AnisoSilkThreadMapST ("Thread UV Scale / Offset", Vector) = (1,1,0,0)
+                [Enum(UV0,0,UV1,1,UV2,2,UV3,3)] _AnisoSilkThreadUVSelect ("Thread UV", Float) = 1
+                _AnisoSilkThreadNormalStrength ("Thread Normal Strength", Range(0,1)) = 0.28
+                _AnisoSilkThreadSmoothnessScale ("Thread Smoothness Scale", Float) = 0.62
+                _AnisoSilkThreadNoiseTiling ("Thread Noise Tiling", Float) = 9
+                _AnisoSilkThreadNoiseStrength ("Thread Noise Strength", Float) = 0.15
+                [Toggle] _AnisoSilkUseThreadMapMask ("Use Thread Mask", Float) = 1
+                [Enum(R,0,G,1,B,2,A,3)] _AnisoSilkMaskChannel ("Thread Mask Channel", Float) = 3
+                [Toggle] _AnisoSilkUseMatTypeAsSpecMask ("Use Lightmap R As Specular Mask", Float) = 1
+                _AnisoSilkSmoothnessMin ("Smoothness Min", Range(0,1)) = 0.16
+                _AnisoSilkSmoothnessMax ("Smoothness Max", Range(0,1)) = 0.85
+                _AnisoSilkAnisotropy ("Anisotropy", Range(-0.99,0.99)) = -0.32
+                [Toggle] _AnisoSilkSwapTB ("Swap Tangent / Bitangent", Float) = 0
+                [Toggle] _AnisoSilkUseSecondLobe ("Enable Second Lobe", Float) = 1
+                _AnisoSilkSecondLobeStrength ("Second Lobe Strength", Float) = 0.35
+                _AnisoSilkSecondLobeRoughnessScale ("Second Lobe Roughness Scale", Float) = 1
+                [Toggle] _AnisoSilkUseCameraDirAsLightDir ("Use Reflected View As Light Direction", Float) = 1
+                _AnisoSilkCameraLightDirBlend ("Camera / Light Blend", Range(0,1)) = 0.96
+                _AnisoSilkSpecularColor ("Specular Color", Color) = (0.53676474,0.8466529,1,1)
+                [Toggle] _AnisoSilkUseInputColorForFColor ("Use Input Color", Float) = 1
+                _AnisoSilkInputColorBlendStrength ("Input Color Blend", Range(0,1)) = 0.8
+                [Toggle] _AnisoSilkUseThreadIDColor ("Use Thread ID Color", Float) = 1
+                [Enum(ID0,0,ID1,1,ID2,2,ID3,3,ID4,4)] _AnisoSilkThreadIDColorSelect ("Thread Color ID", Float) = 1
+                _AnisoSilkThreadIDColor ("Thread ID Color", Color) = (0.9338235,0.91298777,0.85829365,1)
+                _AnisoSilkSpecularIntensity ("Specular Intensity", Float) = 3.5
+                _AnisoSilkSpecularFinalIntensity ("Final Intensity", Float) = 0.01
+                _AnisoSilkSpecularSaturation ("Saturation", Float) = 1.4
+            [HideInInspector] end_anisosilk("", Float) = 0
+
+            [HideInInspector] start_bodyshining("Character Shining V2--{reference_property:_UseCharacterShining_V2}", Float) = 0
+                [Toggle] _UseCharacterShining_V2 ("Enable Character Shining V2 (Odette Branches)", Float) = 0
+                [Enum(Body,0,Body01,1,Dress01,2)] _ShiningMaterialBranch ("Odette Shining Branch", Float) = 0
+                _ShiningCustomIDMask_V2 ("Shining Shape Texture (Body B / Cloth RGA)", 2D) = "black" {}
+                [Enum(UV0,0,UV1,1,UV2,2,UV3,3)] _ShiningUVSwitch_ID1 ("Dot Sampler UV", Float) = 0
+                _ShiningTiling_ID1 ("Dot Sampler Tiling", Float) = 160
+                _CameraOffsetShining_ID1 ("Dot Camera Offset", Float) = 2.5
+                _ShiningSize_V2 ("Dot Size", Float) = 0.015
+                _ShiningDensity_V2 ("Dot Density", Range(0.001,1)) = 0.55
+                _ShiningFrequency_V2 ("Dot Frequency", Float) = 2
+                _ShiningIntensity_V2 ("Dot Intensity", Float) = 0.8
+                _ShiningColor_V2 ("Dot Color", Color) = (1,1,1,1)
+                _ShiningColorBlend_V2 ("Dot Grayscale Blend", Range(0,1)) = 0.65
+                [Toggle] _UseCharacterShining_V2_CopyID_1 ("Enable Shape Group 1", Float) = 1
+                [Enum(UV0,0,UV1,1,UV2,2,UV3,3)] _ShiningUVSwitch_ID3 ("Shape 1 Sampler UV", Float) = 2
+                _ShiningTiling_ID3 ("Shape 1 Sampler Tiling", Float) = 200
+                _ShiningCustomIDTextureRectSizeOffset_ID3 ("Shape 1 Rect Size / Offset", Vector) = (0.5,0.5,0,0)
+                _CameraOffsetShining_ID3 ("Shape 1 Camera Offset", Float) = 0.01
+                _ShiningDensity_V2_CopyID_1 ("Shape 1 Density", Range(0.001,1)) = 0.4
+                _ShiningFrequency_V2_CopyID_1 ("Shape 1 Frequency", Float) = 0
+                _ShiningIntensity_V2_CopyID_1 ("Shape 1 Intensity", Float) = 4.24
+                _ShiningColor_V2_CopyID_1 ("Shape 1 Color", Color) = (0.77205884,0.8773835,1,1)
+                [Toggle] _UseCharacterShining_V2_CopyID_2 ("Enable Shape Group 2", Float) = 1
+                [Enum(UV0,0,UV1,1,UV2,2,UV3,3)] _ShiningUVSwitch_ID4 ("Shape 2 Sampler UV", Float) = 2
+                _ShiningTiling_ID4 ("Shape 2 Sampler Tiling", Float) = 130
+                _ShiningCustomIDTextureRectSizeOffset_ID4 ("Shape 2 Rect Size / Offset", Vector) = (0.8,0.8,0,0)
+                _CameraOffsetShining_ID4 ("Shape 2 Camera Offset", Float) = 2.5
+                _ShiningDensity_V2_CopyID_2 ("Shape 2 Density", Range(0.001,1)) = 0.05
+                _ShiningFrequency_V2_CopyID_2 ("Shape 2 Frequency", Float) = 2.75
+                _ShiningIntensity_V2_CopyID_2 ("Shape 2 Intensity", Float) = 0.8
+                _ShiningColor_V2_CopyID_2 ("Shape 2 Color", Color) = (1,1,1,1)
+                // Cloth presets retain the native shared-sampler routing: ID4 / ID2 / ID3 / ID1.
+                [HideInInspector] start_clothshining("Cloth Branch Settings", Float) = 0
+                    [Enum(UV0,0,UV1,1,UV2,2,UV3,3)] _ShiningUVSwitch_ID2 ("Cloth ID2 UV", Float) = 2
+                    _ShiningTiling_ID2 ("Cloth ID2 Tiling", Float) = 41.4
+                    _CameraOffsetShining_ID2 ("Cloth ID2 Camera Offset", Float) = 2.5
+                    _ShiningCustomIDTextureRectSizeOffset_ID1 ("Cloth ID1 Rect Size / Offset", Vector) = (0.7,0.8,0,0)
+                    _ShiningCustomIDTextureRectSizeOffset_ID2 ("Cloth ID2 Rect Size / Offset", Vector) = (0.8,0.8,0,0)
+                    _ShiningClothRotation ("ID1-4 Rotation (Degrees)", Vector) = (12,187,0,18)
+                    _ShiningClothRandomRotation ("ID1-4 Random Rotation", Vector) = (0,0.841,0.65,0)
+                    _ShiningClothRandomSizeMin ("ID1-4 Minimum Size", Vector) = (0.6,0.8,0.5,0.59)
+                    _ShiningClothRandomSizeMax ("ID1-4 Maximum Size", Vector) = (1.2,0.9,1.9,1.1)
+                    _ShiningClothRandomSize ("ID1-4 Size Randomness", Vector) = (1,1,0.3,1.2)
+                    _ShiningClothSeedJitter ("ID1-4 Density Seed Jitter", Vector) = (1.101,0.7548777,0.7548777,1.02)
+                    _ShiningClothHighlightMain ("Main Width / Softness / Dark / Strength", Vector) = (0.3,0.1,0.3,1)
+                    _ShiningClothHighlight2 ("Group 2 Width / Softness / Dark / Strength", Vector) = (0.3,0.1,0.3,1)
+                    _ShiningClothHighlight3 ("Group 3 Width / Softness / Dark / Strength", Vector) = (0.3,0.1,0.3,1)
+                    _ShiningClothSaturation ("Main / Group 1-3 Saturation", Vector) = (2,2,1,1)
+                    _ShiningColorBlend_V2_CopyID_1 ("Cloth Group 1 Color Blend", Range(0,1)) = 1
+                    _ShiningColorBlend_V2_CopyID_2 ("Cloth Group 2 Color Blend", Range(0,1)) = 0
+                    _ShiningColorBlend_V2_CopyID_3 ("Cloth Group 3 Color Blend", Range(0,1)) = 0.35
+                    _ShiningColor_V2_Far ("Cloth Main Far Color", Color) = (1,1,1,1)
+                    _ShiningColor_V2_DistanceMin ("Cloth Main Color Near Distance", Float) = 2
+                    _ShiningColor_V2_DistanceMax ("Cloth Main Color Far Distance", Float) = 3
+                    [Toggle] _UseCharacterShining_V2_CopyID_3 ("Enable Cloth Shape Group 3", Float) = 1
+                    _ShiningDensity_V2_CopyID_3 ("Cloth Group 3 Density", Range(0.001,1)) = 0.45
+                    _ShiningFrequency_V2_CopyID_3 ("Cloth Group 3 Frequency", Float) = 1.5
+                    _ShiningIntensity_V2_CopyID_3 ("Cloth Group 3 Intensity", Float) = 1
+                    _ShiningColor_V2_CopyID_3 ("Cloth Group 3 Color", Color) = (1,1,1,1)
+                [HideInInspector] end_clothshining("", Float) = 0
+            [HideInInspector] end_bodyshining("", Float) = 0
+
             // this can be worked on later, my marriage is more important
             //ifex _UseCharacterStockings == 0
                 [HideInInspector] start_stocking("Stocking--{reference_property:_UseCharacterStockings}", Float) = 0
@@ -489,12 +596,24 @@ Shader "HoyoToon/Genshin/Character"
                         _StockingsDetailTilingNear ("Detail Tiling Near", Float) = 1
                     [HideInInspector] end_stockdetail ("Detail Settings", Float) = 0
                     [HideInInspector] start_stocklighting("Lighting Settings", Float) = 0
+                        [Toggle] _UseNativeBodyResponse ("Use Native Body Response", Float) = 0
+                        [Toggle] _UseGradientStocking ("Enable Stocking Gradient", Float) = 0
+                        _StockingsGradientStrength ("Gradient Strength", Range(0,1)) = 0.2
+                        _StockingsGradientLength ("Gradient Length", Float) = 1
+                        [Enum(Y,0,ReverseY,1,YArc,2,XArc,3,ReverseX,4)] _StockingsGradientTypeChoose ("Gradient Direction", Float) = 0
+                        _StockingsGradientLightColor ("Gradient Light Color", Color) = (1,1,1,1)
+                        _StockingsGradientDarkColor ("Gradient Dark Color", Color) = (1,1,1,1)
                         _StockingsLightColor ("Light Color", Color) = (1,1,1,1)
+                        _StockingsLightDarkColor ("Light Color In Shadow", Color) = (1,1,1,1)
                         _StockingsShadowColor ("Shadow Color", Color) = (0,0,0,1)
                         _StockingsLightRange ("Light Range", Float) = 1
                         _StockingsLightScale ("Light Scale", Float) = 1
                         _StockingsLightScaleInShadow ("Light Scale In Shadow", Float) = 1
                         _StockingsShadowRange ("Shadow Range", Float) = 1
+                        [Toggle] _UseSecondFresnel ("Use Second View Shadow", Float) = 0
+                        _StockingsSecondShadowRange ("Second Shadow Range", Float) = 1
+                        _StockingsSecondShadowSoft ("Second Shadow Soft", Range(0,1)) = 0.01
+                        _StockingsSecondShadowColor ("Second Shadow Color", Color) = (1,1,1,1)
                     [HideInInspector] end_stocklighting("Lighting Settings", Float) = 0
                     [HideInInspector] start_stockspecular("Specular Settings", Float) = 0
                         _StockingsSpecularColor ("Specular Color", Color) = (1,1,1,1)

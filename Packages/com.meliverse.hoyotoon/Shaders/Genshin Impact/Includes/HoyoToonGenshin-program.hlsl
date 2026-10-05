@@ -907,16 +907,33 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         half isMainNormal = _isNativeMainNormal;
         half isLine = _TextureLineUse;
         float fixNormal = _DummyFixedForNormal;
+        bool native_cloth = _ShiningMaterialBranch > 0.5f;
+        // Body response is independent of both the sparkle region selector and the silk toggle.
+        bool native_body = _UseNativeBodyResponse > 0.5f;
+        bool native_response = native_cloth || native_body;
+        float3 geometry_normal = normal;
 
         // adding support for new normal mapping boolean
         #if defined(use_bump)
-            if(bump_enable || isMainNormal) normal_mapping(normalmap, _DummyFixedForNormal ? ws_pos.xyz : i.view, _BumpScale, uv_a, normal, tangent, bitangent);
+            if (native_response)
+            {
+                float3 cloth_normal = normalmap.rgb;
+                // Body and Dress01 use SelectMatID=1 in the source; it neutralizes RG on region 1.
+                if (!(bump_enable || isMainNormal) || ((native_body || _ShiningMaterialBranch > 1.5f) && material_id == 1))
+                    cloth_normal.rg = 0.5f;
+                // Native VS emits origin-position here; its derivative frame has the opposite sign to world position.
+                float3 cloth_position = _DummyFixedForNormal
+                    ? unity_ObjectToWorld._m03_m13_m23 - ws_pos.xyz : i.view;
+                cloth_normal_mapping(cloth_normal, cloth_position, uv_a, geometry_normal, normal, tangent, bitangent);
+            }
+            else if(bump_enable || isMainNormal) normal_mapping(normalmap, _DummyFixedForNormal ? ws_pos.xyz : i.view, _BumpScale, uv_a, normal, tangent, bitangent);
         #if defined(sdf_line)
             if((bump_enable || isMainNormal) && _TextureLineUse && ((_TextureLineMultiplier.x + _TextureLineMultiplier.y + _TextureLineMultiplier.z) > 0)) detail_line(i.ss_pos.zw, normalmap.z, diffuse.xyz);
         #endif
         #endif
 
         float3 normal_stock = normalize(i.normal);
+        if (native_response) normal_stock = normal;
 
         #if defined(use_stockings)
             if(_UseCharacterStockings && (material_id  == 4)) 
@@ -940,6 +957,20 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
                 */
 
                 float2 stocking_rg = _StockingsDetailTex.Sample(sampler_linear_repeat, stocking_uv).rg;
+                if (native_response)
+                {
+                    if (lightmap.b <= 0.95f)
+                    {
+                        float2 detail_xy = (stocking_rg * 2.0f - 1.0f) * _StockingsDetailScale;
+                        float detail_z = sqrt(1.0f - min(1.0f, dot(detail_xy, detail_xy)));
+                        float3 detail_normal = normalize(tangent * detail_xy.x + bitangent * detail_xy.y + geometry_normal * detail_z);
+                        // Native stockings share the combined normal with toon specular and cloth shining.
+                        normal = normalize(normal + detail_normal);
+                    }
+                    normal_stock = normal;
+                }
+                else
+                {
                 // Keep RG encoded for normal_mapping's single decode. Scale around neutral 0.5;
                 // use scale=0 there to keep tangent-space Z=1 and apply strength only once.
                 float3 stocking_normal = float3((stocking_rg - 0.5f) * _StockingsDetailScale + 0.5f, 1.0f);
@@ -947,6 +978,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
                 float3 bitangent_stock;
                 // Update the outer normal used by character_stocking, without replacing the body frame.
                 normal_mapping(stocking_normal, ws_pos.xyz, 0.0f, uv_b.xy, normal_stock, tangent_stock, bitangent_stock);
+                }
             }
         #endif
         // do this after the bump mapping to ensure that the normals are updated 
@@ -1024,12 +1056,13 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         float3 holographic = (float3)1.0f;
         #if defined(use_specular)
             if(specular_enabled) specular_color(ndoth, shadow, lightmap.x, lightmap.z, material_id, specular);
-            if(lightmap.x > 0.90f) specular = 0.0f; // making sure the specular doesnt bleed into the metal area
+            if(lightmap.x > 0.90f && !(native_response && _UseCharacterStockings && material_id == 4)) specular = 0.0f; // making sure the specular doesnt bleed into the metal area
         #endif
         // METALIC :
+        float3 native_metal_specular = 0.0f;
         #if defined(use_metal)
-            if(_MetalMaterial && !(_UseCharacterStockings * (material_id == 4))) metalics(metalshadow, normal, ndoth, lightmap.x, vface, diffuse.xyz);
-            if(_DebugMode && (_DebugMetal == 1)) return float4(diffuse.xyz, 1.0f);
+            if(_MetalMaterial && !native_response && !(_UseCharacterStockings * (material_id == 4))) metalics(metalshadow, normal, ndoth, lightmap.x, vface, diffuse.xyz);
+            if(_DebugMode && (_DebugMetal == 1) && !native_response) return float4(diffuse.xyz, 1.0f);
             // moving these after the metal so the metal can also be recolored
         #endif
         if(!_DisableColors && !_UseMaterialMasksTex) diffuse = diffuse * coloring(material_id);
@@ -1047,9 +1080,27 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         #if defined(can_shift)
             if(_EnableColorHue) diffuse.xyz = hue_shift(diffuse.xyz, material_id, _ColorHue, _ColorHue2, _ColorHue3, _ColorHue4, _ColorHue5, _GlobalColorHue, _AutomaticColorShift, _ShiftColorSpeed, diffuse_mask);
         #endif
+        #if defined(use_metal)
+            bool native_metal = native_response && _MetalMaterial && lightmap.r > 0.9f
+                && !(_UseCharacterStockings && material_id == 4);
+            if (native_metal)
+            {
+                float rampWidth = _UseVertexRampWidth > 0.0f
+                    ? max(0.01f, i.v_col.y * 2.0f) * _ShadowRampWidth : _ShadowRampWidth;
+                float environmentShadow = max(_NativeStockingEnvironmentShadow, 1.0f - unity_shadow);
+                native_body_metal(normal, view, light, metalshadow.y,
+                    metalshadow.y > 0.0f ? metalshadow.z * rampWidth : 0.0f,
+                    environmentShadow, lightmap.b, diffuse.xyz, native_metal_specular);
+                // Native metal already owns its base shadow; the ordinary toon ramp must not shade it again.
+                s_color = 1.0f;
+            }
+            if (native_response && _DebugMode && _DebugMetal == 1)
+                return float4(native_metal ? diffuse.xyz + native_metal_specular : 0.0f, 1.0f);
+        #endif
         out_color = diffuse;
         out_color.w = 1.0f;
 
+        float3 cloth_specular = 0.0f;
         #if defined(use_stockings)
             if(_UseCharacterStockings && (material_id  == 4)) 
             {
@@ -1057,7 +1108,8 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
                 {
                     i.uv_a.xy, i.uv_a.zw, i.uv_b.xy, i.uv_b.zw
                 };
-                character_stocking(normal_stock, view, light, stocking_uv[_StockingUV % 4], lightmap, out_color);
+                character_stocking(normal_stock, view, light, stocking_uv[_StockingUV % 4], lightmap,
+                    length(_WorldSpaceCameraPos.xyz - ws_pos.xyz), unity_shadow, out_color, cloth_specular);
             }
         #endif
 
@@ -1098,7 +1150,15 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         float3 spec_color = 0.0f;
         #if defined(use_specular)
             spec_color = out_color.xyz + (float3)-1.0f;
-            spec_color.xyz = (_SpecOpacity) * spec_color.xyz + (float3)1.0f;
+            float spec_opacity = _SpecOpacity;
+            if (native_response)
+            {
+                float spec_opacities[5] = { _SpecOpacity, _SpecOpacity2, _SpecOpacity3, _SpecOpacity4, _SpecOpacity5 };
+                spec_opacity = spec_opacities[get_index(material_id)];
+                // Native tint uses colored diffuse, before stocking and other optional base responses.
+                spec_color = diffuse.xyz - 1.0f;
+            }
+            spec_color.xyz = spec_opacity * spec_color.xyz + (float3)1.0f;
             spec_color.xyz = spec_color.xyz * specular;
         #endif
 
@@ -1107,7 +1167,28 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
             if(_UseCharacterLeather ) leather_color(ndoth, normal, light, lightmap.z, leather, holographic, out_color.xyz);
         #endif
 
-        out_color.xyz = out_color.xyz * s_color + (spec_color);
+        out_color.xyz = out_color.xyz * s_color + (spec_color) + cloth_specular;
+        [branch] if (native_response) out_color.xyz += native_metal_specular;
+        // Silk is additive to the authored base response, not a replacement for legacy stockings.
+        [branch] if (_EnableCharacterSilksAnisotropy > 0.5f)
+        {
+            float2 silkUVs[4] = { i.uv_a.xy, i.uv_a.zw, i.uv_b.xy, i.uv_b.zw };
+            out_color.xyz += character_silk(silkUVs[(int)_AnisoSilkThreadUVSelect], ws_pos.xyz,
+                native_body ? normal : i.normal, view, light, lightmap, out_color.xyz);
+        }
+        [branch] if (_UseCharacterShining_V2 > 0.5f)
+        {
+            float2 shiningUVs[4] = { i.uv_a.xy, i.uv_a.zw, i.uv_b.xy, i.uv_b.zw };
+            float3 cameraOffset = _WorldSpaceCameraPos.xyz - unity_ObjectToWorld._m03_m13_m23;
+            if (_ShiningMaterialBranch > 0.5f)
+                out_color.xyz += character_cloth_shining(shiningUVs[(int)_ShiningUVSwitch_ID1], shiningUVs[(int)_ShiningUVSwitch_ID2],
+                    shiningUVs[(int)_ShiningUVSwitch_ID3], shiningUVs[(int)_ShiningUVSwitch_ID4],
+                    i.v_col, normalmap.b, normal, view, light, cameraOffset, _Time.y);
+            else
+                out_color.xyz += character_body_shining(shiningUVs[(int)_ShiningUVSwitch_ID1],
+                    shiningUVs[(int)_ShiningUVSwitch_ID3], shiningUVs[(int)_ShiningUVSwitch_ID4],
+                    float2(normalmap.b, lightmap.b), cameraOffset, _Time.y);
+        }
         
         
                 
