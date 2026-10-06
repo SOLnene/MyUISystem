@@ -65,6 +65,7 @@ float _CausticThreshold;
 Texture2D _LightMapTex; // this is both the body/hair lightmap texture and the faceshadow texture
 #if defined(faceishadow)
     Texture2D _FaceMapTex; // this is the facelightmap texture
+    Texture2D _FaceSdfMap;
 #endif
 #if defined(has_sramp)
     Texture2D _PackedShadowRampTex;
@@ -260,6 +261,24 @@ float _FaceMapSoftness;
 float _FaceMapRotateOffset;
 float _UseFaceMapNew;
 float _UseFaceBlueAsAO;
+float _UseNativeFaceSDF;
+float _FaceFlipFactor;
+float _NewFaceShadowOffset;
+float _FaceSdfShadowSharpness;
+float _NewShadowRampMin;
+float _NewShadowRampMax;
+float4 _SdfThresholdClamp;
+float _EnableSdfSpecA;
+float _SdfSpecA_Vertical;
+float _SdfSpecA_FlipUv;
+float _SdfSpecA_InvertStrength;
+float _SdfSpecA_Sharpness;
+float _SdfSpecA_Strength;
+float _SdfSpecA_BacklightIntensity;
+float4 _SdfSpecA_UvBaseOffset;
+float4 _SdfSpecA_UvOffsetRegions;
+float _SdfSpecA_UvSplitY;
+float4 _SdfSpecA_RegionParams;
 
 // weapon properties
 float _UseWeapon;

@@ -248,6 +248,10 @@ vs_out vs_model(vs_in v)
     o.ss_pos = ComputeScreenPos(o.pos);
     o.v_col = v.v_col;
     o.light_pos = mul(_LightMatrix0, o.ws_pos);
+    #if defined(faceishadow)
+        // Face_SDF uses the interpolated vertex lighting term, not a renormalized fragment normal.
+        o.native_face_ndotl = dot(normalize(o.normal), _WorldSpaceLightPos0.xyz);
+    #endif
 
     // parallax shit
     // cringe
@@ -1049,7 +1053,16 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         float3 s_color = (float3)1.0f;
         float3 leather = (float3)0;
         #if defined(use_shadow)
-            if(_EnableShadow) shadow_color(lightmap.y, i.v_col.x, customao, unity_shadow, i.v_col.y, ndotl, material_id, i.uv_a.xy, shadow, metalshadow, s_color, light);
+            float shadow_ndotl = ndotl;
+            #if defined(faceishadow)
+                if (_UseFaceMapNew && _UseNativeFaceSDF > 0.5f) shadow_ndotl = i.native_face_ndotl;
+            #endif
+            if(_EnableShadow) shadow_color(lightmap.y, i.v_col.x, customao, unity_shadow, i.v_col.y, shadow_ndotl, material_id, i.uv_a.xy, shadow, metalshadow, s_color, light);
+        #endif
+        float native_face_specular = 0.0f;
+        #if defined(faceishadow)
+            [branch] if (_UseFaceMapNew && _UseNativeFaceSDF > 0.5f)
+                native_face_specular = native_face_sdf_specular(uv_a, native_face_light_direction(light));
         #endif
            // SPECULAR : 
         float3 specular = (float3)0.0f;
@@ -1168,6 +1181,7 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         #endif
 
         out_color.xyz = out_color.xyz * s_color + (spec_color) + cloth_specular;
+        out_color.xyz += native_face_specular;
         [branch] if (native_response) out_color.xyz += native_metal_specular;
         // Silk is additive to the authored base response, not a replacement for legacy stockings.
         [branch] if (_EnableCharacterSilksAnisotropy > 0.5f)

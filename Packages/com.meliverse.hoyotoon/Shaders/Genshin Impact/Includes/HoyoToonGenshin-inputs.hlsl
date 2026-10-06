@@ -23,6 +23,9 @@ struct vs_out
     float4 ss_pos    : TEXCOORD4; // screen space position
     float3 parallax  : TEXCOORD5;
     float4 light_pos : TEXCOORD6;
+    #if defined(faceishadow)
+        float native_face_ndotl : TEXCOORD10;
+    #endif
     float4 n_view    : TEXCOORD8;
     float4 ppos      : TEXCOORD9;
     float4 v_col     : COLOR0; // vertex color 

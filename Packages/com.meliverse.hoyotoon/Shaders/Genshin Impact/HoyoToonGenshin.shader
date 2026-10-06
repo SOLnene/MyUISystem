@@ -189,6 +189,26 @@ Shader "HoyoToon/Genshin/Character"
         [HideInInspector] start_faceshading("Face--{condition_show:{type:PROPERTY_BOOL,data:_UseFaceMapNew==1.0}} ", Float) = 0
             _FaceMapRotateOffset ("Face Map Rotate Offset", Range(-1, 1)) = 0
             [SmallTexture] _FaceMapTex ("Face Shadow",2D)= "white"{ }
+            [ToggleUI] _UseNativeFaceSDF ("Use Original Face SDF", Float) = 0
+            [SmallTexture] _FaceSdfMap ("Original Face SDF--{condition_show:{type:PROPERTY_BOOL,data:_UseNativeFaceSDF==1.0}}", 2D) = "white"{ }
+            // Original per-material inputs; keep the legacy Face Shadow binding independent.
+            [HideInInspector] _FaceFlipFactor ("Face Flip Factor", Float) = 0
+            [HideInInspector] _NewFaceShadowOffset ("Face Shadow Offset", Float) = 0
+            [HideInInspector] _FaceSdfShadowSharpness ("Face SDF Shadow Sharpness", Float) = 100
+            [HideInInspector] _NewShadowRampMin ("Face Shadow Ramp Min", Float) = 0
+            [HideInInspector] _NewShadowRampMax ("Face Shadow Ramp Max", Float) = 1
+            [HideInInspector] _SdfThresholdClamp ("SDF Threshold Clamp", Vector) = (0.03, 0.97, 0, 0)
+            [HideInInspector] _EnableSdfSpecA ("Enable SDF Specular A", Float) = 0
+            [HideInInspector] _SdfSpecA_Vertical ("SDF Specular Vertical", Float) = 0
+            [HideInInspector] _SdfSpecA_FlipUv ("SDF Specular Flip UV", Float) = 1
+            [HideInInspector] _SdfSpecA_InvertStrength ("SDF Specular Invert Strength", Float) = 0
+            [HideInInspector] _SdfSpecA_Sharpness ("SDF Specular Sharpness", Float) = 10
+            [HideInInspector] _SdfSpecA_Strength ("SDF Specular Strength", Float) = 1
+            [HideInInspector] _SdfSpecA_BacklightIntensity ("SDF Specular Backlight", Float) = 0
+            [HideInInspector] _SdfSpecA_UvBaseOffset ("SDF Specular UV Base", Vector) = (0, 0, 0, 0)
+            [HideInInspector] _SdfSpecA_UvOffsetRegions ("SDF Specular UV Regions", Vector) = (0, 0, 0, 0)
+            [HideInInspector] _SdfSpecA_UvSplitY ("SDF Specular UV Split", Float) = 0.5
+            [HideInInspector] _SdfSpecA_RegionParams ("SDF Specular Regions", Vector) = (1, 1, 1, 1)
             [HideInInspector] _UseFaceMapNew ("Enable Face Shader", Float) = 0.0
             _FaceMapSoftness ("Face Lighting Softness", Range(0.0, 1.0)) = 0.001
 

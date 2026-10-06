@@ -489,10 +489,84 @@ void detail_line(float2 sspos, float sdf, inout float3 diffuse)
     diffuse.xyz = lines * line_color + diffuse.xyz;
 }
 
+#if defined(faceishadow)
+// Face_SDF projects native Y(front)/Z(side), and X(up)/Y(front).
+// The imported mesh has different axes; adapt through the existing Face head basis.
+float4 native_face_light_direction(float3 light)
+{
+    light = normalize(light);
+    float3 up = normalize(UnityObjectToWorldDir(_headUpVector));
+    float3 forward = normalize(UnityObjectToWorldDir(_headForwardVector));
+    float3 right = normalize(UnityObjectToWorldDir(_headRightVector));
+    float3 headRight = cross(_CharacterFaceWorldDirection, -_CharacterHeadCenterXDirWS);
+    if (dot(headRight, headRight) > 1e-8f)
+    {
+        // The shared pupil input axis points down on Odette; native Face X points up.
+        up = normalize(-_CharacterHeadCenterXDirWS);
+        forward = normalize(_CharacterFaceWorldDirection);
+        right = normalize(headRight);
+    }
+    float3 localLight = float3(dot(light, up), dot(light, forward), dot(light, right));
+    return float4(localLight.y, -localLight.z, -localLight.x, -localLight.y)
+        / max(float4(length(localLight.yz).xx, length(localLight.xy).xx), 0.0001f);
+}
+
+float native_face_sigmoid(float distance)
+{
+    float e = exp2(-abs(49.8289223f * distance));
+    return distance >= 0.0f ? 1.0f / (1.0f + e) : e / (1.0f + e);
+}
+
+float native_face_mirror(float mirror)
+{
+    return _FaceFlipFactor > 0.5f ? 1.0f : (_FaceFlipFactor < -0.5f ? 0.0f : mirror);
+}
+
+float native_face_sdf_shadow(float2 uv, float4 direction)
+{
+    if (dot(direction, direction) <= 1e-8f) return 1.0f;
+    float2 shadowUV = float2(lerp(uv.x, 1.0f - uv.x, native_face_mirror(direction.y >= 0.0f)), uv.y);
+    float2 packed = _FaceSdfMap.Sample(sampler_linear_repeat, shadowUV).ra;
+    // R and A encode opposite halves of the distance range, not interchangeable masks.
+    float sdf = packed.y > 0.0001f ? 0.5f * (1.0f + packed.y) : 0.5f * packed.x;
+    float threshold = clamp(0.5f - 0.5f * direction.x + _NewFaceShadowOffset,
+        _SdfThresholdClamp.x, max(_SdfThresholdClamp.y, _SdfThresholdClamp.x + 0.001f));
+    float lit = native_face_sigmoid((sdf - threshold) * _FaceSdfShadowSharpness);
+    return lerp(_NewShadowRampMin, _NewShadowRampMax, lit);
+}
+
+float native_face_sdf_specular(float2 uv, float4 direction)
+{
+    if (_EnableSdfSpecA <= 0.5f || dot(direction, direction) <= 1e-8f) return 0.0f;
+    float3 d = _SdfSpecA_Vertical > 0.5f ? direction.zwx : direction.xyz;
+    float mirroredX = lerp(uv.x, 1.0f - uv.x, native_face_mirror(d.y <= 0.0f));
+    float upper = uv.y >= _SdfSpecA_UvSplitY;
+    float2 region = lerp(_SdfSpecA_RegionParams.xz, _SdfSpecA_RegionParams.yw, upper);
+    float2 offset = lerp(_SdfSpecA_UvOffsetRegions.xy, _SdfSpecA_UvOffsetRegions.zw, upper);
+    float2 specUV = float2(_SdfSpecA_FlipUv > 0.5f ? mirroredX : uv.x, uv.y) + _SdfSpecA_UvBaseOffset.xy;
+    float2 wrapped = frac(specUV);
+    specUV.x += offset.x * lerp(1.0f, wrapped.x >= 0.5f ? 1.0f : -1.0f, upper);
+    float wrappedUpper = wrapped.y >= _SdfSpecA_UvSplitY;
+    float lower = wrappedUpper * _SdfSpecA_UvSplitY;
+    float span = max(0.001f, lerp(_SdfSpecA_UvSplitY, 1.0f - _SdfSpecA_UvSplitY, wrappedUpper));
+    specUV.y = frac((wrapped.y - lower + offset.y) / span) * span + lower;
+    float2 packed = _FaceSdfMap.Sample(sampler_linear_repeat, specUV).gb;
+    float sharpness = _SdfSpecA_Sharpness * max(0.001f, region.y);
+    float angular = 1.0f - abs(d.y);
+    float band = native_face_sigmoid((angular - (1.0f - packed.y)) * sharpness)
+        * (1.0f - native_face_sigmoid((angular - packed.x) * sharpness));
+    float front = max(0.0f, _SdfSpecA_InvertStrength > 0.5f ? 0.5f - 0.5f * d.x : 0.5f + 0.5f * d.x);
+    float back = d.x <= 0.0f ? 1.1f - max(0.0f, -d.z) : 0.0f;
+    return band * _SdfSpecA_Strength * region.x * (front + back * _SdfSpecA_BacklightIntensity);
+}
+#endif
+
 float shadow_area_face(float2 uv, float3 light)
 {   
     // float3 light = normalize(_WorldSpaceLightPos0.xyz);
     #if defined(faceishadow)
+        [branch] if (_UseNativeFaceSDF > 0.5f)
+            return native_face_sdf_shadow(uv, native_face_light_direction(light));
         float3 head_forward = normalize(UnityObjectToWorldDir(_headForwardVector.xyz));
         float3 head_right   = normalize(UnityObjectToWorldDir(_headRightVector.xyz));
         float rdotl = dot((head_right.xz),  (light.xz));
@@ -666,6 +740,40 @@ void shadow_color(in float lightmapao, in float vertexao, in float customao, in 
         float night_shift = auto_night_shift();
 
         outcolor = lerp(warm_shadow_array[get_index(material_id)], cool_shadow_array[get_index(material_id)], night_shift);
+
+        #if defined(faceishadow)
+        [branch] if (_UseFaceMapNew && _UseNativeFaceSDF > 0.5f)
+        {
+            float sdfLit = native_face_sdf_shadow(uv, native_face_light_direction(light));
+            float faceAO = _UseLightMapColorAO > 0.001f ? lightmapao : 1.0f;
+            faceAO = 0.5f + 2.0f * (faceAO - 0.5f) * abs(faceAO - 0.5f);
+            if (_UseVertexColorAO != 0.0f) faceAO *= vertexao;
+            float aoLight = faceAO < 0.05f ? 0.0f : (faceAO > 0.95f ? 1.0f : 0.5f * (faceAO + ndotl * 0.4975f + 0.5f));
+            float aoLit = aoLight >= _LightArea;
+            float transition = 0.0f;
+            if (aoLit == 0.0f)
+            {
+                float2 transitions[5] = { float2(_ShadowTransitionRange, _ShadowTransitionSoftness),
+                    float2(_ShadowTransitionRange2, _ShadowTransitionSoftness2),
+                    float2(_ShadowTransitionRange3, _ShadowTransitionSoftness3),
+                    float2(_ShadowTransitionRange4, _ShadowTransitionSoftness4),
+                    float2(_ShadowTransitionRange5, _ShadowTransitionSoftness5) };
+                float2 t = transitions[get_index(material_id)];
+                float distance = (_LightArea - aoLight) / t.x;
+                transition = _UseShadowTransition ? (distance >= 1.0f ? 1.0f : min(1.0f, pow(distance + 0.01f, t.y))) : 1.0f;
+            }
+            float regionMask = _LightMapTex.Sample(sampler_linear_repeat, uv).r;
+            float shadowWeight = 1.0f - (regionMask > 0.5f ? min(aoLit, sdfLit) : aoLit);
+            // Bright-environment baseline: local Unity projection is not the native per-draw sensor.
+            // Keep SDF/AO shading until an independent character-level environment input is available.
+            float3 tint = _UseShadowTransition ? lerp(1.0f, outcolor, transition) : outcolor;
+            float3 sdfTint = lerp(1.0f, tint, 1.0f - sdfLit);
+            color = lerp(1.0f, sdfTint, shadowWeight);
+            shadow = 1.0f - shadowWeight;
+            metalshadow = shadow;
+            return;
+        }
+        #endif
         
         float3 outshadow = (float3)1.0f;
         if(_UseShadowRamp) outshadow = shadow_area_ramp(lightmapao, vertexao, vertexwidth, ndotl, material_id);
