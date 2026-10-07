@@ -27,6 +27,7 @@ struct vs_out
         float native_face_ndotl : TEXCOORD10;
     #endif
     float4 n_view    : TEXCOORD8;
+    float3 native_hair_view : TEXCOORD11;
     float4 ppos      : TEXCOORD9;
     float4 v_col     : COLOR0; // vertex color 
     UNITY_VERTEX_OUTPUT_STEREO

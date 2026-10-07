@@ -241,6 +241,8 @@ vs_out vs_model(vs_in v)
     o.tangent.xyz = mul((float3x3)unity_ObjectToWorld, v.tangent);
     o.tangent.w = v.tangent.w * unity_WorldTransformParams.w;
     o.view = camera_position() - mul(unity_ObjectToWorld, v.vertex).xyz;
+    // Keep the legacy view untouched while matching native Hair's pre-interpolation normalization.
+    o.native_hair_view = _UseNativeHairResponse > 0.5f ? normalize(o.view) : 0.0f;
     o.n_view.xyz = -mul(unity_ObjectToWorld, v.vertex).xyz + unity_ObjectToWorld[3].xyz;
     o.n_view = float4(_DummyFixedForNormal ? o.n_view : o.view, 1.0f);
     o.ws_pos =  v.vertex;
@@ -914,7 +916,8 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         bool native_cloth = _ShiningMaterialBranch > 0.5f;
         // Body response is independent of both the sparkle region selector and the silk toggle.
         bool native_body = _UseNativeBodyResponse > 0.5f;
-        bool native_response = native_cloth || native_body;
+        bool native_hair = _UseNativeHairResponse > 0.5f;
+        bool native_response = native_cloth || native_body || native_hair;
         float3 geometry_normal = normal;
 
         // adding support for new normal mapping boolean
@@ -925,6 +928,8 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
                 // Body and Dress01 use SelectMatID=1 in the source; it neutralizes RG on region 1.
                 if (!(bump_enable || isMainNormal) || ((native_body || _ShiningMaterialBranch > 1.5f) && material_id == 1))
                     cloth_normal.rg = 0.5f;
+                // The exported Hair preset uses SelectMatID=5; its raw R is AO, not a normal component.
+                if (native_hair && material_id == 5) cloth_normal.rg = 0.5f;
                 // Native VS emits origin-position here; its derivative frame has the opposite sign to world position.
                 float3 cloth_position = _DummyFixedForNormal
                     ? unity_ObjectToWorld._m03_m13_m23 - ws_pos.xyz : i.view;
@@ -1057,7 +1062,10 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
             #if defined(faceishadow)
                 if (_UseFaceMapNew && _UseNativeFaceSDF > 0.5f) shadow_ndotl = i.native_face_ndotl;
             #endif
-            if(_EnableShadow) shadow_color(lightmap.y, i.v_col.x, customao, unity_shadow, i.v_col.y, shadow_ndotl, material_id, i.uv_a.xy, shadow, metalshadow, s_color, light);
+            // HairMapAntiAlias=1 and AOShadowWarpScale=1 in this preset: region-5 R below 0.25 is rejected.
+            float shadow_lightmap_ao = native_hair && material_id == 5
+                ? (normalmap.r >= 0.25f ? normalmap.r : 0.0f) : lightmap.y;
+            if(_EnableShadow) shadow_color(shadow_lightmap_ao, i.v_col.x, customao, unity_shadow, i.v_col.y, shadow_ndotl, material_id, i.uv_a.xy, shadow, metalshadow, s_color, light);
         #endif
         float native_face_specular = 0.0f;
         #if defined(faceishadow)
@@ -1101,6 +1109,8 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
                 float rampWidth = _UseVertexRampWidth > 0.0f
                     ? max(0.01f, i.v_col.y * 2.0f) * _ShadowRampWidth : _ShadowRampWidth;
                 float environmentShadow = max(_NativeStockingEnvironmentShadow, 1.0f - unity_shadow);
+                // Hair uses the native bright-environment baseline until its per-draw sensor is available.
+                if (native_hair) environmentShadow = 0.0f;
                 native_body_metal(normal, view, light, metalshadow.y,
                     metalshadow.y > 0.0f ? metalshadow.z * rampWidth : 0.0f,
                     environmentShadow, lightmap.b, diffuse.xyz, native_metal_specular);
@@ -1183,6 +1193,15 @@ float4 ps_model(vs_out i,  bool vface : SV_ISFRONTFACE) : SV_TARGET
         out_color.xyz = out_color.xyz * s_color + (spec_color) + cloth_specular;
         out_color.xyz += native_face_specular;
         [branch] if (native_response) out_color.xyz += native_metal_specular;
+        // Sample before applying B, as in the source; a per-pixel mask branch can invalidate implicit gradients.
+        [branch] if (native_hair)
+        {
+            float3 cameraOffset = _WorldSpaceCameraPos.xyz - unity_ObjectToWorld._m03_m13_m23;
+            float3 direct, edge;
+            native_hair_crystal_lighting(normal, i.native_hair_view, light, direct, edge);
+            float3 response = native_hair_crystal_matcap(normal, cameraOffset) + direct + edge;
+            out_color.xyz += native_hair_crystal_response_delta(response, normalmap.b, out_color.xyz);
+        }
         // Silk is additive to the authored base response, not a replacement for legacy stockings.
         [branch] if (_EnableCharacterSilksAnisotropy > 0.5f)
         {

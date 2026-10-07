@@ -175,6 +175,9 @@ Shader "HoyoToon/Genshin/Character"
         //Normal Map
         //ifex _UseBumpMap == 0
         [HideInInspector] start_normalmap ("Normal Map--{reference_property:_UseBumpMap}", Float) = 0
+            // Odette Hair uses region 5, independently of Body's region-1 normal rule.
+            [ToggleUI] _UseNativeHairResponse ("Use Native Hair Response (Odette)", Float) = 0
+            [SmallTexture][NoScaleOffset] _HairCrystalMatcap ("Crystal MatCap--{condition_showS:_UseNativeHairResponse>0.5}", 2D) = "black" {}
             [Toggle] _UseBumpMap("Normal Map", Float) = 0.0
             [HideInInspector] [Toggle] _DummyFixedForNormal ("kms", Float) = 0
             [HideInInspector] [Toggle] _isNativeMainNormal ("", Float) = 0
@@ -293,16 +296,16 @@ Shader "HoyoToon/Genshin/Character"
                 //_EnvironmentLightingStrength ("Environment Lighting Strength", Range(0.0, 1.0)) = 1.0
                 _LightArea ("Shadow Position", Range(0.0, 2.0)) = 0.55
                 _ShadowRampWidth ("Ramp Width", Range(0.2, 3.0)) = 1.0
-                [Toggle] _useShadowSoft ("Native Shadow Soft 1--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0}", Float) = 0
-                _shadowSoftRange ("Native Shadow Soft Range 1--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_useShadowSoft!=0}", Float) = 1
-                [Toggle] _useShadowSoft2 ("Native Shadow Soft 2--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial2!=0}", Float) = 0
-                _shadowSoftRange2 ("Native Shadow Soft Range 2--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial2!=0&&_useShadowSoft2!=0}", Float) = 1
-                [Toggle] _useShadowSoft3 ("Native Shadow Soft 3--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial3!=0}", Float) = 0
-                _shadowSoftRange3 ("Native Shadow Soft Range 3--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial3!=0&&_useShadowSoft3!=0}", Float) = 1
-                [Toggle] _useShadowSoft4 ("Native Shadow Soft 4--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial4!=0}", Float) = 0
-                _shadowSoftRange4 ("Native Shadow Soft Range 4--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial4!=0&&_useShadowSoft4!=0}", Float) = 1
-                [Toggle] _useShadowSoft5 ("Native Shadow Soft 5--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial5!=0}", Float) = 0
-                _shadowSoftRange5 ("Native Shadow Soft Range 5--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5)&&_UseShadowRamp!=0&&_UseMaterial5!=0&&_useShadowSoft5!=0}", Float) = 1
+                [Toggle] _useShadowSoft ("Native Shadow Soft 1--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5||_UseNativeHairResponse>0.5)&&_UseShadowRamp!=0}", Float) = 0
+                _shadowSoftRange ("Native Shadow Soft Range 1--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5||_UseNativeHairResponse>0.5)&&_UseShadowRamp!=0&&_useShadowSoft!=0}", Float) = 1
+                [Toggle] _useShadowSoft2 ("Native Shadow Soft 2--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5||_UseNativeHairResponse>0.5)&&_UseShadowRamp!=0&&_UseMaterial2!=0}", Float) = 0
+                _shadowSoftRange2 ("Native Shadow Soft Range 2--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5||_UseNativeHairResponse>0.5)&&_UseShadowRamp!=0&&_UseMaterial2!=0&&_useShadowSoft2!=0}", Float) = 1
+                [Toggle] _useShadowSoft3 ("Native Shadow Soft 3--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5||_UseNativeHairResponse>0.5)&&_UseShadowRamp!=0&&_UseMaterial3!=0}", Float) = 0
+                _shadowSoftRange3 ("Native Shadow Soft Range 3--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5||_UseNativeHairResponse>0.5)&&_UseShadowRamp!=0&&_UseMaterial3!=0&&_useShadowSoft3!=0}", Float) = 1
+                [Toggle] _useShadowSoft4 ("Native Shadow Soft 4--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5||_UseNativeHairResponse>0.5)&&_UseShadowRamp!=0&&_UseMaterial4!=0}", Float) = 0
+                _shadowSoftRange4 ("Native Shadow Soft Range 4--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5||_UseNativeHairResponse>0.5)&&_UseShadowRamp!=0&&_UseMaterial4!=0&&_useShadowSoft4!=0}", Float) = 1
+                [Toggle] _useShadowSoft5 ("Native Shadow Soft 5--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5||_UseNativeHairResponse>0.5)&&_UseShadowRamp!=0&&_UseMaterial5!=0}", Float) = 0
+                _shadowSoftRange5 ("Native Shadow Soft Range 5--{condition_showS:(_UseNativeBodyResponse>0.5||_ShiningMaterialBranch>0.5||_UseNativeHairResponse>0.5)&&_UseShadowRamp!=0&&_UseMaterial5!=0&&_useShadowSoft5!=0}", Float) = 1
                 [Toggle] _CustomAOEnable ("Enable Custom AO", Float) = 0	
                 [SmallTexture]_CustomAO ("Custom AO Texture--{condition_show:{type:PROPERTY_BOOL,data:_CustomAOEnable==1.0}}",2D)= "white"{ }
                 [Enum(Repeat, 0, Clamp, 1)] _AOSamplerType ("Custom AO Sampler Type--{condition_show:{type:PROPERTY_BOOL,data:_CustomAOEnable==1.0}}", Int) = 0
@@ -414,9 +417,9 @@ Shader "HoyoToon/Genshin/Character"
                     _MTSpecularScale ("Metallic Specular Scale--{condition_show:{type:PROPERTY_BOOL,data:_MetalMaterial==1.0}}", Float) = 15.0 
                     _MTMapTileScale ("Metallic Matcap Tile Scale--{condition_show:{type:PROPERTY_BOOL,data:_MetalMaterial==1.0}}", Range(0.0, 2.0)) = 1.0
                     _MTSpecularAttenInShadow ("Metallic Specular Power in Shadow--{condition_show:{type:PROPERTY_BOOL,data:_MetalMaterial==1.0}}", Range(0.0, 1.0)) = 0.2
-                    _MTSpecularOffset ("Native Metal Matcap Offset--{condition_show:{type:PROPERTY_BOOL,data:_UseNativeBodyResponse==1}}", Float) = 0
-                    _MTSpecularShadowScale ("Native Metal Mirrored Specular Scale--{condition_show:{type:PROPERTY_BOOL,data:_UseNativeBodyResponse==1}}", Float) = 0
-                    [Toggle] _MTSpecularAO ("Native Metal Specular Shadow Mask--{condition_show:{type:PROPERTY_BOOL,data:_UseNativeBodyResponse==1}}", Float) = 1
+                    _MTSpecularOffset ("Native Metal Matcap Offset--{condition_showS:_UseNativeBodyResponse>0.5||_UseNativeHairResponse>0.5}", Float) = 0
+                    _MTSpecularShadowScale ("Native Metal Mirrored Specular Scale--{condition_showS:_UseNativeBodyResponse>0.5||_UseNativeHairResponse>0.5}", Float) = 0
+                    [Toggle] _MTSpecularAO ("Native Metal Specular Shadow Mask--{condition_showS:_UseNativeBodyResponse>0.5||_UseNativeHairResponse>0.5}", Float) = 1
                     _MTSharpLayerOffset ("Metallic Sharp Layer Offset--{condition_show:{type:PROPERTY_BOOL,data:_MetalMaterial==1.0}}", Range(0.001, 1.0)) = 1.0
                     // Metal Color
                     [HideInInspector] start_metallicscolor("Metallic Colors--{condition_show:{type:PROPERTY_BOOL,data:_MetalMaterial==1.0}}", Int) = 0

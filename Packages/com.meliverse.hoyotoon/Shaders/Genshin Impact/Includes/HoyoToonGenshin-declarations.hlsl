@@ -118,6 +118,7 @@ Texture2D _CustomEmissionTex;
     Texture2D _StockingsDetailTex;
 #endif
 Texture2D _AnisoSilkThreadMap;
+Texture2D _HairCrystalMatcap;
 Texture2D _ShiningCustomIDMask_V2;
 #if defined(parallax_glass)
     Texture2D _GlassSpecularTex;
@@ -545,6 +546,8 @@ float4 _StockingsLightDarkColor;
 float _NativeStockingEnvironmentShadow;
 float4 _StockingsShadowColor;
 float _UseNativeBodyResponse;
+// Selects Odette's decoded Hair rules without enabling Body or cloth region overrides.
+float _UseNativeHairResponse;
 float _UseGradientStocking;
 float _StockingsGradientStrength;
 float _StockingsGradientLength;

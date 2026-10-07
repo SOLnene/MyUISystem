@@ -5,7 +5,7 @@ float materialID(float alpha)
     float material = 1.0f;
 
     // Authored regions have exclusive upper bounds; retain legacy boundaries outside native modes.
-    if (_UseNativeBodyResponse > 0.5f || _ShiningMaterialBranch > 0.5f)
+    if (_UseNativeBodyResponse > 0.5f || _ShiningMaterialBranch > 0.5f || _UseNativeHairResponse > 0.5f)
     {
         material = (_UseMaterial2 && region >= 0.8f) ? 2.0f : material;
         material = (_UseMaterial3 && region >= 0.4f && region < 0.6f) ? 3.0f : material;
@@ -611,7 +611,7 @@ float3 shadow_area_ramp(float lightmapao, float vertexao, float vertexwidth, flo
     float shadow_bright = 0.95f < shadow_thresh;
     float shadow_dark = shadow_thresh < 0.05f;
 
-    float lightScale = (_UseNativeBodyResponse > 0.5f || _ShiningMaterialBranch > 0.5f) ? 0.4975f : 0.5f;
+    float lightScale = (_UseNativeBodyResponse > 0.5f || _ShiningMaterialBranch > 0.5f || _UseNativeHairResponse > 0.5f) ? 0.4975f : 0.5f;
     float shadow_area = (shadow_bright) ? 1.0f : ((ndotl * lightScale + 0.5f) + shadow_thresh) * 0.5f;
     shadow_area = (shadow_dark) ? 0.0f : shadow_area;
 
@@ -802,7 +802,7 @@ void shadow_color(in float lightmapao, in float vertexao, in float customao, in 
             float3 ramp = lerp(dayramp, nightramp, night_shift);
             color = lerp(1.0f, ramp, saturate(shadow.y + (1.0f - ao)));
             // This native Ramp composition assumes no external occlusion; retain the existing AO/cast-shadow path otherwise.
-            if((_UseNativeBodyResponse > 0.5f || _ShiningMaterialBranch > 0.5f) && ao == 1.0f)
+            if((_UseNativeBodyResponse > 0.5f || _ShiningMaterialBranch > 0.5f || _UseNativeHairResponse > 0.5f) && ao == 1.0f)
             {
                 float soft_enabled[5] = {_useShadowSoft, _useShadowSoft2, _useShadowSoft3, _useShadowSoft4, _useShadowSoft5};
                 float soft_range[5] = {_shadowSoftRange, _shadowSoftRange2, _shadowSoftRange3, _shadowSoftRange4, _shadowSoftRange5};
@@ -827,7 +827,7 @@ void shadow_color(in float lightmapao, in float vertexao, in float customao, in 
     #endif
 }
 
-// Native Body and cloth keep the metal base and highlight separate until additive composition.
+// Native Body, cloth and Hair share this decoded metal base/additive highlight response.
 void native_body_metal(float3 normal, float3 view, float3 light, float shadowMask,
     float shadowTransition, float environmentShadow, float specularArea,
     inout float3 color, out float3 specular)
@@ -862,6 +862,60 @@ void native_body_metal(float3 normal, float3 view, float3 light, float shadowMas
         ? lerp(1.0f, _MTShadowMultiColor.rgb, shadowTransition) : _MTShadowMultiColor.rgb;
     color *= shadowMask > 0.0f ? shadowTint : 1.0f;
     if (body01Metal || _MTSpecularAO > 0.0f) specular *= 1.0f - shadowMask;
+}
+
+float3 native_hair_crystal_matcap(float3 normal, float3 cameraOffset)
+{
+    // Native MatCap uses camera-to-object axes, not the camera's roll-dependent view matrix.
+    float3 cameraAxis = normalize(cameraOffset.zxy);
+    float3 rightAxis = float3(0.0f, cameraAxis.y, -cameraAxis.x);
+    float horizontalLength = dot(rightAxis.yz, rightAxis.yz);
+    // An exactly vertical camera cannot define this authored horizontal frame.
+    if (horizontalLength <= 1e-12f) return 0.0f;
+    rightAxis *= rsqrt(horizontalLength);
+    float3 upAxis = -cameraAxis.zxy * rightAxis.yzx + rightAxis * cameraAxis;
+    upAxis = normalize(upAxis);
+    float2 uv = float2(dot(rightAxis.zy, normal.xz), dot(upAxis, normal)) * 0.5f + 0.5f;
+    float4 matcap = _HairCrystalMatcap.Sample(sampler_linear_clamp, uv);
+
+    // Odette's compiled preset: hue=-1 radian, size=1, alpha intensity=0.2.
+    float3 axis = float3(0.577350259f, 0.577350259f, 0.577350259f);
+    float3 rotated = matcap.rgb * 0.540302277f + cross(axis, matcap.rgb) * -0.841470957f;
+    rotated += dot(axis, matcap.rgb) * float3(0.265406609f, 0.265406609f, 0.265406609f);
+    return rotated * saturate(matcap.a * 0.2f);
+}
+
+void native_hair_crystal_lighting(float3 normal, float3 vertexView, float3 light,
+    out float3 direct, out float3 edge)
+{
+    // Native VS normalizes view before interpolation. GGX renormalizes it; edge response does not.
+    float3 n = normalize(normal);
+    float3 l = normalize(light);
+    float3 h = normalize(normalize(vertexView) + l);
+    float ndoth = saturate(dot(n, h));
+    float ldoth = saturate(dot(l, h));
+    float denominator = ndoth * ndoth * -0.991900027f + 1.0f;
+    denominator *= denominator;
+    // Preserve the compiled roughness-0.3 preset's exact comparison and peak limit.
+    float distribution = denominator != 0.008100f
+        ? min(12.0f, (0.00810000021f / denominator) * 0.318309873f) : 0.318309873f;
+    float grazing = 1.0f - ldoth;
+    float grazingSquared = grazing * grazing;
+    float fresnel = grazingSquared * grazingSquared * grazing * 1.38866007f + 0.300000012f;
+    direct = float3(0.693000019f, 1.78100002f, 1.78100002f)
+        * (max(0.0f, dot(n, l)) * fresnel * distribution);
+
+    float edgeAngle = max(0.0001f, 1.0f - min(1.0f, abs(dot(vertexView, normal))));
+    float edgeWeight = min(1.0f, pow(edgeAngle, 10.0f) * 12.6000004f);
+    edge = float3(0.104999997f, 1.05700004f, 1.62300003f) * edgeWeight;
+}
+
+float3 native_hair_crystal_response_delta(float3 response, float mask, float3 baseColor)
+{
+    // Overlay is affine in the crystal response. Add only the available contributions;
+    // absent refraction/cubemap inputs must not be treated as a complete black crystal layer.
+    float3 overlayScale = baseColor <= 0.5f ? baseColor * 2.0f : (1.0f - baseColor) * 2.0f;
+    return response * overlayScale * (mask * 0.85f);
 }
 
 void metalics(in float3 shadow, in float3 normal, float3 ndoth, float speculartex, float backfacing, inout float3 color)
@@ -951,7 +1005,7 @@ void specular_color(in float ndoth, in float3 shadow, in float lightmapspec, in 
             _SpecularColor5, 
         };
         
-        bool native_response = _ShiningMaterialBranch > 0.5f || _UseNativeBodyResponse > 0.5f;
+        bool native_response = _ShiningMaterialBranch > 0.5f || _UseNativeBodyResponse > 0.5f || _UseNativeHairResponse > 0.5f;
         float term = pow(max(ndoth, native_response ? 0.0001f : 0.001f), spec_array[get_index(material_id)].x);
         if (native_response)
         {
