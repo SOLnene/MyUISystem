@@ -7,7 +7,7 @@ using UnityEngine;
 public class GachaPoolTabViewModel : IDisposable
 {
     public GachaPoolUIConfig Config { get; }
-    public Sprite Icon => Config.tabIcon;
+    public string IconAddress => Config.tabIconAddress;
     public ReactiveProperty<bool> IsSelected { get; }
 
     CompositeDisposable disposable = new CompositeDisposable();

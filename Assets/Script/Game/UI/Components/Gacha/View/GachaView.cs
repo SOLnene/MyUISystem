@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Cysharp.Threading.Tasks;
@@ -26,6 +27,9 @@ public partial class GachaView : UIView
     GameObject inputBlocker;
     bool isClosing;
     bool isInputLocked;
+    bool isOpening;
+    int presentationVersion;
+    GachaTopHubViewModel topVm;
     //UIControlData
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -38,11 +42,12 @@ public partial class GachaView : UIView
     {
         base.OnOpen(data);
         isClosing = false;
+        isInputLocked = false;
         disposable.Clear();
         vm.OnSessionStarted
             .Subscribe(flowController.StartSession)
             .AddTo(disposable);
-        ShowHubs().Forget();
+        ShowHubs(++presentationVersion).Forget();
     }
 
     void Bind()
@@ -56,11 +61,12 @@ public partial class GachaView : UIView
         disposable = new CompositeDisposable();
         
         //TopHub
-        GachaTopHubViewModel topVm = new GachaTopHubViewModel(
+        topVm = new GachaTopHubViewModel(
             vm.PoolConfigs,
             vm.CurrentPoolConfig,
             vm.SwitchPool);
-        topHub.Bind(topVm).Forget();
+        // 加载时仍允许关闭，改为分别控制切池与抽卡按钮，不用全屏挡板。
+        inputBlocker.SetActive(false);
         //middleView
         middleHub.InputLockChanged -= SetInputLocked;
         middleHub.InputLockChanged += SetInputLocked;
@@ -68,43 +74,79 @@ public partial class GachaView : UIView
         
         Draw1Btn.onClick.RemoveAllListeners();
         Draw10Btn.onClick.RemoveAllListeners();
-        Draw1Btn.onClick.AddListener(() => vm.drawCommand.Execute(1));
-        Draw10Btn.onClick.AddListener(() => vm.drawCommand.Execute(10));
+        Draw1Btn.onClick.AddListener(() =>
+        {
+            if (!isClosing && !isOpening && !isInputLocked && middleHub.IsReady)
+            {
+                vm.drawCommand.Execute(1);
+            }
+        });
+        Draw10Btn.onClick.AddListener(() =>
+        {
+            if (!isClosing && !isOpening && !isInputLocked && middleHub.IsReady)
+            {
+                vm.drawCommand.Execute(10);
+            }
+        });
         closeBtn.onClick.RemoveAllListeners();
         closeBtn.onClick.AddListener(OnCancel);
     }
 
-    async UniTask ShowHubs()
+    async UniTask ShowHubs(int version)
     {
-        SetInputLocked(true);
+        isOpening = true;
+        ApplyInputState();
         try
         {
-            await UniTask.WhenAll(topHub.Show(), middleHub.Show(), bottomHub.Show());
+            await UniTask.WhenAll(topHub.Bind(topVm), topHub.Show(), middleHub.Show(), bottomHub.Show());
+        }
+        catch (OperationCanceledException)
+        {
         }
         finally
         {
-            SetInputLocked(false);
+            // 关闭或重开会改变版本；旧的打开流程不得恢复新页面的输入。
+            if (version == presentationVersion && !isClosing)
+            {
+                isOpening = false;
+                ApplyInputState();
+            }
         }
     }
 
     async UniTask CloseWithAnimation()
     {
-        SetInputLocked(true);
+        int version = presentationVersion;
+        ApplyInputState();
         try
         {
             await UniTask.WhenAll(topHub.Hide(), middleHub.Hide(), bottomHub.Hide());
-            base.OnCancel();
+            if (version == presentationVersion && isClosing)
+            {
+                base.OnCancel();
+            }
         }
         finally
         {
-            SetInputLocked(false);
+            if (version == presentationVersion)
+            {
+                ApplyInputState();
+            }
         }
     }
 
     void SetInputLocked(bool isLocked)
     {
         isInputLocked = isLocked;
-        inputBlocker.SetActive(isInputLocked);
+        ApplyInputState();
+    }
+
+    void ApplyInputState()
+    {
+        bool canSwitch = !isClosing && !isOpening && !isInputLocked;
+        topHub.SetPoolSwitchEnabled(canSwitch);
+        // Transient draw locks are checked in click callbacks without changing button visuals.
+        closeBtn.interactable = !isClosing;
     }
 
     public override void OnCancel()
@@ -115,6 +157,7 @@ public partial class GachaView : UIView
         }
 
         isClosing = true;
+        ++presentationVersion;
         CloseWithAnimation().Forget();
     }
     
@@ -130,6 +173,10 @@ public partial class GachaView : UIView
 
     public override void OnClose()
     {
+        ++presentationVersion;
+        isClosing = true;
+        isOpening = false;
+        middleHub.CancelPresentation();
         flowController.CancelSession();
         disposable.Clear();
         base.OnClose();
@@ -139,6 +186,7 @@ public partial class GachaView : UIView
     {
         middleHub.InputLockChanged -= SetInputLocked;
         disposable.Dispose();
+        topVm.Dispose();
         flowController.Dispose();
         base.OnRelease();
     }

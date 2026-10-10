@@ -1,5 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
+using System;
+using System.Threading;
 using Cysharp.Threading.Tasks;
 using SkierFramework;
 using UniRx;
@@ -19,6 +21,9 @@ public class GachaTopHubView : BindableUI
 
 	GameObject tabPrefab;
 	GachaTopHubViewModel vm;
+	readonly List<GachaPoolTabView> tabViews = new List<GachaPoolTabView>();
+	CancellationTokenSource bindCts;
+	bool poolSwitchEnabled;
 	readonly CompositeDisposable disposable = new CompositeDisposable();
 	[SerializeField]
 	AnimatedPanel anim;
@@ -30,7 +35,17 @@ public class GachaTopHubView : BindableUI
 
 	internal async UniTask Hide()
 	{
+		bindCts?.Cancel();
 		await anim.Hide();
+	}
+
+	internal void SetPoolSwitchEnabled(bool enabled)
+	{
+		poolSwitchEnabled = enabled;
+		foreach (var tab in tabViews)
+		{
+			tab.SetPoolSwitchEnabled(enabled);
+		}
 	}
 	
 	
@@ -38,16 +53,59 @@ public class GachaTopHubView : BindableUI
 	{
 		vm = viewModel;
 		Debug.Log("Bind Hub");
-		if (tabPrefab == null)
+		if (tabViews.Count == viewModel.Tabs.Count)
 		{
-			tabPrefab = await ResourceManager.Instance.LoadAssetAsync<GameObject>("ui/gacha/gachapooltab"); 
+			return;
 		}
-		foreach (var tab in viewModel.Tabs)
+		bindCts?.Cancel();
+		var cts = new CancellationTokenSource();
+		bindCts = cts;
+		try
 		{
-			var prefab = Instantiate(tabPrefab, gachaPoolContent);
-			var tabView = prefab.GetComponent<GachaPoolTabView>();
-			tabView.Bind(tab, type => viewModel.SwitchPoolCommand.Execute(type));
+			if (tabPrefab == null)
+			{
+				tabPrefab = await ResourceManager.Instance.LoadAssetAsync<GameObject>(
+					"ui/gacha/gachapooltab", cts.Token);
+			}
+			// 缓存命中也可能同步返回；关闭后不能再创建页签。
+			cts.Token.ThrowIfCancellationRequested();
+			if (tabPrefab == null)
+			{
+				throw new InvalidOperationException("Gacha tab prefab could not be loaded.");
+			}
+			for (int i = tabViews.Count; i < viewModel.Tabs.Count; i++)
+			{
+				var prefab = Instantiate(tabPrefab, gachaPoolContent);
+				var tabView = prefab.GetComponent<GachaPoolTabView>();
+				tabView.Bind(viewModel.Tabs[i], type =>
+				{
+					if (poolSwitchEnabled)
+					{
+						vm.SwitchPoolCommand.Execute(type);
+					}
+				});
+				tabView.SetPoolSwitchEnabled(poolSwitchEnabled);
+				tabViews.Add(tabView);
+			}
 		}
-		
+		finally
+		{
+			if (bindCts == cts)
+			{
+				bindCts = null;
+			}
+			cts.Dispose();
+		}
+	}
+
+	void OnDisable()
+	{
+		bindCts?.Cancel();
+	}
+
+	void OnDestroy()
+	{
+		bindCts?.Cancel();
+		disposable.Dispose();
 	}
 }

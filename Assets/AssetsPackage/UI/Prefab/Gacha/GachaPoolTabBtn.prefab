@@ -198,7 +198,6 @@ GameObject:
   - component: {fileID: 4476469594687448097}
   - component: {fileID: 6254014778503863061}
   - component: {fileID: 1041021429485654330}
-  - component: {fileID: 9154717689329792891}
   m_Layer: 5
   m_Name: GachaPoolTabBtn
   m_TagString: Untagged
@@ -246,41 +245,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 0f0b2eb4119e0224cbc01c0ce4834ec1, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
---- !u!114 &9154717689329792891
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8391534464826952766}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: bec254e92978598418e38c0641bcd88c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  ctrlItemDatas:
-  - name: selectBg
-    type: Image
-    targets:
-    - {fileID: 7031626454011689117}
-  - name: normalBg
-    type: Image
-    targets:
-    - {fileID: 578529075397792253}
-  - name: icon
-    type: Image
-    targets:
-    - {fileID: 5608146045171963172}
-  - name: btn
-    type: Button
-    targets:
-    - {fileID: 4435072189648740378}
-  - name: content
-    type: GachaTabFeedback
-    targets:
-    - {fileID: 6979171069074546953}
-  subUIItemDatas: []
-  dataHasChanged: 1
+  selectBg: {fileID: 7031626454011689117}
+  normalBg: {fileID: 578529075397792253}
+  icon: {fileID: 5608146045171963172}
+  btn: {fileID: 4435072189648740378}
+  content: {fileID: 6979171069074546953}
 --- !u!1 &8399826962898812391
 GameObject:
   m_ObjectHideFlags: 0
