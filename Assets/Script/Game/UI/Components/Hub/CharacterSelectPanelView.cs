@@ -64,6 +64,11 @@ public class CharacterSelectPanelView : SelectionPanelView
     {
         if (selectionRequest?.IsMultipleSelection == true)
         {
+            if (selectionRequest.OnMultiCharacterPicked != null)
+            {
+                selectionRequest.OnMultiCharacterPicked(character);
+                return;
+            }
             if (selectionRequest.MultiSelectionSet.Toggle(character)
                 == LimitedSelectionResult.LimitReached)
             {
@@ -98,6 +103,8 @@ public sealed class CharacterSelectionRequest
     public readonly Action<CharacterModel> OnSingleCharacterPicked;
     public readonly Action OnCancelled;
     public readonly Action OnMultiSelectionLimitReached;
+
+    internal Action<CharacterModel> OnMultiCharacterPicked { get; set; }
 
     public bool IsMultipleSelection => MultiSelectionSet != null;
 

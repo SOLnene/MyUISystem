@@ -34,6 +34,7 @@ public class TeamEditView : UIView
     private string[][] workingTeamPresets;
     private int editingPresetIndex;
     private int selectionMemberIndex = -1;
+    private bool isReplacingMemberSelection;
     private Canvas uiCanvas;
     private Camera worldCamera;
     private bool worldCameraWasEnabled;
@@ -157,11 +158,16 @@ public class TeamEditView : UIView
             .AddTo(characterSelectionDisposable);
 
         characterSelectPanel.transform.SetAsLastSibling();
-        characterSelectPanel.Show(CharacterSelectionRequest.ForMultiple(
+        CharacterSelectionRequest request = CharacterSelectionRequest.ForMultiple(
             GameContext.Instance.CharacterRepository.Characters,
             characterSelection,
             FinishCharacterSelection,
-            memberIndex >= 0 ? CanSelectForCurrentMember : null));
+            memberIndex >= 0 ? CanSelectForCurrentMember : null);
+        if (memberIndex >= 0)
+        {
+            request.OnMultiCharacterPicked = OnNormalFormationCharacterPicked;
+        }
+        characterSelectPanel.Show(request);
     }
 
     private void AddMemberToCharacterSelection(int memberIndex)
@@ -297,8 +303,76 @@ public class TeamEditView : UIView
         teamPresetTabs.Select(nextIndex);
     }
 
+    private void OnNormalFormationCharacterPicked(CharacterModel character)
+    {
+        if (characterSelection == null || !CanSelectForCurrentMember(character))
+        {
+            return;
+        }
+
+        if (characterSelection.Contains(character))
+        {
+            characterSelection.TryDeselect(character);
+            return;
+        }
+
+        ReplaceSingleMemberSelection(character);
+        ApplyNormalFormationSelectionAsync(character, characterSelection, selectionMemberIndex)
+            .Forget(Debug.LogException);
+    }
+
+    private void ReplaceSingleMemberSelection(CharacterModel character)
+    {
+        // 更新勾选状态时屏蔽移除事件，旧模型由舞台在新资源就绪后交接。
+        isReplacingMemberSelection = true;
+        try
+        {
+            characterSelection.Clear();
+            if (character != null)
+            {
+                characterSelection.TrySelect(character);
+            }
+        }
+        finally
+        {
+            isReplacingMemberSelection = false;
+        }
+    }
+
+    private async UniTask ApplyNormalFormationSelectionAsync(
+        CharacterModel character,
+        LimitedSelectionSet<CharacterModel> selection,
+        int memberIndex)
+    {
+        TeamStageView stage = teamStageInstance;
+        try
+        {
+            await stage.SetMemberAsync(memberIndex, character.Definition.key);
+        }
+        finally
+        {
+            // 关闭或后续点击已接管选择时，过期任务不得回滚当前勾选状态。
+            if (characterSelection == selection && selection.Contains(character))
+            {
+                string actualKey = stage.GetMemberCharacterKey(memberIndex);
+                if (actualKey != character.Definition.key)
+                {
+                    ReplaceSingleMemberSelection(string.IsNullOrEmpty(actualKey)
+                        ? null
+                        : GameContext.Instance.CharacterRepository.GetByKey(actualKey));
+                }
+                RefreshMemberLabels();
+            }
+        }
+    }
+
     private void OnCharacterSelectionChanged(SelectionDelta<CharacterModel> delta)
     {
+        if (isReplacingMemberSelection)
+        {
+            return;
+        }
+
         string characterKey = delta.Item.Definition.key;
         int memberIndex = selectionMemberIndex >= 0
             ? selectionMemberIndex
