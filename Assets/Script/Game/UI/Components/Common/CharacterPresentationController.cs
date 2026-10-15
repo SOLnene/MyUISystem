@@ -230,6 +230,11 @@ public sealed class CharacterPresentationController : MonoBehaviour
         float? crossFadeDurationOverride)
     {
         CharacterPresentationData destination = profile.Get(target);
+        // 初始化和复位必须直接进入 Loop，不能被普通动作切换的路线规则覆盖。
+        if (mode == PresentationTransitionMode.Immediate)
+        {
+            return new[] { new TransitionStep(target, PresentationPhase.Loop, 0f) };
+        }
         bool hasSource = currentPresentation != null;
         bool teamRoute = target == CharacterPresentationState.TeamSwitch
                          || (hasSource && currentState == CharacterPresentationState.TeamSwitch);
