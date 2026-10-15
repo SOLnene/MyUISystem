@@ -10,6 +10,14 @@ public interface IGachaService
 public class GachaService: IGachaService
 {
     private readonly IGachaPoolProvider poolProvider;
+    RemoteGachaConfiguration remoteConfiguration;
+    readonly CharacterEventGacha characterEvents = new CharacterEventGacha();
+
+    internal void ApplyRemoteConfiguration(RemoteGachaConfiguration configuration)
+    {
+        remoteConfiguration?.Dispose();
+        remoteConfiguration = configuration;
+    }
 
     //每个卡池保底计数
     Dictionary<string, int> pityCounters = new();
@@ -22,7 +30,7 @@ public class GachaService: IGachaService
     
     public GachaResult Draw(int count,string gachaKey)
     {
-        var pool = poolProvider.GetPool(gachaKey);
+        var pool = (remoteConfiguration ?? poolProvider).GetPool(gachaKey);
         if (pool == null || pool.entries.Count == 0)
         {
             Debug.LogWarning($"No pool found for key {gachaKey}");
@@ -30,6 +38,9 @@ public class GachaService: IGachaService
         }
         
         var entries = new List<GachaEntry>();
+
+        if (pool.EventRules != null)
+            return characterEvents.Draw(count, pool);
 
         // 获取这个池的保底计数
         if (!pityCounters.TryGetValue(pool.gachaKey, out int pityCounter))
@@ -55,12 +66,14 @@ public class GachaService: IGachaService
             saveData.pityCounters.Add(new GachaPitySaveData(pair.Key, pair.Value));
         }
 
+        characterEvents.ExportTo(saveData);
         return saveData;
     }
 
     public void ImportSaveData(GachaSaveData saveData)
     {
         pityCounters.Clear();
+        characterEvents.Import(saveData?.eventPityCounters);
         if (saveData == null || saveData.pityCounters == null)
         {
             return;

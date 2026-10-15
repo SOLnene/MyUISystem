@@ -193,6 +193,17 @@ public class TeamMemberSaveData
 public class GachaSaveData
 {
     public List<GachaPitySaveData> pityCounters = new List<GachaPitySaveData>();
+    public List<GachaEventPitySaveData> eventPityCounters = new List<GachaEventPitySaveData>();
+}
+
+[Serializable]
+public class GachaEventPitySaveData
+{
+    // Separate shared-group state preserves the existing per-pool counters in older saves.
+    public string groupKey;
+    public int fiveStarCount;
+    public int fourStarCount;
+    public bool featuredFiveStarGuaranteed;
 }
 
 [Serializable]

@@ -11,6 +11,8 @@ public class GachaDefinition : ScriptableObject
     
     //保底规则  
     public int pityCount = 90;
+    // Remote-only rules are intentionally excluded from serialized legacy assets.
+    internal GachaEventRules EventRules { get; set; }
 }
 
 

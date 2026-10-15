@@ -80,5 +80,6 @@ internal sealed class GameSession : IDisposable
         // 候选失败或切换会话时，释放其创建的订阅和异步资源。
         BackpackVM?.Dispose();
         AchievementService?.Dispose();
+        GachaService.ApplyRemoteConfiguration(null);
     }
 }
