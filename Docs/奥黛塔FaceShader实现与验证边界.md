@@ -28,9 +28,11 @@ Shader 文件位于 `Packages/com.meliverse.hoyotoon/Shaders/Genshin Impact/`。
 
 `_FaceSdfMap` 当前绑定 `Avatar_Girl_Tex_FaceSDF.png`，承担距离与高光带数据；不能用普通 Face Diffuse 替代。
 
-已有 `_FaceMapTex` 当前绑定 `Avatar_Tex_Face02_Shadow.png`，保留它原有的职责。新增 SDF 入口没有覆盖这个入口，也不把两张图当成同一种遮罩。
+`_LightMapTex` 当前绑定 `Avatar_Tex_Face02_Shadow.png`，提供分区遮罩、AO 和材质编号；它不是 `_FaceMapTex` 的绑定图。
 
-这两张本地数据图的 `sRGBTexture` 均为 0，避免采样 RGB 时被当作颜色转换。Face Diffuse 仍作为颜色图使用。此约定不表示所有名字含 Face 的图都必须关闭 sRGB。
+已有 `_FaceMapTex` 当前绑定共用的 `Avatar_Girl_Tex_FaceLightmap.png`（资源位于 Barbara 目录），供旧 Face 算法、描边宽度和调试显示使用；新原版 Face 路线的 SDF 阴影形状与鼻子高光读取 `_FaceSdfMap`，没有覆盖这个入口。
+
+上述三张数据图的 `sRGBTexture` 均为 0，避免采样 RGB 时被当作颜色转换。Face Diffuse 仍作为颜色图使用。此约定不表示所有名字含 Face 的图都必须关闭 sRGB。
 
 启用新路线需要 Face 材质分支、`_UseFaceMapNew=1` 和 `_UseNativeFaceSDF=1`。关闭原版开关保留原有 Face 算法，不代表恢复所有材质、光照和场景配置。
 
