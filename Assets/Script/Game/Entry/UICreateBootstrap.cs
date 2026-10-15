@@ -20,19 +20,24 @@ public sealed class UICreateBootstrap : MonoBehaviour
         if (SaveProfileManager.Instance.ActiveProfile == null)
         {
             UIManager.Instance.Open(UIType.LoginView);
-            await UniTask.WaitUntil(
-                () => GameContext.Instance.CanSave,
-                cancellationToken: this.GetCancellationTokenOnDestroy());
+            if (await UniTask.WaitUntil(
+                () => GameContext.Instance.CanSave &&
+                    (!CloudGameSaveSession.IsCloudSource(GameContext.Instance.ActiveSaveDirectory) ||
+                        (CloudGameSaveSession.Current?.IsReady ?? false)),
+                cancellationToken: this.GetCancellationTokenOnDestroy()).SuppressCancellationThrow())
+                return;
         }
         else
         {
             await GameContext.Instance.Init();
         }
 
-        foreach (InventoryItem item in ItemFactory.CreateTestItems())
-        {
-            GameContext.Instance.BackpackVM.AddItem(item);
-        }
+        // 新账号仅发放一次初始测试物品，读取已有云存档时不重复赠送。
+        if (GameContext.Instance.TryRequestInitialTestItems())
+            foreach (InventoryItem item in ItemFactory.CreateTestItems())
+            {
+                GameContext.Instance.BackpackVM.AddItem(item);
+            }
 
         if (opensHubDirectly)
         {

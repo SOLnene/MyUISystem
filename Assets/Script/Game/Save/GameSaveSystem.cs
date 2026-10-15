@@ -92,6 +92,13 @@ public static class GameSaveSystem
             return false;
         }
 
+        string source = GameContext.Instance.ActiveSaveDirectory;
+        if (string.IsNullOrEmpty(source))
+        {
+            Debug.LogError("写入存档失败: 尚未选择本地或云端会话。");
+            return false;
+        }
+
         GameSaveData saveData = new GameSaveData
         {
             version = CurrentVersion,
@@ -111,10 +118,16 @@ public static class GameSaveSystem
         try
         {
             string json = JsonUtility.ToJson(saveData, true);
-            WriteSaveFile(json);
-            NeedsResave = false;
-            preserveBackupOnNextSave = false;
-            return true;
+            if (!CloudGameSaveSession.IsCloudSource(source))
+            {
+                WriteSaveFile(json);
+                NeedsResave = false;
+                preserveBackupOnNextSave = false;
+                return true;
+            }
+            CloudGameSaveSession.RequireSession(source).QueueSave(json);
+            // 同步接口不能把入队当作保存成功；协调器等待云端确认后再清除 dirty。
+            return false;
         }
         catch (Exception exception)
         {
@@ -189,6 +202,10 @@ public static class GameSaveSystem
     {
         NeedsResave = false;
         preserveBackupOnNextSave = false;
+        if (CloudGameSaveSession.IsCloudSource(saveDirectory))
+            return LoadCloudSave(CloudGameSaveSession.RequireSession(saveDirectory).Json,
+                economy, inventoryRepository, characterRepository, teamRepository,
+                gachaService, storePurchaseService);
         string savePath = Path.Combine(saveDirectory, SaveFileName);
         string backupPath = Path.Combine(saveDirectory, BackupFileName);
         bool hasMainSave = File.Exists(savePath);
@@ -239,6 +256,43 @@ public static class GameSaveSystem
         }
 
         return SaveLoadResult.Corrupted;
+    }
+
+    internal static void ConfirmCloudSave()
+    {
+        NeedsResave = false;
+    }
+
+    static SaveLoadResult LoadCloudSave(string json, GameEconomy economy,
+        InventoryRepository inventoryRepository, CharacterRepository characterRepository,
+        TeamRepository teamRepository, GachaService gachaService,
+        StorePurchaseService storePurchaseService)
+    {
+        if (json == null)
+            return SaveLoadResult.NotFound;
+        try
+        {
+            if (!json.Contains("\"version\""))
+                return SaveLoadResult.Corrupted;
+            var data = JsonUtility.FromJson<GameSaveData>(json);
+            if (data == null)
+                return SaveLoadResult.Corrupted;
+            if (data.version <= 0 || data.version > CurrentVersion)
+                return SaveLoadResult.UnsupportedVersion;
+            int sourceVersion = data.version;
+            NormalizeSaveData(data, sourceVersion);
+            if (!ValidateSaveData(data) || !TryApplySaveData(data, economy,
+                inventoryRepository, characterRepository, teamRepository, gachaService,
+                storePurchaseService))
+                return SaveLoadResult.Corrupted;
+            NeedsResave = sourceVersion < CurrentVersion;
+            return SaveLoadResult.Success;
+        }
+        catch (Exception exception)
+        {
+            Debug.LogError($"读取云存档失败: {exception.Message}");
+            return SaveLoadResult.Corrupted;
+        }
     }
 
     static bool TryReadSaveData(

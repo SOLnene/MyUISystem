@@ -39,26 +39,39 @@ public class GameContext: Singleton<GameContext>
         }
     }
 
-    internal async UniTask<bool> TryStartProfileAsync(string saveDirectory)
+    internal async UniTask<bool> TryStartProfileAsync(string saveDirectory, CancellationToken cancellationToken = default)
     {
-        await sessionGate.WaitAsync();
+        await sessionGate.WaitAsync(cancellationToken);
         try
         {
+            cancellationToken.ThrowIfCancellationRequested();
             if (currentSession?.SaveDirectory == saveDirectory)
             {
                 return true;
             }
 
             await GameDatabase.Init();
+            cancellationToken.ThrowIfCancellationRequested();
             // 候选初始化期间保留旧会话，失败时可以无损重试其他存档。
             var candidateSession = new GameSession(saveDirectory);
+            var previousCurrencies = GameEconomy.Instance.ExportSaveData();
+            var previousAchievements = AchievementProgressService.Instance.ExportSaveData();
+            var previousTutorial = TutorialProgressService.ExportSaveData();
             try
             {
                 await candidateSession.InitializeAsync();
+                // 候选还会初始化全局进度；取消时恢复它们，不能只丢弃仓库。
+                cancellationToken.ThrowIfCancellationRequested();
             }
             catch
             {
                 candidateSession.Dispose();
+                if (cancellationToken.IsCancellationRequested)
+                {
+                    GameEconomy.Instance.ImportSaveData(previousCurrencies);
+                    AchievementProgressService.Instance.ImportSaveData(previousAchievements);
+                    TutorialProgressService.ImportSaveData(previousTutorial);
+                }
                 throw;
             }
 

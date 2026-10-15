@@ -65,6 +65,16 @@ public sealed class SaveProfileManager
         return profile;
     }
 
+    internal SaveProfileInfo CreateLocalProfile()
+    {
+        // 独立本地入口不枚举或导入历史存档，首次只创建它自己的档案。
+        string profileId = Guid.NewGuid().ToString("N");
+        Directory.CreateDirectory(GetProfileDirectory(profileId));
+        var profile = new SaveProfileInfo(profileId, "本地玩家", DateTime.UtcNow.ToString("O"));
+        WriteProfile(GetProfileDirectory(profileId), profile);
+        return profile;
+    }
+
     public bool ActivateProfile(string profileId)
     {
         if (!TryGetProfile(profileId, out SaveProfileInfo profile, out _))
