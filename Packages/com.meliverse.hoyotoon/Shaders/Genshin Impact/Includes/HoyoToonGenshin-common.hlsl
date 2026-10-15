@@ -51,7 +51,8 @@ void modelFadeClip(float2 pixelPosition)
 {
     if (_ModelFade < 0.9999f)
     {
-        ditherClip(pixelPosition, saturate(_ModelFade));
+        // ditherClip converts normalized coordinates to pixels, so avoid scaling twice.
+        ditherClip(pixelPosition / _ScreenParams.xy, saturate(_ModelFade));
     }
 }
 

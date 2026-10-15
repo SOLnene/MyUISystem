@@ -13,6 +13,12 @@ public sealed class ModelPreviewController : MonoBehaviour
     Transform equipRoot;
 
     [SerializeField]
+    ParticleSystem characterSwitchParticles;
+
+    [SerializeField]
+    CharacterSwitchElementPalette characterSwitchElementPalette;
+
+    [SerializeField]
     ModelPreviewDatabase modelPreviewDatabase;
 
     [SerializeField]
@@ -74,6 +80,18 @@ public sealed class ModelPreviewController : MonoBehaviour
     bool preserveCharacterOnNextEquipActivation;
     bool hasLoadFailed;
 
+    [SerializeField, Min(0f)]
+    float characterSwitchFadeDuration = 0.15f;
+    [SerializeField, Min(0f)]
+    float characterSwitchFadeOutDuration = 0.06f;
+    [SerializeField, Min(0f)]
+    float characterSwitchEffectLeadTime = 0.2f;
+
+    static readonly int ModelFadeId = Shader.PropertyToID("_ModelFade");
+    CancellationTokenSource characterSwitchCancellation;
+    Renderer[] fadingCharacterRenderers;
+    MaterialPropertyBlock characterFadePropertyBlock;
+
     public bool IsCharacterPreviewActive =>
         activePreviewState != ActivePreviewState.Equip
         && characterRoot.gameObject.activeInHierarchy;
@@ -88,6 +106,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         ModelPreviewType previewType,
         string targetKey)
     {
+        CancelCharacterSwitch();
         // 普通显示同样走“准备后激活”，避免维护另一套加载和回收流程。
         ModelPreviewDefinition definition = await EnsurePreloadedAsync(
             previewType,
@@ -107,6 +126,7 @@ public sealed class ModelPreviewController : MonoBehaviour
             return null;
         }
 
+        CancelCharacterSwitch();
         Preload(definition);
         ModelPreviewDefinition preparedDefinition =
             await WaitForPreloadedAsync(
@@ -120,6 +140,134 @@ public sealed class ModelPreviewController : MonoBehaviour
                    out _)
             ? preparedDefinition
             : null;
+    }
+
+    internal async UniTask<ModelPreviewDefinition> ShowCharacterWithDitherAsync(
+        string targetKey,
+        Action<ModelPreviewDefinition> onActivated)
+    {
+        CancelCharacterSwitch();
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            this.GetCancellationTokenOnDestroy());
+        characterSwitchCancellation = cancellation;
+        try
+        {
+            ModelPreviewDefinition definition = await EnsurePreloadedAsync(
+                ModelPreviewType.Character, targetKey, cancellation.Token);
+            if (definition == null)
+            {
+                return null;
+            }
+
+            PreviewPreparation preparation = pendingPreview;
+            string element = GameDatabase.CharacterDatabase?.Get(targetKey)?.element;
+            CharacterSwitchParticlePlayback.Play(
+                characterSwitchParticles, characterSwitchElementPalette.Resolve(element));
+            bool replacingCharacter = activePreviewState == ActivePreviewState.Character
+                                      && activePreviewObject != null;
+            if (replacingCharacter)
+            {
+                fadingCharacterRenderers = activePreviewObject.GetComponentsInChildren<Renderer>(true);
+                await FadeCharacterModelAsync(
+                    fadingCharacterRenderers, 1f, 0f, characterSwitchFadeOutDuration, cancellation.Token);
+            }
+
+            // 粒子领先时间包含旧模型退场，避免把两个等待段重复累加。
+            float leadTime = Mathf.Max(0f, characterSwitchEffectLeadTime
+                - (replacingCharacter ? characterSwitchFadeOutDuration : 0f));
+            await UniTask.Delay(TimeSpan.FromSeconds(leadTime), cancellationToken: cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
+            if (pendingPreview != preparation || preparation.State != PreviewPreparationState.Ready)
+            {
+                return null;
+            }
+
+            Renderer[] preparedRenderers = preparation.PreviewObject.GetComponentsInChildren<Renderer>(true);
+            SetCharacterModelFade(preparedRenderers, 0f);
+            // 旧模型在同一帧内隐藏并回收，先恢复池对象的材质状态。
+            SetCharacterModelFade(fadingCharacterRenderers, 1f);
+            fadingCharacterRenderers = preparedRenderers;
+            if (!TryActivatePreloaded(ModelPreviewType.Character, targetKey, out _))
+            {
+                return null;
+            }
+
+            // 相机与 Default 动作在激活帧提交，模型显隐不延迟动作复位。
+            cancellation.Token.ThrowIfCancellationRequested();
+            onActivated(definition);
+            cancellation.Token.ThrowIfCancellationRequested();
+            // 粒子属于展示容器，旧模型回收后仍可播完尾段。
+            await FadeCharacterModelAsync(
+                preparedRenderers, 0f, 1f, characterSwitchFadeDuration, cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
+            return definition;
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            return null;
+        }
+        finally
+        {
+            // 过期任务不得恢复或清理后续切换正在使用的模型。
+            if (ReferenceEquals(characterSwitchCancellation, cancellation))
+            {
+                SetCharacterModelFade(fadingCharacterRenderers, 1f);
+                fadingCharacterRenderers = null;
+                characterSwitchCancellation = null;
+            }
+            cancellation.Dispose();
+        }
+    }
+
+    internal void CancelCharacterSwitch()
+    {
+        characterSwitchParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        CancellationTokenSource cancellation = characterSwitchCancellation;
+        characterSwitchCancellation = null;
+        cancellation?.Cancel();
+        SetCharacterModelFade(fadingCharacterRenderers, 1f);
+        fadingCharacterRenderers = null;
+    }
+
+    async UniTask FadeCharacterModelAsync(
+        Renderer[] renderers,
+        float from,
+        float to,
+        float duration,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        SetCharacterModelFade(renderers, from);
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
+            elapsed += Time.deltaTime;
+            SetCharacterModelFade(renderers, Mathf.Lerp(from, to, elapsed / duration));
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        SetCharacterModelFade(renderers, to);
+    }
+
+    void SetCharacterModelFade(Renderer[] renderers, float fade)
+    {
+        if (renderers == null)
+        {
+            return;
+        }
+
+        characterFadePropertyBlock ??= new MaterialPropertyBlock();
+        foreach (Renderer renderer in renderers)
+        {
+            if (renderer == null)
+            {
+                continue;
+            }
+            characterFadePropertyBlock.Clear();
+            renderer.GetPropertyBlock(characterFadePropertyBlock);
+            characterFadePropertyBlock.SetFloat(ModelFadeId, fade);
+            renderer.SetPropertyBlock(characterFadePropertyBlock);
+        }
     }
 
     internal void Preload(
@@ -286,6 +434,7 @@ public sealed class ModelPreviewController : MonoBehaviour
 
     public void ShowDefaultCharacter()
     {
+        CancelCharacterSwitch();
         CancelPendingLoad();
         ReleaseActivePreview();
         ReleaseSuspendedCharacter();
@@ -421,6 +570,7 @@ public sealed class ModelPreviewController : MonoBehaviour
             return false;
         }
 
+        CancelCharacterSwitch();
         GameObject equipPreviewObject = activePreviewObject;
         GameObject characterPreviewObject = suspendedCharacterPreviewObject;
         ModelPreviewDefinition definition = suspendedCharacterPreviewDefinition;
@@ -608,8 +758,14 @@ public sealed class ModelPreviewController : MonoBehaviour
         }
     }
 
+    void OnDisable()
+    {
+        CancelCharacterSwitch();
+    }
+
     void OnDestroy()
     {
+        CancelCharacterSwitch();
         CancelPendingLoad();
         ReleaseSuspendedCharacter();
     }

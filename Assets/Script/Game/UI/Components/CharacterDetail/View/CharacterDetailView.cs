@@ -226,7 +226,8 @@ namespace Game.UI.Components.CharacterDetail
             {
                 bool previewReady = await ModelViewer.Instance.TryShowPreviewAsync(
                     ModelPreviewType.Character,
-                    character.Definition.key);
+                    character.Definition.key,
+                    characterPresetIndex: DefaultOpenTabIndex);
                 if (!previewReady || isClosing || vm == null || version != operationVersion)
                     return;
 

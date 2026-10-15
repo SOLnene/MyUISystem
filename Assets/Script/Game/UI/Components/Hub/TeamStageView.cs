@@ -11,14 +11,21 @@ public sealed class TeamStageView : MonoBehaviour
     [SerializeField] private Camera displayCamera;
     [SerializeField] private Transform[] memberInfoAnchors;
     [SerializeField] private Transform[] memberModelRoots;
+    [SerializeField] private ParticleSystem[] memberSwitchParticles;
+    [SerializeField] private CharacterSwitchElementPalette characterSwitchElementPalette;
     [SerializeField] private string[] memberCharacterKeys;
     [SerializeField] private ModelPreviewDatabase modelPreviewDatabase;
     [SerializeField] private TeamStageCameraController cameraController;
     [SerializeField] private float memberFadeDuration = 0.15f;
+    [SerializeField, Min(0f)] private float memberSwitchFadeOutDuration = 0.06f;
+    [SerializeField, Min(0f)] private float memberSwitchFadeInDuration = 0.15f;
+    [SerializeField, Min(0f)] private float memberSwitchEffectLeadTime = 0.2f;
 
     private GameObject[] activeMemberModels;
     private string[] activeMemberCharacterKeys;
     private Renderer[][] memberRenderers;
+    private float[] memberVisibility;
+    private float[] memberSwitchFades;
     private CancellationTokenSource[] memberLoadCancellations;
     private int[] memberLoadVersions;
     private MaterialPropertyBlock memberFadePropertyBlock;
@@ -36,6 +43,13 @@ public sealed class TeamStageView : MonoBehaviour
         activeMemberModels = new GameObject[MemberCount];
         activeMemberCharacterKeys = new string[MemberCount];
         memberRenderers = new Renderer[MemberCount][];
+        memberVisibility = new float[MemberCount];
+        memberSwitchFades = new float[MemberCount];
+        for (int index = 0; index < MemberCount; index++)
+        {
+            memberVisibility[index] = 1f;
+            memberSwitchFades[index] = 1f;
+        }
         memberLoadCancellations = new CancellationTokenSource[MemberCount];
         memberLoadVersions = new int[MemberCount];
         memberFadePropertyBlock = new MaterialPropertyBlock();
@@ -61,6 +75,13 @@ public sealed class TeamStageView : MonoBehaviour
     {
         cameraController.FocusMember(index);
         focusedMemberIndex = index;
+        for (int memberIndex = 0; memberIndex < MemberCount; memberIndex++)
+        {
+            if (memberIndex != index)
+            {
+                memberSwitchParticles[memberIndex].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            }
+        }
         memberFadeTween?.Kill();
         memberFadeTween = DOVirtual.Float(1f, 0f, memberFadeDuration, fade =>
         {
@@ -105,9 +126,9 @@ public sealed class TeamStageView : MonoBehaviour
             return;
         }
 
-        memberCharacterKeys[index] = characterKey;
         if (string.IsNullOrEmpty(characterKey))
         {
+            memberCharacterKeys[index] = characterKey;
             ClearMemberModel(index);
             return;
         }
@@ -115,6 +136,7 @@ public sealed class TeamStageView : MonoBehaviour
         if (activeMemberModels[index] != null
             && activeMemberCharacterKeys[index] == characterKey)
         {
+            memberCharacterKeys[index] = characterKey;
             CancelMemberLoad(index);
             return;
         }
@@ -125,10 +147,10 @@ public sealed class TeamStageView : MonoBehaviour
         if (definition == null)
         {
             Debug.LogWarning($"Team stage model definition not found: {characterKey}", this);
-            ClearMemberModel(index);
             return;
         }
 
+        memberCharacterKeys[index] = characterKey;
         await LoadMemberModelAsync(index, characterKey, definition);
     }
 
@@ -190,14 +212,35 @@ public sealed class TeamStageView : MonoBehaviour
             SetLayerRecursively(loadedModel, LayerMask.NameToLayer("ModelDisplay"));
 
             GameObject previousModel = activeMemberModels[index];
+            // 独立粒子不会随角色 Dither 裁剪；聚焦时仅播放当前可见位置。
+            if (focusedMemberIndex < 0 || focusedMemberIndex == index)
+            {
+                // 使用本次请求的目标元素，旧角色在预加载阶段仍可能可见。
+                string element = GameDatabase.CharacterDatabase?.Get(characterKey)?.element;
+                CharacterSwitchParticlePlayback.Play(
+                    memberSwitchParticles[index], characterSwitchElementPalette.Resolve(element));
+            }
             if (previousModel != null)
             {
+                await FadeMemberReplacementAsync(
+                    index, 0f, memberSwitchFadeOutDuration, cancellation.Token);
+            }
+
+            float leadTime = Mathf.Max(0f, memberSwitchEffectLeadTime
+                - (previousModel != null ? memberSwitchFadeOutDuration : 0f));
+            await UniTask.Delay(TimeSpan.FromSeconds(leadTime), cancellationToken: cancellation.Token);
+            cancellation.Token.ThrowIfCancellationRequested();
+            if (previousModel != null)
+            {
+                // 同一帧内回收旧模型，先恢复池对象的可见度。
+                memberSwitchFades[index] = 1f;
                 SetMemberFade(index, 1f);
             }
 
             activeMemberModels[index] = loadedModel;
             activeMemberCharacterKeys[index] = characterKey;
             memberRenderers[index] = loadedModel.GetComponentsInChildren<Renderer>(true);
+            memberSwitchFades[index] = 0f;
             SetMemberFade(index, focusedMemberIndex < 0 || focusedMemberIndex == index ? 1f : 0f);
             loadedModel.SetActive(true);
             loadedModel = null;
@@ -206,6 +249,9 @@ public sealed class TeamStageView : MonoBehaviour
             {
                 ResourceManager.Instance.Recycle(previousModel);
             }
+            // 空位加入也从不可见开始，避免先出现实体后补播光束。
+            await FadeMemberReplacementAsync(
+                index, 1f, memberSwitchFadeInDuration, cancellation.Token);
         }
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
         {
@@ -219,11 +265,35 @@ public sealed class TeamStageView : MonoBehaviour
 
             if (memberLoadCancellations[index] == cancellation)
             {
+                memberCharacterKeys[index] = activeMemberCharacterKeys[index];
+                memberSwitchFades[index] = 1f;
+                SetMemberFade(index, memberVisibility[index]);
                 memberLoadCancellations[index] = null;
             }
 
             cancellation.Dispose();
         }
+    }
+
+    private async UniTask FadeMemberReplacementAsync(
+        int index,
+        float targetFade,
+        float duration,
+        CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        float from = memberSwitchFades[index];
+        float elapsed = 0f;
+        while (elapsed < duration)
+        {
+            await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
+            elapsed += Time.deltaTime;
+            memberSwitchFades[index] = Mathf.Lerp(from, targetFade, elapsed / duration);
+            SetMemberFade(index, memberVisibility[index]);
+        }
+        cancellationToken.ThrowIfCancellationRequested();
+        memberSwitchFades[index] = targetFade;
+        SetMemberFade(index, memberVisibility[index]);
     }
 
     private void ClearMemberModel(int index)
@@ -234,10 +304,13 @@ public sealed class TeamStageView : MonoBehaviour
 
     private void CancelMemberLoad(int index)
     {
+        memberSwitchParticles[index].Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         memberLoadVersions[index]++;
         CancellationTokenSource cancellation = memberLoadCancellations[index];
         memberLoadCancellations[index] = null;
         cancellation?.Cancel();
+        memberSwitchFades[index] = 1f;
+        SetMemberFade(index, memberVisibility[index]);
     }
 
     private void RecycleMemberModel(int index, bool forceDestroy = false)
@@ -315,6 +388,8 @@ public sealed class TeamStageView : MonoBehaviour
 
     private void SetMemberFade(int index, float fade)
     {
+        // 聚焦可见度与换人显隐相乘，两个流程不会覆盖彼此。
+        memberVisibility[index] = fade;
         Renderer[] renderers = memberRenderers[index];
         if (renderers == null)
         {
@@ -330,7 +405,7 @@ public sealed class TeamStageView : MonoBehaviour
 
             memberFadePropertyBlock.Clear();
             memberRenderer.GetPropertyBlock(memberFadePropertyBlock);
-            memberFadePropertyBlock.SetFloat(ModelFadeId, fade);
+            memberFadePropertyBlock.SetFloat(ModelFadeId, fade * memberSwitchFades[index]);
             memberRenderer.SetPropertyBlock(memberFadePropertyBlock);
         }
     }
@@ -340,6 +415,14 @@ public sealed class TeamStageView : MonoBehaviour
         foreach (Transform child in root.GetComponentsInChildren<Transform>(true))
         {
             child.gameObject.layer = layer;
+        }
+    }
+
+    private void OnDisable()
+    {
+        for (int index = 0; index < MemberCount; index++)
+        {
+            CancelMemberLoad(index);
         }
     }
 

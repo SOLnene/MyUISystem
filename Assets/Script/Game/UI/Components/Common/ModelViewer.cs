@@ -835,27 +835,44 @@ public class ModelViewer : SingletonMono<ModelViewer>
         await TryShowPreviewAsync(previewType, targetKey);
     }
 
-    internal async UniTask<bool> TryShowPreviewAsync(ModelPreviewType previewType, string targetKey)
+    internal async UniTask<bool> TryShowPreviewAsync(
+        ModelPreviewType previewType,
+        string targetKey,
+        int? characterPresetIndex = null)
     {
-        ModelPreviewDefinition definition =
-            await previewController.ShowAsync(previewType, targetKey);
+        void ApplyActivatedPresentation(ModelPreviewDefinition definition)
+        {
+            SetPlaneReflection(previewType == ModelPreviewType.Character);
+            ApplyPreviewCamera(definition.CameraPreset);
+            if (previewType == ModelPreviewType.Character)
+            {
+                // 加载成功后再提交目标 preset，失败时保持旧角色的展示状态。
+                if (characterPresetIndex.HasValue)
+                {
+                    currentPresetIndex = characterPresetIndex.Value;
+                }
+                ApplyCurrentCharacterPresetImmediate();
+            }
+        }
+
+        if (previewType == ModelPreviewType.Character && characterPresetIndex.HasValue)
+        {
+            return await previewController.ShowCharacterWithDitherAsync(
+                targetKey, ApplyActivatedPresentation) != null;
+        }
+
+        ModelPreviewDefinition definition = await previewController.ShowAsync(previewType, targetKey);
         if (definition == null)
         {
             return false;
         }
-
-        SetPlaneReflection(previewType == ModelPreviewType.Character);
-        ApplyPreviewCamera(definition.CameraPreset);
-        if (previewType == ModelPreviewType.Character)
-        {
-            ApplyCurrentCharacterPresetImmediate();
-        }
-
+        ApplyActivatedPresentation(definition);
         return true;
     }
 
     internal void CancelPendingPreviewLoad()
     {
+        previewController.CancelCharacterSwitch();
         previewController.CancelPendingLoad();
         previewController.CancelCharacterPreservation();
         if (equipPreviewFlowState == EquipPreviewFlowState.Entering)
