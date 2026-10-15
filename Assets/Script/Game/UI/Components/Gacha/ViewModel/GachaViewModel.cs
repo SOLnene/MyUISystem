@@ -40,6 +40,7 @@ public class GachaViewModel : IDisposable
     public IReadOnlyList<GachaPoolUIConfig> PoolConfigs { get; }
     public IReadOnlyReactiveProperty<GachaPoolUIConfig> CurrentPoolConfig => currentPoolConfig;
     readonly ReactiveProperty<GachaPoolUIConfig> currentPoolConfig;
+    readonly List<GachaPoolUIConfig> poolConfigs = new List<GachaPoolUIConfig>();
     
     public Subject<GachaSessionViewModel> OnSessionStarted { get; } = new Subject<GachaSessionViewModel>();
 
@@ -53,21 +54,22 @@ public class GachaViewModel : IDisposable
     {
         gachaService = service;
         visualProvider = provider;
-        PoolConfigs = configDatabase.Configs;
+        poolConfigs.AddRange(configDatabase.Configs);
+        PoolConfigs = poolConfigs;
         currentPoolConfig = new ReactiveProperty<GachaPoolUIConfig>(configDatabase.defaultConfig);
 
         //currentIndex.Subscribe(_ => UpdateHasNext()).AddTo(disposable);
         lastDrawnItems.ObserveCountChanged().Subscribe(_ => UpdateHasNext()).AddTo(disposable);
         
         drawCommand
-            .Where(_ => !isDrawing.Value &&
+            .Where(_ => currentPoolConfig.Value != null && !isDrawing.Value &&
                         (currentSession == null || currentSession.Phase.Value == GachaSessionPhase.Finished))
             .Subscribe(
                 count =>
                 {
                     Draw(count);
                 }).AddTo(disposable);
-        currentPoolConfig.Subscribe(
+        currentPoolConfig.Where(config => config != null).Subscribe(
             config =>Debug.Log($"切换卡池到 {config.gachaKey}"))
             .AddTo(disposable);
     }
@@ -124,9 +126,20 @@ public class GachaViewModel : IDisposable
         OnSessionStarted.OnNext(currentSession);
     }
 
+    internal void ApplyPoolConfigs(IReadOnlyList<GachaPoolUIConfig> configs)
+    {
+        // 先清除旧选择；开放列表为空或请求失败时不能继续抽旧池。
+        currentPoolConfig.Value = null;
+        poolConfigs.Clear();
+        for (int i = 0; i < configs.Count; i++)
+            poolConfigs.Add(configs[i]);
+        if (poolConfigs.Count > 0)
+            currentPoolConfig.Value = poolConfigs[0];
+    }
+
     public void SwitchPool(GachaPoolUIConfig config)
     {
-        if (config == null || currentPoolConfig.Value == config)
+        if (config == null || !poolConfigs.Contains(config) || currentPoolConfig.Value == config)
             return;
 
         currentPoolConfig.Value = config;

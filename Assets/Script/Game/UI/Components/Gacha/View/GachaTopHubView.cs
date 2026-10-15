@@ -51,12 +51,12 @@ public class GachaTopHubView : BindableUI
 	
 	public async UniTask Bind(GachaTopHubViewModel viewModel)
 	{
-		vm = viewModel;
 		Debug.Log("Bind Hub");
-		if (tabViews.Count == viewModel.Tabs.Count)
+		if (ReferenceEquals(vm, viewModel) && tabViews.Count == viewModel.Tabs.Count)
 		{
 			return;
 		}
+		vm = viewModel;
 		bindCts?.Cancel();
 		var cts = new CancellationTokenSource();
 		bindCts = cts;
@@ -73,7 +73,14 @@ public class GachaTopHubView : BindableUI
 			{
 				throw new InvalidOperationException("Gacha tab prefab could not be loaded.");
 			}
-			for (int i = tabViews.Count; i < viewModel.Tabs.Count; i++)
+			// 数量相同也可能换池或换顺序，必须绑定本次配置对应的标签。
+			foreach (var tab in tabViews)
+			{
+				tab.gameObject.SetActive(false);
+				Destroy(tab.gameObject);
+			}
+			tabViews.Clear();
+			for (int i = 0; i < viewModel.Tabs.Count; i++)
 			{
 				var prefab = Instantiate(tabPrefab, gachaPoolContent);
 				var tabView = prefab.GetComponent<GachaPoolTabView>();
