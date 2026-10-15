@@ -20,7 +20,7 @@ namespace Game.UI.Components.CharacterDetail
 
         public void LoadIcon(string characterKey)
         {
-            string iconAddress = CharacterVisualAddressResolver.ResolveIcon(characterKey);
+            string iconAddress = CharacterVisualAddressResolver.ResolveAvatarIcon(characterKey);
             IconLoader.SetSpriteAsync(icon, iconAddress, this.GetCancellationTokenOnDestroy()).Forget();
         }
     }

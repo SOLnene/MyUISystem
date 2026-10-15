@@ -28,7 +28,7 @@ public class CharacterSlotView : MonoBehaviour
 
         selectionSlot.ResetState();
         selectionSlot.BindVisual(
-            CharacterVisualAddressResolver.ResolveIcon(character.Definition.key),
+            CharacterVisualAddressResolver.ResolveAvatarIcon(character.Definition.key),
             RarityConfig.GetColor(character.Definition.rarity - 1));
         selectionSlot.SetInteractable(interactable);
         SetChecked(isChecked);
