@@ -45,6 +45,13 @@ public static class EventBusUtil
     public static void ClearAllBuses()
     {
 //        Debug.Log("Clearing all buses...");
+        // Script reloads reset this cache without replaying runtime startup.
+        // Rebuild it so listeners registered after the reload are still cleared.
+        if (EventBusTypes == null)
+        {
+            Initialize();
+        }
+
         for (int i = 0; i < EventBusTypes.Count; i++)
         {
             var busType = EventBusTypes[i];
