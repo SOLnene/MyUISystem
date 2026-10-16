@@ -152,6 +152,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
         || activeCameraTransition != null
         || cameraPushOperation != null;
     internal bool IsCharacterPreviewActive => previewController.IsCharacterPreviewActive;
+    internal bool CanShowCharacter(string targetKey) => previewController.CanShowCharacter(targetKey);
     public event Action OnPreviewTransitionCompleted;
     void Start()
     {
@@ -880,6 +881,19 @@ public class ModelViewer : SingletonMono<ModelViewer>
             equipPreviewFlowState = EquipPreviewFlowState.None;
             hasCharacterEquipHandoffPose = false;
         }
+    }
+
+    internal void BeginCharacterPreview()
+    {
+        // Only a fresh page open clears the actor; returning from weapons keeps the suspended character.
+        CancelPendingPreviewLoad();
+        previewController.ClearPreview();
+        equipPreviewFlowState = EquipPreviewFlowState.None;
+        hasCharacterEquipHandoffPose = false;
+        currentPresetIndex = 0;
+        ApplyPreviewCamera(presets[0]);
+        SetPlaneReflection(false);
+        canDrag = false;
     }
 
     public void ShowCharacterPreview()

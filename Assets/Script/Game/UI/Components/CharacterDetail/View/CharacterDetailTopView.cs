@@ -57,6 +57,9 @@ namespace Game.UI.Components.CharacterDetail
             for (int i = 0; i < characters.Count; i++)
             {
                 CharacterModel character = characters[i];
+                if (!ModelViewer.Instance.CanShowCharacter(character.Definition.key))
+                    continue;
+
                 CharacterIconButton button = Instantiate(characterButtonPrefab, characterButtonRoot);
                 button.gameObject.SetActive(true);
                 button.SetInteractable(character != currentCharacter);

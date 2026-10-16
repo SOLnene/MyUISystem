@@ -64,9 +64,17 @@ internal class MainMenuNavigator
             ? characterRepository.GetByKey(characterDefinition.key)
             : null;
 
-        if (characterModel == null && characterRepository.Characters.Count > 0)
+        if (characterModel == null || !ModelViewer.Instance.CanShowCharacter(characterModel.Definition.key))
         {
-            characterModel = characterRepository.Characters[0];
+            characterModel = null;
+            foreach (var character in characterRepository.Characters)
+            {
+                if (!ModelViewer.Instance.CanShowCharacter(character.Definition.key))
+                    continue;
+
+                characterModel = character;
+                break;
+            }
         }
 
         if (characterModel == null)

@@ -102,6 +102,15 @@ public sealed class ModelPreviewController : MonoBehaviour
     public bool HasLoadFailed => hasLoadFailed;
     internal bool HasSuspendedCharacter => suspendedCharacterPreviewObject != null;
 
+    internal bool CanShowCharacter(string targetKey)
+    {
+        if (string.IsNullOrEmpty(targetKey))
+            return false;
+
+        ModelPreviewDefinition definition = modelPreviewDatabase.Get(ModelPreviewType.Character, targetKey);
+        return definition != null && !string.IsNullOrEmpty(definition.ModelAddress);
+    }
+
     public async UniTask<ModelPreviewDefinition> ShowAsync(
         ModelPreviewType previewType,
         string targetKey)
@@ -284,16 +293,19 @@ public sealed class ModelPreviewController : MonoBehaviour
         ModelPreviewDefinition definition = modelPreviewDatabase.Get(previewType, targetKey);
         if (definition == null)
         {
+            CancelPendingLoad();
+            hasLoadFailed = true;
             Debug.LogWarning(
                 $"Model preview definition not found: {previewType}/{targetKey}",
                 this);
             return;
         }
 
-        Preload(definition);
+        // A fallback selects the resource; activation still belongs to the requested weapon.
+        Preload(definition, targetKey);
     }
 
-    void Preload(ModelPreviewDefinition definition)
+    void Preload(ModelPreviewDefinition definition, string targetKey = null)
     {
         if (definition == null)
         {
@@ -305,7 +317,7 @@ public sealed class ModelPreviewController : MonoBehaviour
 
         pendingPreview = new PreviewPreparation(
             definition.PreviewType,
-            definition.TargetKey,
+            targetKey ?? definition.TargetKey,
             definition);
         LoadPreviewAsync(pendingPreview).Forget(Debug.LogException);
     }
@@ -430,6 +442,19 @@ public sealed class ModelPreviewController : MonoBehaviour
                 preparation.Cancellation.Dispose();
             }
         }
+    }
+
+    internal void ClearPreview()
+    {
+        CancelCharacterSwitch();
+        CancelPendingLoad();
+        preserveCharacterOnNextEquipActivation = false;
+        ReleaseActivePreview();
+        ReleaseSuspendedCharacter();
+        characterPresentation.Unbind();
+        characterRoot.gameObject.SetActive(false);
+        equipRoot.gameObject.SetActive(false);
+        hasLoadFailed = false;
     }
 
     public void ShowDefaultCharacter()

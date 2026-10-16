@@ -119,6 +119,7 @@ namespace Game.UI.Components.CharacterDetail
             ++operationVersion;
             currentOperation = DetailOperation.None;
             CancelEquipEnhanceTransition();
+            ModelViewer.Instance.BeginCharacterPreview();
             ModelViewer.Instance.PlayStarFieldParticles();
             isClosing = false;
             vm = data as CharacterDetailViewModel;
