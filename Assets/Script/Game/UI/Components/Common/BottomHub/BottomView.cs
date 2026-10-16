@@ -37,10 +37,7 @@ public class BottomView : MonoBehaviour,IActionHubView
     {
         vm = backpackViewModel;
         button.onClick.RemoveAllListeners();
-        button.onClick.AddListener(() =>
-        {
-            UIManager.Instance.Open(UIType.EquipDetailView,vm.selectedSlot.Value);
-        });
+        button.onClick.AddListener(OnDetailClick);
         //TODO:换成buttondata生成
         if (enhanceButton != null)
         {
@@ -77,7 +74,15 @@ public class BottomView : MonoBehaviour,IActionHubView
     
     public void OnDetailClick()
     {
-        EquipItem equipItem;
+        ItemViewModel item = vm.selectedSlot.Value?.ItemViewModel;
+        if (item == null)
+            return;
+
+        if (item.Model is EquipItem weapon)
+            UIManager.Instance.Open(UIType.EquipDetailView,
+                new EquipDetailOpenParams(new EquipItemViewModel(weapon), WeaponDetailTab.Info));
+        else
+            UIManager.Instance.Open(UIType.InfoPanelPopup, item);
     }
 }
 

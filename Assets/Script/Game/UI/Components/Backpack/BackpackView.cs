@@ -46,6 +46,7 @@ public class BackpackView : UIView
 
         topView.Bind(viewModel.topVM);
         middleView.Bind(viewModel.middleVM, viewModel.infoVM);
+        bottomHub.Bind(viewModel);
 
     }
 
