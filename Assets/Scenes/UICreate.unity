@@ -15076,6 +15076,67 @@ Transform:
   m_Children: []
   m_Father: {fileID: 162872526}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1001 &864114762
+PrefabInstance:
+  m_ObjectHideFlags: 0
+  serializedVersion: 2
+  m_Modification:
+    serializedVersion: 3
+    m_TransformParent: {fileID: 0}
+    m_Modifications:
+    - target: {fileID: -8679921383154817045, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 0.030976715
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_LocalRotation.w
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_LocalRotation.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_LocalRotation.y
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_LocalRotation.z
+      value: -0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: -8679921383154817045, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_LocalEulerAnglesHint.z
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_Name
+      value: Equip_Pole_Zephyrus_Model
+      objectReference: {fileID: 0}
+    - target: {fileID: 919132149155446097, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
+    m_RemovedComponents: []
+    m_RemovedGameObjects: []
+    m_AddedGameObjects: []
+    m_AddedComponents: []
+  m_SourcePrefab: {fileID: 100100000, guid: 379a7d23730f7ea49901686939cb51f7, type: 3}
 --- !u!1 &870469819
 GameObject:
   m_ObjectHideFlags: 0
@@ -30006,6 +30067,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: Avatar_Girl_Sword_Odette_Presentation
       objectReference: {fileID: 0}
+    - target: {fileID: 166276825522948344, guid: 288bda0adcc7c1e46869a108c11f9b09, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 747227747211544856, guid: 288bda0adcc7c1e46869a108c11f9b09, type: 3}
       propertyPath: m_LocalPosition.x
       value: -1.926
@@ -33024,6 +33089,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: ModelViewer
       objectReference: {fileID: 0}
+    - target: {fileID: 4852943657513259575, guid: 5ded686e3013c924193f4c90cac4d737, type: 3}
+      propertyPath: m_IsActive
+      value: 1
+      objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
@@ -34530,3 +34599,4 @@ SceneRoots:
   - {fileID: 2024148198}
   - {fileID: 8809100000000000002}
   - {fileID: 857565164}
+  - {fileID: 864114762}
