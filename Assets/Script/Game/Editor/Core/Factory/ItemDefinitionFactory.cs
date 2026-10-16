@@ -11,7 +11,7 @@ public static class ItemDefinitionFactory
         ItemSpriteParseResult result)
     {
         Type defType = ResolveDefinitionType(result);
-        var so = ScriptableObject.CreateInstance(defType) as ItemDefinition;
+        var so = Activator.CreateInstance(defType) as ItemDefinition;
         if (so == null)
         {
             return null;
@@ -55,6 +55,7 @@ public static class ItemDefinitionFactory
         so.iconPath = result.addressKey;
         so.category = result.category;
         so.itemRarity = (ItemRarity)Random.Range(0, 5);
+        so.stars = (int)so.itemRarity + 1;
         so.desc = "自动生成的物品";
     }
     

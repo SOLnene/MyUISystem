@@ -39,7 +39,7 @@ public static class GameDatabase
             return;
         }
 
-        itemDatabase = await ResourceManager.Instance.LoadAssetAsync<ItemDatabase>("itemdatabase");
+        itemDatabase = await LoadItemDatabase();
         charaVisualDatabase = await ResourceManager.Instance.LoadAssetAsync<CharacterVisualDatabase>("charactervisualdatabase");
         gachaPoolDatabase = await ResourceManager.Instance.LoadAssetAsync<GachaPoolDatabase>("gachapooldatabase");
         gachaPoolUIConfigDatabase = await ResourceManager.Instance.LoadAssetAsync<GachaPoolUIConfigDatabase>("gachapooluiconfigdatabase");
@@ -47,6 +47,16 @@ public static class GameDatabase
         promoteDatabase = await ResourceManager.Instance.LoadAssetAsync<PromoteDatabase>("promotedatabase");
         storeDatabase = await ResourceManager.Instance.LoadAssetAsync<StoreDatabase>("storeitemdatabase");
         storeConfigDatabase = await LoadStoreConfigDatabase();
+    }
+
+    static async UniTask<ItemDatabase> LoadItemDatabase()
+    {
+        TextAsset configAsset = await ResourceManager.Instance.LoadAssetAsync<TextAsset>("itemdatabase");
+        if (configAsset == null)
+            throw new InvalidOperationException("Item config asset is unavailable: itemdatabase.");
+
+        // Publish only a fully validated table; a partial import cannot become the active database.
+        return ItemConfigJson.Parse(configAsset.text);
     }
 
     static async UniTask<StoreConfigDatabase> LoadStoreConfigDatabase()

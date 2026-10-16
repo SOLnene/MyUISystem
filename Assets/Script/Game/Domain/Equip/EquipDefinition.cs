@@ -1,8 +1,9 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Game/Equip Definition")]
+[Serializable]
 public class EquipDefinition : ItemDefinition
 {
     public int baseAttack;

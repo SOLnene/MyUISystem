@@ -1,9 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Game/Database/Item Database")]
-public class ItemDatabase : ScriptableObject
+[Serializable]
+public class ItemDatabase
 {
     public List<ItemDefinition> allItems;
 

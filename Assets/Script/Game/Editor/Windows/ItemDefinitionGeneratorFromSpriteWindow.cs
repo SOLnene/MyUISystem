@@ -21,7 +21,7 @@ using UnityEditor.AddressableAssets.Settings.GroupSchemas;
 public class ItemDefinitionGeneratorFromSpriteWindow : EditorWindow
 {
     private string spriteFolder = "Assets/AssetsPackage/Sprite/Item/Equip";
-    private string outputFolder = "Assets/GameData/ItemDefinitions";
+    private string outputFolder = "Assets/GameData/Database";
     private bool overwriteExisting = false;
     private bool markAddressable = false;
     private string addressPrefix = "icon_"; // 可选前缀

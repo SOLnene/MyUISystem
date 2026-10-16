@@ -1,9 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-[CreateAssetMenu(menuName = "Game/Definition/Item Definition")]
-public class ItemDefinition : ScriptableObject
+[Serializable]
+public class ItemDefinition
 {
     public int id;
     //外部唯一标识
