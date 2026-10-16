@@ -83,6 +83,8 @@ internal sealed class RemoteGachaConfiguration : IGachaPoolProvider, IDisposable
                         entry.rarity < 1 || entry.rarity > 5 ||
                         !keys.Add(entry.entryType + ":" + entry.entryKey))
                         throw new InvalidDataException("服务器返回的卡池物品或权重无效。");
+                    if (data.eventRules != null && (entry.rarity == 3 || entry.rarity == 4))
+                        continue;
                     bool known = entry.entryType == (int)GachaEntryType.Character
                         ? characters.Get(entry.entryKey) != null
                         : items.GetItemByKey(entry.entryKey) is EquipDefinition;
@@ -94,6 +96,13 @@ internal sealed class RemoteGachaConfiguration : IGachaPoolProvider, IDisposable
                         entryKey = entry.entryKey, entryType = (GachaEntryType)entry.entryType,
                         weight = entry.weight, rarity = entry.rarity
                     });
+                }
+                if (data.eventRules != null)
+                {
+                    PopulateWeaponTiers(entries, items);
+                    total = 0;
+                    foreach (var entry in entries)
+                        total += entry.weight;
                 }
                 if (total > int.MaxValue)
                     throw new InvalidDataException("服务器返回的卡池权重超出范围。");
@@ -122,6 +131,28 @@ internal sealed class RemoteGachaConfiguration : IGachaPoolProvider, IDisposable
             result.Dispose();
             throw;
         }
+    }
+
+    static void PopulateWeaponTiers(List<GachaEntry> entries, ItemDatabase items)
+    {
+        // Expand once per snapshot; individual draws never scan the item database.
+        // The server's lower-tier lists remain compatibility data for older clients.
+        var weaponKeys = new HashSet<string>(StringComparer.Ordinal);
+        foreach (var item in items.allItems)
+        {
+            if (item is not EquipDefinition weapon || (weapon.stars != 3 && weapon.stars != 4))
+                continue;
+            if (string.IsNullOrWhiteSpace(weapon.key) || !weaponKeys.Add(weapon.key) ||
+                items.GetItemByKey(weapon.key) != weapon)
+                throw new InvalidDataException("Automatic weapon tiers require unique, registered weapon definitions.");
+            entries.Add(new GachaEntry
+            {
+                entryKey = weapon.key, entryType = GachaEntryType.Equip,
+                weight = 1, rarity = weapon.stars
+            });
+        }
+        if (entries.Count > 1024)
+            throw new InvalidDataException("Automatic weapon tiers exceed the supported pool size.");
     }
 
     public GachaDefinition GetPool(string gachaKey) =>
