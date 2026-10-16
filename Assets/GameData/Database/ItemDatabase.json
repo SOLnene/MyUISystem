@@ -1111,6 +1111,1336 @@
       "category": "Material",
       "itemRarity": "Epic",
       "stars": 4
+    },
+    {
+      "id": 200012,
+      "key": "Sword_Dawn",
+      "itemName": "黎明神剑",
+      "desc": "3星单手剑，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_sword_dawn",
+      "category": "Equip",
+      "itemRarity": "Rare",
+      "stars": 3,
+      "baseAttack": 39,
+      "baseCritRate": 0.05,
+      "baseCritDamage": 0.1,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 8
+            },
+            {
+              "materialKey": "item_202",
+              "count": 4000
+            }
+          ],
+          "attackAddFlat": 20.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 16
+            },
+            {
+              "materialKey": "item_202",
+              "count": 8000
+            }
+          ],
+          "attackAddFlat": 40.0,
+          "attackAddPercent": 0.04
+        },
+        {
+          "rank": 2,
+          "maxLevel": 60,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114003",
+              "count": 24
+            },
+            {
+              "materialKey": "item_202",
+              "count": 12000
+            }
+          ],
+          "attackAddFlat": 60.0,
+          "attackAddPercent": 0.06
+        },
+        {
+          "rank": 3,
+          "maxLevel": 80,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114004",
+              "count": 32
+            },
+            {
+              "materialKey": "item_202",
+              "count": 16000
+            }
+          ],
+          "attackAddFlat": 80.0,
+          "attackAddPercent": 0.08
+        },
+        {
+          "rank": 4,
+          "maxLevel": 100,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 40
+            },
+            {
+              "materialKey": "item_202",
+              "count": 20000
+            }
+          ],
+          "attackAddFlat": 100.0,
+          "attackAddPercent": 0.099999994
+        }
+      ]
+    },
+    {
+      "id": 200013,
+      "key": "Sword_Zephyrus",
+      "itemName": "西风剑",
+      "desc": "4星单手剑，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_sword_zephyrus",
+      "category": "Equip",
+      "itemRarity": "Epic",
+      "stars": 4,
+      "baseAttack": 44,
+      "baseCritRate": 0.06,
+      "baseCritDamage": 0.18,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 10
+            },
+            {
+              "materialKey": "item_202",
+              "count": 5000
+            }
+          ],
+          "attackAddFlat": 25.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 20
+            },
+            {
+              "materialKey": "item_202",
+              "count": 10000
+            }
+          ],
+          "attackAddFlat": 50.0,
+          "attackAddPercent": 0.04
+        },
+        {
+          "rank": 2,
+          "maxLevel": 60,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114003",
+              "count": 30
+            },
+            {
+              "materialKey": "item_202",
+              "count": 15000
+            }
+          ],
+          "attackAddFlat": 75.0,
+          "attackAddPercent": 0.06
+        },
+        {
+          "rank": 3,
+          "maxLevel": 80,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114004",
+              "count": 40
+            },
+            {
+              "materialKey": "item_202",
+              "count": 20000
+            }
+          ],
+          "attackAddFlat": 100.0,
+          "attackAddPercent": 0.08
+        },
+        {
+          "rank": 4,
+          "maxLevel": 100,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 50
+            },
+            {
+              "materialKey": "item_202",
+              "count": 25000
+            }
+          ],
+          "attackAddFlat": 125.0,
+          "attackAddPercent": 0.099999994
+        },
+        {
+          "rank": 5,
+          "maxLevel": 120,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 60
+            },
+            {
+              "materialKey": "item_202",
+              "count": 30000
+            }
+          ],
+          "attackAddFlat": 150.0,
+          "attackAddPercent": 0.12
+        }
+      ]
+    },
+    {
+      "id": 200014,
+      "key": "Sword_Falcon",
+      "itemName": "风鹰剑",
+      "desc": "5星单手剑，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_sword_falcon",
+      "category": "Equip",
+      "itemRarity": "Legendary",
+      "stars": 5,
+      "baseAttack": 46,
+      "baseCritRate": 0.12,
+      "baseCritDamage": 0.2,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 2
+            },
+            {
+              "materialKey": "item_202",
+              "count": 1000
+            }
+          ],
+          "attackAddFlat": 5.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 4
+            },
+            {
+              "materialKey": "item_202",
+              "count": 2000
+            }
+          ],
+          "attackAddFlat": 10.0,
+          "attackAddPercent": 0.04
+        }
+      ]
+    },
+    {
+      "id": 200015,
+      "key": "Claymore_Reasoning",
+      "itemName": "以理服人",
+      "desc": "3星双手剑，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_claymore_reasoning",
+      "category": "Equip",
+      "itemRarity": "Rare",
+      "stars": 3,
+      "baseAttack": 39,
+      "baseCritRate": 0.05,
+      "baseCritDamage": 0.1,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 8
+            },
+            {
+              "materialKey": "item_202",
+              "count": 4000
+            }
+          ],
+          "attackAddFlat": 20.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 16
+            },
+            {
+              "materialKey": "item_202",
+              "count": 8000
+            }
+          ],
+          "attackAddFlat": 40.0,
+          "attackAddPercent": 0.04
+        },
+        {
+          "rank": 2,
+          "maxLevel": 60,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114003",
+              "count": 24
+            },
+            {
+              "materialKey": "item_202",
+              "count": 12000
+            }
+          ],
+          "attackAddFlat": 60.0,
+          "attackAddPercent": 0.06
+        },
+        {
+          "rank": 3,
+          "maxLevel": 80,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114004",
+              "count": 32
+            },
+            {
+              "materialKey": "item_202",
+              "count": 16000
+            }
+          ],
+          "attackAddFlat": 80.0,
+          "attackAddPercent": 0.08
+        },
+        {
+          "rank": 4,
+          "maxLevel": 100,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 40
+            },
+            {
+              "materialKey": "item_202",
+              "count": 20000
+            }
+          ],
+          "attackAddFlat": 100.0,
+          "attackAddPercent": 0.099999994
+        }
+      ]
+    },
+    {
+      "id": 200016,
+      "key": "Claymore_Zephyrus",
+      "itemName": "西风大剑",
+      "desc": "4星双手剑，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_claymore_zephyrus",
+      "category": "Equip",
+      "itemRarity": "Epic",
+      "stars": 4,
+      "baseAttack": 44,
+      "baseCritRate": 0.06,
+      "baseCritDamage": 0.18,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 10
+            },
+            {
+              "materialKey": "item_202",
+              "count": 5000
+            }
+          ],
+          "attackAddFlat": 25.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 20
+            },
+            {
+              "materialKey": "item_202",
+              "count": 10000
+            }
+          ],
+          "attackAddFlat": 50.0,
+          "attackAddPercent": 0.04
+        },
+        {
+          "rank": 2,
+          "maxLevel": 60,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114003",
+              "count": 30
+            },
+            {
+              "materialKey": "item_202",
+              "count": 15000
+            }
+          ],
+          "attackAddFlat": 75.0,
+          "attackAddPercent": 0.06
+        },
+        {
+          "rank": 3,
+          "maxLevel": 80,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114004",
+              "count": 40
+            },
+            {
+              "materialKey": "item_202",
+              "count": 20000
+            }
+          ],
+          "attackAddFlat": 100.0,
+          "attackAddPercent": 0.08
+        },
+        {
+          "rank": 4,
+          "maxLevel": 100,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 50
+            },
+            {
+              "materialKey": "item_202",
+              "count": 25000
+            }
+          ],
+          "attackAddFlat": 125.0,
+          "attackAddPercent": 0.099999994
+        },
+        {
+          "rank": 5,
+          "maxLevel": 120,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 60
+            },
+            {
+              "materialKey": "item_202",
+              "count": 30000
+            }
+          ],
+          "attackAddFlat": 150.0,
+          "attackAddPercent": 0.12
+        }
+      ]
+    },
+    {
+      "id": 200017,
+      "key": "Claymore_Wolfmound",
+      "itemName": "狼的末路",
+      "desc": "5星双手剑，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_claymore_wolfmound",
+      "category": "Equip",
+      "itemRarity": "Legendary",
+      "stars": 5,
+      "baseAttack": 46,
+      "baseCritRate": 0.12,
+      "baseCritDamage": 0.2,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 2
+            },
+            {
+              "materialKey": "item_202",
+              "count": 1000
+            }
+          ],
+          "attackAddFlat": 5.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 4
+            },
+            {
+              "materialKey": "item_202",
+              "count": 2000
+            }
+          ],
+          "attackAddFlat": 10.0,
+          "attackAddPercent": 0.04
+        }
+      ]
+    },
+    {
+      "id": 200018,
+      "key": "Pole_Noire",
+      "itemName": "黑缨枪",
+      "desc": "3星长柄武器，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_pole_noire",
+      "category": "Equip",
+      "itemRarity": "Rare",
+      "stars": 3,
+      "baseAttack": 39,
+      "baseCritRate": 0.05,
+      "baseCritDamage": 0.1,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 8
+            },
+            {
+              "materialKey": "item_202",
+              "count": 4000
+            }
+          ],
+          "attackAddFlat": 20.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 16
+            },
+            {
+              "materialKey": "item_202",
+              "count": 8000
+            }
+          ],
+          "attackAddFlat": 40.0,
+          "attackAddPercent": 0.04
+        },
+        {
+          "rank": 2,
+          "maxLevel": 60,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114003",
+              "count": 24
+            },
+            {
+              "materialKey": "item_202",
+              "count": 12000
+            }
+          ],
+          "attackAddFlat": 60.0,
+          "attackAddPercent": 0.06
+        },
+        {
+          "rank": 3,
+          "maxLevel": 80,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114004",
+              "count": 32
+            },
+            {
+              "materialKey": "item_202",
+              "count": 16000
+            }
+          ],
+          "attackAddFlat": 80.0,
+          "attackAddPercent": 0.08
+        },
+        {
+          "rank": 4,
+          "maxLevel": 100,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 40
+            },
+            {
+              "materialKey": "item_202",
+              "count": 20000
+            }
+          ],
+          "attackAddFlat": 100.0,
+          "attackAddPercent": 0.099999994
+        }
+      ]
+    },
+    {
+      "id": 200019,
+      "key": "Pole_Zephyrus",
+      "itemName": "西风长枪",
+      "desc": "4星长柄武器，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_pole_zephyrus",
+      "category": "Equip",
+      "itemRarity": "Epic",
+      "stars": 4,
+      "baseAttack": 44,
+      "baseCritRate": 0.06,
+      "baseCritDamage": 0.18,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 10
+            },
+            {
+              "materialKey": "item_202",
+              "count": 5000
+            }
+          ],
+          "attackAddFlat": 25.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 20
+            },
+            {
+              "materialKey": "item_202",
+              "count": 10000
+            }
+          ],
+          "attackAddFlat": 50.0,
+          "attackAddPercent": 0.04
+        },
+        {
+          "rank": 2,
+          "maxLevel": 60,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114003",
+              "count": 30
+            },
+            {
+              "materialKey": "item_202",
+              "count": 15000
+            }
+          ],
+          "attackAddFlat": 75.0,
+          "attackAddPercent": 0.06
+        },
+        {
+          "rank": 3,
+          "maxLevel": 80,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114004",
+              "count": 40
+            },
+            {
+              "materialKey": "item_202",
+              "count": 20000
+            }
+          ],
+          "attackAddFlat": 100.0,
+          "attackAddPercent": 0.08
+        },
+        {
+          "rank": 4,
+          "maxLevel": 100,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 50
+            },
+            {
+              "materialKey": "item_202",
+              "count": 25000
+            }
+          ],
+          "attackAddFlat": 125.0,
+          "attackAddPercent": 0.099999994
+        },
+        {
+          "rank": 5,
+          "maxLevel": 120,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 60
+            },
+            {
+              "materialKey": "item_202",
+              "count": 30000
+            }
+          ],
+          "attackAddFlat": 150.0,
+          "attackAddPercent": 0.12
+        }
+      ]
+    },
+    {
+      "id": 200020,
+      "key": "Pole_Morax",
+      "itemName": "和璞鸢",
+      "desc": "5星长柄武器，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_pole_morax",
+      "category": "Equip",
+      "itemRarity": "Legendary",
+      "stars": 5,
+      "baseAttack": 46,
+      "baseCritRate": 0.12,
+      "baseCritDamage": 0.2,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 2
+            },
+            {
+              "materialKey": "item_202",
+              "count": 1000
+            }
+          ],
+          "attackAddFlat": 5.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 4
+            },
+            {
+              "materialKey": "item_202",
+              "count": 2000
+            }
+          ],
+          "attackAddFlat": 10.0,
+          "attackAddPercent": 0.04
+        }
+      ]
+    },
+    {
+      "id": 200021,
+      "key": "Bow_Sling",
+      "itemName": "弹弓",
+      "desc": "3星弓，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_bow_sling",
+      "category": "Equip",
+      "itemRarity": "Rare",
+      "stars": 3,
+      "baseAttack": 39,
+      "baseCritRate": 0.05,
+      "baseCritDamage": 0.1,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 8
+            },
+            {
+              "materialKey": "item_202",
+              "count": 4000
+            }
+          ],
+          "attackAddFlat": 20.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 16
+            },
+            {
+              "materialKey": "item_202",
+              "count": 8000
+            }
+          ],
+          "attackAddFlat": 40.0,
+          "attackAddPercent": 0.04
+        },
+        {
+          "rank": 2,
+          "maxLevel": 60,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114003",
+              "count": 24
+            },
+            {
+              "materialKey": "item_202",
+              "count": 12000
+            }
+          ],
+          "attackAddFlat": 60.0,
+          "attackAddPercent": 0.06
+        },
+        {
+          "rank": 3,
+          "maxLevel": 80,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114004",
+              "count": 32
+            },
+            {
+              "materialKey": "item_202",
+              "count": 16000
+            }
+          ],
+          "attackAddFlat": 80.0,
+          "attackAddPercent": 0.08
+        },
+        {
+          "rank": 4,
+          "maxLevel": 100,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 40
+            },
+            {
+              "materialKey": "item_202",
+              "count": 20000
+            }
+          ],
+          "attackAddFlat": 100.0,
+          "attackAddPercent": 0.099999994
+        }
+      ]
+    },
+    {
+      "id": 200022,
+      "key": "Bow_Zephyrus",
+      "itemName": "西风猎弓",
+      "desc": "4星弓，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_bow_zephyrus",
+      "category": "Equip",
+      "itemRarity": "Epic",
+      "stars": 4,
+      "baseAttack": 44,
+      "baseCritRate": 0.06,
+      "baseCritDamage": 0.18,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 10
+            },
+            {
+              "materialKey": "item_202",
+              "count": 5000
+            }
+          ],
+          "attackAddFlat": 25.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 20
+            },
+            {
+              "materialKey": "item_202",
+              "count": 10000
+            }
+          ],
+          "attackAddFlat": 50.0,
+          "attackAddPercent": 0.04
+        },
+        {
+          "rank": 2,
+          "maxLevel": 60,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114003",
+              "count": 30
+            },
+            {
+              "materialKey": "item_202",
+              "count": 15000
+            }
+          ],
+          "attackAddFlat": 75.0,
+          "attackAddPercent": 0.06
+        },
+        {
+          "rank": 3,
+          "maxLevel": 80,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114004",
+              "count": 40
+            },
+            {
+              "materialKey": "item_202",
+              "count": 20000
+            }
+          ],
+          "attackAddFlat": 100.0,
+          "attackAddPercent": 0.08
+        },
+        {
+          "rank": 4,
+          "maxLevel": 100,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 50
+            },
+            {
+              "materialKey": "item_202",
+              "count": 25000
+            }
+          ],
+          "attackAddFlat": 125.0,
+          "attackAddPercent": 0.099999994
+        },
+        {
+          "rank": 5,
+          "maxLevel": 120,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 60
+            },
+            {
+              "materialKey": "item_202",
+              "count": 30000
+            }
+          ],
+          "attackAddFlat": 150.0,
+          "attackAddPercent": 0.12
+        }
+      ]
+    },
+    {
+      "id": 200023,
+      "key": "Bow_Amos",
+      "itemName": "阿莫斯之弓",
+      "desc": "5星弓，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_bow_amos",
+      "category": "Equip",
+      "itemRarity": "Legendary",
+      "stars": 5,
+      "baseAttack": 46,
+      "baseCritRate": 0.12,
+      "baseCritDamage": 0.2,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 2
+            },
+            {
+              "materialKey": "item_202",
+              "count": 1000
+            }
+          ],
+          "attackAddFlat": 5.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 4
+            },
+            {
+              "materialKey": "item_202",
+              "count": 2000
+            }
+          ],
+          "attackAddFlat": 10.0,
+          "attackAddPercent": 0.04
+        }
+      ]
+    },
+    {
+      "id": 200024,
+      "key": "Catalyst_Pulpfic",
+      "itemName": "讨龙英杰谭",
+      "desc": "3星法器，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_catalyst_pulpfic",
+      "category": "Equip",
+      "itemRarity": "Rare",
+      "stars": 3,
+      "baseAttack": 39,
+      "baseCritRate": 0.05,
+      "baseCritDamage": 0.1,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 8
+            },
+            {
+              "materialKey": "item_202",
+              "count": 4000
+            }
+          ],
+          "attackAddFlat": 20.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 16
+            },
+            {
+              "materialKey": "item_202",
+              "count": 8000
+            }
+          ],
+          "attackAddFlat": 40.0,
+          "attackAddPercent": 0.04
+        },
+        {
+          "rank": 2,
+          "maxLevel": 60,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114003",
+              "count": 24
+            },
+            {
+              "materialKey": "item_202",
+              "count": 12000
+            }
+          ],
+          "attackAddFlat": 60.0,
+          "attackAddPercent": 0.06
+        },
+        {
+          "rank": 3,
+          "maxLevel": 80,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114004",
+              "count": 32
+            },
+            {
+              "materialKey": "item_202",
+              "count": 16000
+            }
+          ],
+          "attackAddFlat": 80.0,
+          "attackAddPercent": 0.08
+        },
+        {
+          "rank": 4,
+          "maxLevel": 100,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 40
+            },
+            {
+              "materialKey": "item_202",
+              "count": 20000
+            }
+          ],
+          "attackAddFlat": 100.0,
+          "attackAddPercent": 0.099999994
+        }
+      ]
+    },
+    {
+      "id": 200025,
+      "key": "Catalyst_Zephyrus",
+      "itemName": "西风秘典",
+      "desc": "4星法器，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_catalyst_zephyrus",
+      "category": "Equip",
+      "itemRarity": "Epic",
+      "stars": 4,
+      "baseAttack": 44,
+      "baseCritRate": 0.06,
+      "baseCritDamage": 0.18,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 10
+            },
+            {
+              "materialKey": "item_202",
+              "count": 5000
+            }
+          ],
+          "attackAddFlat": 25.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 20
+            },
+            {
+              "materialKey": "item_202",
+              "count": 10000
+            }
+          ],
+          "attackAddFlat": 50.0,
+          "attackAddPercent": 0.04
+        },
+        {
+          "rank": 2,
+          "maxLevel": 60,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114003",
+              "count": 30
+            },
+            {
+              "materialKey": "item_202",
+              "count": 15000
+            }
+          ],
+          "attackAddFlat": 75.0,
+          "attackAddPercent": 0.06
+        },
+        {
+          "rank": 3,
+          "maxLevel": 80,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114004",
+              "count": 40
+            },
+            {
+              "materialKey": "item_202",
+              "count": 20000
+            }
+          ],
+          "attackAddFlat": 100.0,
+          "attackAddPercent": 0.08
+        },
+        {
+          "rank": 4,
+          "maxLevel": 100,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 50
+            },
+            {
+              "materialKey": "item_202",
+              "count": 25000
+            }
+          ],
+          "attackAddFlat": 125.0,
+          "attackAddPercent": 0.099999994
+        },
+        {
+          "rank": 5,
+          "maxLevel": 120,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114005",
+              "count": 60
+            },
+            {
+              "materialKey": "item_202",
+              "count": 30000
+            }
+          ],
+          "attackAddFlat": 150.0,
+          "attackAddPercent": 0.12
+        }
+      ]
+    },
+    {
+      "id": 200026,
+      "key": "Catalyst_Fourwinds",
+      "itemName": "四风原典",
+      "desc": "5星法器，用于武器抽取、背包与强化测试。数值沿用项目测试标准。",
+      "iconPath": "ui_equipicon_catalyst_fourwinds",
+      "category": "Equip",
+      "itemRarity": "Legendary",
+      "stars": 5,
+      "baseAttack": 46,
+      "baseCritRate": 0.12,
+      "baseCritDamage": 0.2,
+      "rankInfos": [
+        {
+          "rank": 0,
+          "maxLevel": 20,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114001",
+              "count": 2
+            },
+            {
+              "materialKey": "item_202",
+              "count": 1000
+            }
+          ],
+          "attackAddFlat": 5.0,
+          "attackAddPercent": 0.02
+        },
+        {
+          "rank": 1,
+          "maxLevel": 40,
+          "goldCost": 0,
+          "requirements": [
+            {
+              "materialKey": "item_114002",
+              "count": 4
+            },
+            {
+              "materialKey": "item_202",
+              "count": 2000
+            }
+          ],
+          "attackAddFlat": 10.0,
+          "attackAddPercent": 0.04
+        }
+      ]
     }
   ]
 }
