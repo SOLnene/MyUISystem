@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Game.Domain.Character;
@@ -11,15 +12,26 @@ public static class CharacterFactory
             definition,level,exp,rank,talentLevel,talentTokenCount
             );
         //给角色一把初始武器
-        var defaultWeaponDef = GameDatabase.ItemDatabase.GetItemByKey("Claymore_Default") as EquipDefinition;
-        if (defaultWeaponDef == null)
-        {
-            Debug.LogError("Default weapon not found: Claymore_Default");
-            return character;
-        }
-
-        var defaultWeapon = new EquipItem(defaultWeaponDef);
+        var defaultWeapon = new EquipItem(GetStarterWeaponDefinition(definition.weaponType));
         character.ChangeEquip(defaultWeapon);
         return character;
+    }
+
+    internal static EquipDefinition GetStarterWeaponDefinition(string weaponType)
+    {
+        // Fixed keys keep starter grants independent of item-table ordering.
+        string key = weaponType switch
+        {
+            "Sword" => "Sword_Dawn",
+            "Claymore" => "Claymore_Reasoning",
+            "Polearm" => "Pole_Noire",
+            "Bow" => "Bow_Sling",
+            "Catalyst" => "Catalyst_Pulpfic",
+            _ => throw new InvalidOperationException($"Unknown starter weapon type: {weaponType}")
+        };
+        var weapon = GameDatabase.ItemDatabase.GetItemByKey(key) as EquipDefinition;
+        if (weapon == null || weapon.weaponType != weaponType || weapon.stars != 3)
+            throw new InvalidOperationException($"Invalid three-star starter weapon: {key}");
+        return weapon;
     }
 }

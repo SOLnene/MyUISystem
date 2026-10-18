@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Security.Cryptography;
 using System.Text;
 using UnityEngine;
 
@@ -15,7 +16,7 @@ public enum SaveLoadResult
 
 public static class GameSaveSystem
 {
-    const int CurrentVersion = 7;
+    const int CurrentVersion = 8;
     const string SaveFileName = "save.json";
     const string BackupFileName = "save.backup.json";
     const string TempFileName = "save.tmp";
@@ -104,8 +105,9 @@ public static class GameSaveSystem
             version = CurrentVersion,
             savedAtUtc = DateTime.UtcNow.ToString("O"),
             currencies = economy.ExportSaveData(),
-            inventory = inventoryRepository.ExportSaveData(),
+            // Character export repairs missing starters before the inventory snapshot is captured.
             characters = characterRepository.ExportSaveData(),
+            inventory = inventoryRepository.ExportSaveData(),
             team = teamRepository.ExportSaveData(),
             gacha = gachaService != null ? gachaService.ExportSaveData() : new GachaSaveData(),
             store = storePurchaseService != null
@@ -280,12 +282,17 @@ public static class GameSaveSystem
             if (data.version <= 0 || data.version > CurrentVersion)
                 return SaveLoadResult.UnsupportedVersion;
             int sourceVersion = data.version;
-            NormalizeSaveData(data, sourceVersion);
-            if (!ValidateSaveData(data) || !TryApplySaveData(data, economy,
+            bool needsResave = NormalizeSaveData(data, sourceVersion);
+            if (!ValidateSaveData(data))
+                return SaveLoadResult.Corrupted;
+            if (needsResave)
+                PreserveWeaponMigrationSnapshot(Path.Combine(Application.persistentDataPath,
+                    "SaveMigrationBackups", "cloud-" + Uri.EscapeDataString(CloudGameSaveSession.Current.PlayerId)), json);
+            if (!TryApplySaveData(data, economy,
                 inventoryRepository, characterRepository, teamRepository, gachaService,
                 storePurchaseService))
                 return SaveLoadResult.Corrupted;
-            NeedsResave = sourceVersion < CurrentVersion;
+            NeedsResave = needsResave;
             return SaveLoadResult.Success;
         }
         catch (Exception exception)
@@ -326,14 +333,15 @@ public static class GameSaveSystem
             }
 
             int sourceVersion = saveData.version;
-            needsResave = sourceVersion < CurrentVersion;
-            NormalizeSaveData(saveData, sourceVersion);
+            needsResave = NormalizeSaveData(saveData, sourceVersion);
             if (!ValidateSaveData(saveData))
             {
                 saveData = null;
                 return false;
             }
 
+            if (needsResave)
+                PreserveWeaponMigrationSnapshot(Path.GetDirectoryName(path), json);
             return true;
         }
         catch (Exception exception)
@@ -344,7 +352,7 @@ public static class GameSaveSystem
         }
     }
 
-    static void NormalizeSaveData(GameSaveData saveData, int sourceVersion)
+    static bool NormalizeSaveData(GameSaveData saveData, int sourceVersion)
     {
         saveData.version = CurrentVersion;
         saveData.currencies ??= new CurrencySaveData();
@@ -408,6 +416,88 @@ public static class GameSaveSystem
         saveData.achievements.claimedIds ??= new List<string>();
         saveData.Tutorial ??= new TutorialSaveData();
         saveData.Tutorial.completedIds ??= new List<string>();
+        if (sourceVersion < 8)
+            MigrateRetiredWeapons(saveData.inventory);
+        return EnsureSavedStarterWeapons(saveData) || sourceVersion < CurrentVersion;
+    }
+
+    static void MigrateRetiredWeapons(InventorySaveData inventory)
+    {
+        foreach (EquipItemSaveData weapon in inventory.equips)
+        {
+            if (weapon == null)
+                continue;
+            // Retired IDs stay reserved. Changing only the definition preserves instance progress and ownership.
+            string replacement = weapon.itemId switch
+            {
+                200001 => "Claymore_Reasoning",
+                200003 or 200004 or 200005 or 200007 or 200009 or 200010 or 200011 => "Claymore_Zephyrus",
+                200006 or 200008 => "Claymore_Wolfmound",
+                _ => null
+            };
+            if (replacement == null)
+                continue;
+            var definition = GameDatabase.ItemDatabase.GetItemByKey(replacement) as EquipDefinition;
+            if (definition == null)
+                throw new InvalidDataException($"Weapon migration target is missing: {replacement}");
+            weapon.itemId = definition.id;
+        }
+    }
+
+    static bool EnsureSavedStarterWeapons(GameSaveData saveData)
+    {
+        var weapons = new Dictionary<long, EquipItemSaveData>();
+        long lastInstanceId = 0;
+        foreach (EquipItemSaveData weapon in saveData.inventory.equips)
+        {
+            if (weapon == null)
+                continue;
+            lastInstanceId = Math.Max(lastInstanceId, weapon.instanceId);
+            weapons.TryAdd(weapon.instanceId, weapon);
+        }
+        bool changed = false;
+        if (saveData.characters.characters == null)
+            return false;
+        foreach (CharacterSaveData character in saveData.characters.characters)
+        {
+            if (character == null || string.IsNullOrEmpty(character.characterKey))
+                continue;
+            var definition = GameDatabase.CharacterDatabase.Get(character.characterKey);
+            if (definition == null)
+                continue;
+            if (weapons.TryGetValue(character.equippedWeaponInstanceId, out var savedWeapon)
+                && GameDatabase.ItemDatabase.GetItemByID(savedWeapon.itemId) is EquipDefinition equipped
+                && equipped.weaponType == definition.weaponType)
+                continue;
+
+            var starter = CharacterFactory.GetStarterWeaponDefinition(definition.weaponType);
+            var weapon = new EquipItemSaveData(checked(++lastInstanceId), starter.id, 1, 0, 0, 1);
+            saveData.inventory.equips.Add(weapon);
+            weapons.Add(weapon.instanceId, weapon);
+            character.equippedWeaponInstanceId = weapon.instanceId;
+            changed = true;
+        }
+        return changed;
+    }
+
+    static void PreserveWeaponMigrationSnapshot(string directory, string json)
+    {
+        using var hash = SHA256.Create();
+        string fingerprint = BitConverter.ToString(hash.ComputeHash(Encoding.UTF8.GetBytes(json))).Replace("-", "");
+        string path = Path.Combine(directory, "save.before-weapon-migration-" + fingerprint + ".json");
+        Directory.CreateDirectory(directory);
+        if (File.Exists(path))
+        {
+            if (File.ReadAllText(path, Encoding.UTF8) != json)
+                throw new IOException("The existing weapon migration backup does not match the original save.");
+            return;
+        }
+        // This archive is immutable and independent of the rotating main/backup save pair.
+        using var stream = new FileStream(path, FileMode.CreateNew, FileAccess.Write, FileShare.None);
+        using var writer = new StreamWriter(stream, new UTF8Encoding(false));
+        writer.Write(json);
+        writer.Flush();
+        stream.Flush(true);
     }
 
     static bool ValidateSaveData(GameSaveData saveData)

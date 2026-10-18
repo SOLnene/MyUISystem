@@ -26,7 +26,7 @@ internal sealed class GameSession : IDisposable
         SaveDirectory = saveDirectory;
         InventoryRepository = new InventoryRepository();
         StoreDatabase = GameDatabase.StoreDatabase;
-        CharacterRepository = new CharacterRepository();
+        CharacterRepository = new CharacterRepository(InventoryRepository);
         TeamRepository = new TeamRepository();
         GachaService = new GachaService(
             new GachaPoolProvider(GameDatabase.GachaPoolDatabase));
