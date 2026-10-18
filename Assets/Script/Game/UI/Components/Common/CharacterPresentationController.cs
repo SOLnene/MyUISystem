@@ -10,6 +10,7 @@ public sealed class CharacterPresentationController : MonoBehaviour
     enum TransitionStage
     {
         Idle,
+        PreparingTransition,
         BlendingIntoClip,
         BlendingAsToBs,
         PlayingTransition,
@@ -86,6 +87,8 @@ public sealed class CharacterPresentationController : MonoBehaviour
     bool hasPlayingPresentation;
     CancellationTokenSource playbackCancellation;
     TransitionStage transitionStage;
+    double phaseStartedAt;
+    float phaseClipStartTime;
 
     public CharacterPreviewActor Actor => actor;
     public CharacterPresentationProfile Profile => profile;
@@ -96,6 +99,9 @@ public sealed class CharacterPresentationController : MonoBehaviour
     public bool HasCurrentPresentation => currentPresentation != null;
     public bool HasTargetPresentation => hasTargetPresentation;
     public bool HasPlayingPresentation => hasPlayingPresentation;
+    internal float PhaseTime => hasPlayingPresentation
+        ? phaseClipStartTime + (float)(Time.timeAsDouble - phaseStartedAt)
+        : 0f;
 
     public void Bind(
         CharacterPreviewActor targetActor,
@@ -196,6 +202,19 @@ public sealed class CharacterPresentationController : MonoBehaviour
         SetTargetState(targetState);
         try
         {
+            if (transitionMode != PresentationTransitionMode.Immediate
+                && hasPlayingPresentation
+                && playingState == CharacterPresentationState.WeaponShow
+                && targetState != CharacterPresentationState.WeaponShow
+                && actor != null
+                && actor.TryGetComponent(out CharacterWeaponAttachment weapon)
+                && !weapon.IsConcealed)
+            {
+                // Finish the visible effect in the held pose before the exit clip moves its socket.
+                transitionStage = TransitionStage.PreparingTransition;
+                await UniTask.WaitUntil(() => weapon == null || weapon.IsConcealed,
+                    cancellationToken: cancellation.Token);
+            }
             await ExecuteTransitionPlanAsync(plan, cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
             // 只有目标 Loop 真正建立后，后续切换才允许使用它的退出动画。
@@ -339,7 +358,7 @@ public sealed class CharacterPresentationController : MonoBehaviour
 
             transitionStage = step.Phase == PresentationPhase.Loop ? TransitionStage.BlendingIntoLoop
                 : i == 0 ? TransitionStage.BlendingIntoClip : TransitionStage.BlendingAsToBs;
-            SetPlayingPhase(step.State, step.Phase);
+            SetPlayingPhase(step.State, step.Phase, step.ClipStartTime);
             var clips = GetPhaseClips(profile.Get(step.State), step.Phase);
             // 以计划的绝对时间交接，帧误差不逐段累加；片段起点独立于混合权重。
             float blend = Mathf.Min(step.BlendDuration,
@@ -462,10 +481,14 @@ public sealed class CharacterPresentationController : MonoBehaviour
 
     void SetPlayingPhase(
         CharacterPresentationState state,
-        PresentationPhase phase)
+        PresentationPhase phase,
+        float clipStartTime)
     {
         playingState = state;
         currentPhase = phase;
+        // Effects follow the played clip, including offsets used by timed transitions.
+        phaseStartedAt = Time.timeAsDouble;
+        phaseClipStartTime = clipStartTime;
         hasPlayingPresentation = true;
     }
 

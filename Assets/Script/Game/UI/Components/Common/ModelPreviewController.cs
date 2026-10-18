@@ -79,6 +79,8 @@ public sealed class ModelPreviewController : MonoBehaviour
     ActivePreviewState activePreviewState = ActivePreviewState.DefaultCharacter;
     bool preserveCharacterOnNextEquipActivation;
     bool hasLoadFailed;
+    string weaponCharacterKey;
+    string characterWeaponKey;
 
     [SerializeField, Min(0f)]
     float characterSwitchFadeDuration = 0.15f;
@@ -101,6 +103,38 @@ public sealed class ModelPreviewController : MonoBehaviour
         && pendingPreview.State == PreviewPreparationState.Loading;
     public bool HasLoadFailed => hasLoadFailed;
     internal bool HasSuspendedCharacter => suspendedCharacterPreviewObject != null;
+
+    internal void SetCharacterWeapon(string characterKey, string weaponKey)
+    {
+        weaponCharacterKey = characterKey;
+        characterWeaponKey = weaponKey;
+        RefreshCharacterWeapon();
+    }
+
+    void RefreshCharacterWeapon()
+    {
+        CharacterPreviewActor actor = characterPresentation.Actor;
+        if (actor == null || !actor.TryGetComponent(out CharacterWeaponAttachment attachment))
+        {
+            return;
+        }
+
+        ModelPreviewDefinition weaponDefinition = null;
+        if (activePreviewDefinition != null
+            && activePreviewDefinition.TargetKey == weaponCharacterKey
+            && !string.IsNullOrEmpty(characterWeaponKey))
+        {
+            weaponDefinition = modelPreviewDatabase.Get(ModelPreviewType.Equip, characterWeaponKey);
+            // Standalone preview fallback must not put a different weapon into the character's hand.
+            if (weaponDefinition != null && weaponDefinition.TargetKey != characterWeaponKey)
+            {
+                Debug.LogWarning($"Weapon model not configured: {characterWeaponKey}", actor);
+                weaponDefinition = null;
+            }
+        }
+
+        attachment.ShowWeapon(weaponDefinition, characterPresentation);
+    }
 
     internal bool CanShowCharacter(string targetKey)
     {
@@ -718,6 +752,7 @@ public sealed class ModelPreviewController : MonoBehaviour
                 characterPresentation.SetProfile(null);
                 characterPresentation.Bind(actor);
             }
+            RefreshCharacterWeapon();
             return;
         }
 

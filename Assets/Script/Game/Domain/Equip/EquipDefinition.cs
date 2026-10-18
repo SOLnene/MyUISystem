@@ -9,8 +9,7 @@ public class EquipDefinition : ItemDefinition
     public int baseAttack;
     public float baseCritRate;
     public float baseCritDamage;
-    //todo:添加武器种类
-    //public WeaponType weaponType;
+    public string weaponType;
 
     //public int baseExpValue;
 

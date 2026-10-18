@@ -183,15 +183,19 @@ public class ItemFilter
     ItemCategory category;
     int starLimit;
     int id;
-    public ItemFilter(ItemCategory itemCategory,int star = 1,int id = 0)
+    readonly Func<InventoryItem, bool> predicate;
+    public ItemFilter(ItemCategory itemCategory,int star = 1,int id = 0,
+        Func<InventoryItem, bool> predicate = null)
     {
         category = itemCategory;
         starLimit = star;
         this.id = id;
+        this.predicate = predicate;
     }
     
     public bool Match(InventoryItem item)
     {
-        return category == item.Category && item.Stars<= starLimit && (id == 0 || item.Id == id);
+        return category == item.Category && item.Stars<= starLimit && (id == 0 || item.Id == id)
+               && (predicate == null || predicate(item));
     }
 }

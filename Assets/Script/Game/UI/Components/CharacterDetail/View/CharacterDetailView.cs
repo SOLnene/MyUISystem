@@ -178,6 +178,14 @@ namespace Game.UI.Components.CharacterDetail
             
             final.gameObject.SetActive(false);
             contentView.Bind(vm.contentViewModel);
+
+            string characterKey = vm.model.Definition.key;
+            CharacterDetailEquipPageViewModel equipPage = vm.contentViewModel.EquipPageViewModel;
+            equipPage.currentWeapon
+                .Subscribe(weapon => ModelViewer.Instance.SetCharacterWeapon(
+                    characterKey, weapon != null && equipPage.CanSelectWeapon(weapon.Model)
+                        ? weapon.Model.Key : null))
+                .AddTo(characterDisposable);
            
             enhancePanelView.Bind(vm.enhanceViewmodel);
             promotePanelView.Bind(vm.promoteViewmodel);

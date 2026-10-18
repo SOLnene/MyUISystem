@@ -147,7 +147,7 @@ public class CharacterDetailEquipPageView : MonoBehaviour
     {
         vm.BeginSelectWeapon();
         var param = new SinglePickParams(
-            new ItemFilter(ItemCategory.Equip, 5),
+            new ItemFilter(ItemCategory.Equip, 5, predicate: vm.CanSelectWeapon),
             item =>
             {
                 if (item is EquipItem equipItem)

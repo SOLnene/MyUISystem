@@ -687,6 +687,11 @@ public class ModelViewer : SingletonMono<ModelViewer>
         return ShowPreviewAsync(ModelPreviewType.Equip, equipKey);
     }
 
+    internal void SetCharacterWeapon(string characterKey, string weaponKey)
+    {
+        previewController.SetCharacterWeapon(characterKey, weaponKey);
+    }
+
     internal void PrepareEquipPreview(string equipKey)
     {
         previewController.Preload(ModelPreviewType.Equip, equipKey);

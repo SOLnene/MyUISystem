@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Game.Domain.Character;
@@ -36,6 +37,14 @@ public class CharacterDetailEquipPageViewModel
     {
         return selectedWeapon != null && selectedWeapon != equippedWeapon;
     }
+
+    internal bool CanSelectWeapon(InventoryItem item)
+    {
+        return item is EquipItem weapon
+               && !string.IsNullOrEmpty(model.Definition.weaponType)
+               && string.Equals(weapon.EquipDefinition.weaponType,
+                   model.Definition.weaponType, StringComparison.Ordinal);
+    }
     
     public void BeginSelectWeapon()
     {
@@ -47,6 +56,10 @@ public class CharacterDetailEquipPageViewModel
     
     public void SelectWeapon(EquipItem weapon)
     {
+        if (weapon != null && !CanSelectWeapon(weapon))
+        {
+            return;
+        }
         selectedWeapon = weapon;
         currentWeapon.Value = weapon == null ? null : new EquipItemViewModel(weapon);
         RefreshReplaceButtonState();
@@ -80,13 +93,7 @@ public class CharacterDetailEquipPageViewModel
     //切换预览的武器
     void ShowWeapon(EquipItem weapon)
     {
-        if (weapon == null)
-        {
-            Debug.LogError("ShowWeapon failed: weapon is null.");
-            return;
-        }
-
-        currentWeapon.Value = new EquipItemViewModel(weapon);
+        currentWeapon.Value = weapon == null ? null : new EquipItemViewModel(weapon);
     }
 
     //关闭武器选择界面时调用
