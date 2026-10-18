@@ -15,6 +15,7 @@ public sealed class TeamStageView : MonoBehaviour
     [SerializeField] private CharacterSwitchElementPalette characterSwitchElementPalette;
     [SerializeField] private string[] memberCharacterKeys;
     [SerializeField] private ModelPreviewDatabase modelPreviewDatabase;
+    [SerializeField] private CharacterPresentationController[] memberPresentations;
     [SerializeField] private TeamStageCameraController cameraController;
     [SerializeField] private float memberFadeDuration = 0.15f;
     [SerializeField, Min(0f)] private float memberSwitchFadeOutDuration = 0.06f;
@@ -237,12 +238,14 @@ public sealed class TeamStageView : MonoBehaviour
                 SetMemberFade(index, 1f);
             }
 
+            memberPresentations[index].Unbind();
             activeMemberModels[index] = loadedModel;
             activeMemberCharacterKeys[index] = characterKey;
             memberRenderers[index] = loadedModel.GetComponentsInChildren<Renderer>(true);
             memberSwitchFades[index] = 0f;
             SetMemberFade(index, focusedMemberIndex < 0 || focusedMemberIndex == index ? 1f : 0f);
             loadedModel.SetActive(true);
+            BindMemberPresentation(index, loadedModel, definition);
             loadedModel = null;
 
             if (previousModel != null)
@@ -272,6 +275,29 @@ public sealed class TeamStageView : MonoBehaviour
             }
 
             cancellation.Dispose();
+        }
+    }
+
+    private void BindMemberPresentation(
+        int index,
+        GameObject model,
+        ModelPreviewDefinition definition)
+    {
+        CharacterPreviewActor actor = model.GetComponentInChildren<CharacterPreviewActor>(true);
+        if (actor == null)
+        {
+            Debug.LogWarning($"Team stage actor is missing: {definition.TargetKey}", model);
+            return;
+        }
+
+        CharacterPresentationProfile profile = definition.PresentationProfile;
+        memberPresentations[index].Bind(actor, profile);
+        // Some actors have no team animation; their profile's default loop remains the fallback.
+        if (profile != null && profile.TeamSwitch.LoopBodyClip != null)
+        {
+            memberPresentations[index].SwitchAsync(
+                CharacterPresentationState.TeamSwitch,
+                PresentationTransitionMode.Immediate).Forget(Debug.LogException);
         }
     }
 
@@ -326,6 +352,10 @@ public sealed class TeamStageView : MonoBehaviour
         // MaterialPropertyBlock is retained by pooled renderers, so restore the
         // shared model to its visible state before returning it to the pool.
         SetMemberFade(index, 1f);
+        if (!forceDestroy)
+        {
+            memberPresentations[index].Unbind();
+        }
         ResourceManager.Instance.Recycle(memberModel, forceDestroy);
         activeMemberModels[index] = null;
         activeMemberCharacterKeys[index] = null;
@@ -337,6 +367,14 @@ public sealed class TeamStageView : MonoBehaviour
         if (!isReleased)
         {
             gameObject.SetActive(true);
+            for (int index = 0; index < MemberCount; index++)
+            {
+                if (activeMemberModels[index] != null)
+                {
+                    BindMemberPresentation(index, activeMemberModels[index],
+                        modelPreviewDatabase.Get(ModelPreviewType.Character, activeMemberCharacterKeys[index]));
+                }
+            }
         }
     }
 
@@ -351,6 +389,7 @@ public sealed class TeamStageView : MonoBehaviour
         {
             CancelMemberLoad(index);
             SetMemberFade(index, 1f);
+            memberPresentations[index].Unbind();
         }
 
         memberFadeTween?.Kill();
@@ -423,6 +462,7 @@ public sealed class TeamStageView : MonoBehaviour
         for (int index = 0; index < MemberCount; index++)
         {
             CancelMemberLoad(index);
+            memberPresentations[index].Unbind();
         }
     }
 

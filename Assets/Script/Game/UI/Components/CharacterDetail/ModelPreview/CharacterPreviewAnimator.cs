@@ -83,6 +83,12 @@ public class CharacterPreviewAnimator : MonoBehaviour
         {
             animator.runtimeAnimatorController = originalAnimatorController;
             animator.applyRootMotion = originalApplyRootMotion;
+            // A destroyed graph leaves its last pose behind; reset before another preview borrows this actor.
+            animator.Rebind();
+            if (animator.isActiveAndEnabled)
+            {
+                animator.Update(0f);
+            }
         }
 
         ReleaseRuntimeController();
