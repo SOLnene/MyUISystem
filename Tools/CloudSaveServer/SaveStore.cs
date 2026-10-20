@@ -5,7 +5,7 @@ using Microsoft.Data.Sqlite;
 
 namespace CloudSaveServer;
 
-internal sealed class SaveStore(ServerSettings settings)
+internal sealed partial class SaveStore(ServerSettings settings)
 {
     SqliteConnection Open()
     {
@@ -53,6 +53,7 @@ internal sealed class SaveStore(ServerSettings settings)
             if (!reader.Read() || reader.GetString(0) != settings.ProjectId || reader.GetString(1) != settings.EnvironmentId)
                 throw new InvalidOperationException("This database belongs to a different Unity project/environment.");
         }
+        InitializeGachaSchema(connection, transaction);
         transaction.Commit();
     }
 
@@ -94,6 +95,8 @@ internal sealed class SaveStore(ServerSettings settings)
         long current = value == null ? 0 : Convert.ToInt64(value);
         if (current != request.ExpectedRevision)
             return new(null, "save_conflict", current);
+        if (!AcceptGachaPity(command, request.SaveJson!))
+            return new(null, "gacha_state_owned", current);
         long next = checked(current + 1);
         string timestamp = DateTimeOffset.UtcNow.ToString("O", CultureInfo.InvariantCulture);
         command.Parameters.AddWithValue("$json", request.SaveJson!);

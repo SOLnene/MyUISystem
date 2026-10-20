@@ -42,6 +42,7 @@ public partial class GachaView : UIView
     bool isClosing;
     bool isInputLocked;
     bool isOpening;
+    bool isPresentingResults;
     int presentationVersion;
     GachaTopHubViewModel topVm;
     //UIControlData
@@ -57,6 +58,7 @@ public partial class GachaView : UIView
         base.OnOpen(data);
         isClosing = false;
         isInputLocked = false;
+        isPresentingResults = false;
         disposable.Clear();
         if (boundGachaService != GameContext.Instance.GachaService)
         {
@@ -69,8 +71,23 @@ public partial class GachaView : UIView
             middleHub.Bind(vm);
         }
         vm.OnSessionStarted
-            .Subscribe(flowController.StartSession)
+            .Subscribe(session =>
+            {
+                configRefreshRoot.SetActive(false);
+                isPresentingResults = true;
+                session.OnSessionFinished.Take(1).Subscribe(_ =>
+                {
+                    isPresentingResults = false;
+                }).AddTo(disposable);
+                flowController.StartSession(session);
+            })
             .AddTo(disposable);
+        vm.isDrawing.Subscribe(drawing =>
+        {
+            if (drawing) ShowConfigRefreshStatus("正在确认抽卡结果…", false);
+            ApplyInputState();
+        }).AddTo(disposable);
+        vm.DrawFailed.Subscribe(message => ShowConfigRefreshStatus(message, true)).AddTo(disposable);
         ShowHubs(++presentationVersion).Forget();
     }
 
@@ -106,14 +123,16 @@ public partial class GachaView : UIView
         Draw10Btn.onClick.RemoveAllListeners();
         Draw1Btn.onClick.AddListener(() =>
         {
-            if (!isClosing && !isOpening && !isInputLocked && middleHub.IsReady && configurationVerified)
+            if (!isClosing && !isOpening && !isInputLocked && middleHub.IsReady && configurationVerified &&
+                !vm.isDrawing.Value && !isPresentingResults && vm.CurrentPoolConfig.Value != null)
             {
                 vm.drawCommand.Execute(1);
             }
         });
         Draw10Btn.onClick.AddListener(() =>
         {
-            if (!isClosing && !isOpening && !isInputLocked && middleHub.IsReady && configurationVerified)
+            if (!isClosing && !isOpening && !isInputLocked && middleHub.IsReady && configurationVerified &&
+                !vm.isDrawing.Value && !isPresentingResults && vm.CurrentPoolConfig.Value != null)
             {
                 vm.drawCommand.Execute(10);
             }
@@ -320,15 +339,15 @@ public partial class GachaView : UIView
 
     void ApplyInputState()
     {
-        bool canSwitch = !isClosing && !isOpening && !isInputLocked;
+        bool canSwitch = !isClosing && !isOpening && !isInputLocked && !vm.isDrawing.Value;
         topHub.SetPoolSwitchEnabled(canSwitch);
         // Transient draw locks are checked in click callbacks without changing button visuals.
-        closeBtn.interactable = !isClosing;
+        closeBtn.interactable = !isClosing && !vm.isDrawing.Value;
     }
 
     public override void OnCancel()
     {
-        if (isClosing)
+        if (isClosing || vm.isDrawing.Value)
         {
             return;
         }

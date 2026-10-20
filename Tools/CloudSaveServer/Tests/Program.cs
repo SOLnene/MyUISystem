@@ -27,17 +27,19 @@ internal static partial class Program
 
     static async Task<int> Main(string[] args)
     {
-        string artifactRoot = Path.GetFullPath(args.FirstOrDefault(a => a != "--live-auth") ??
-            Path.Combine(AppContext.BaseDirectory, "validation"));
-        Directory.CreateDirectory(artifactRoot);
-        string runRoot = Path.Combine(artifactRoot, "run-" + Guid.NewGuid().ToString("N"));
-        Directory.CreateDirectory(runRoot);
         try
         {
+            // Setup failures must be reported like test failures instead of crashing the runner.
+            string artifactRoot = Path.GetFullPath(args.FirstOrDefault(a => a != "--live-auth") ??
+                Path.Combine(AppContext.BaseDirectory, "validation"));
+            Directory.CreateDirectory(artifactRoot);
+            string runRoot = Path.Combine(artifactRoot, "run-" + Guid.NewGuid().ToString("N"));
+            Directory.CreateDirectory(runRoot);
             await ValidateLocal(Path.Combine(runRoot, "test.db"));
             await ValidateGacha(Path.Combine(runRoot, "gacha"));
             await ValidateCharacterEvents(Path.Combine(runRoot, "character-events"));
             await ValidateAccounts(Path.Combine(runRoot, "accounts"));
+            await ValidateDraws(Path.Combine(runRoot, "draws"));
             if (args.Contains("--live-auth")) await ValidateUnity(Path.Combine(runRoot, "live.db"));
             Console.WriteLine($"PASS: {passed} checks. Test databases: {runRoot}");
             return 0;
@@ -140,7 +142,7 @@ internal static partial class Program
             Check(conflict.StatusCode == HttpStatusCode.Conflict, "Stale revisions must fail.");
             var oldReplay = await Receipt(await Put(server.Client, a, 0, id, FirstSave), 1);
             Check(oldReplay.Replayed, "An earlier acknowledged request remains replayable after later writes.");
-            foreach (string json in new[] { "not-json", "[]", "{\"version\":8}", "{\"version\":\"7\"}", "{}", "{\"version\":7,\"x\":\"" + new string('x', 5000) + "\"}" })
+            foreach (string json in new[] { "not-json", "[]", "{\"version\":0}", "{\"version\":\"7\"}", "{}", "{\"version\":7,\"x\":\"" + new string('x', 5000) + "\"}" })
             {
                 using var invalid = await Put(server.Client, a, 2, Guid.NewGuid(), json);
                 Check(invalid.StatusCode == HttpStatusCode.BadRequest, "Invalid/oversized save must fail.");

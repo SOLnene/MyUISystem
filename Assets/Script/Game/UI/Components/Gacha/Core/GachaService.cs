@@ -11,6 +11,7 @@ public class GachaService: IGachaService
 {
     private readonly IGachaPoolProvider poolProvider;
     RemoteGachaConfiguration remoteConfiguration;
+    internal long ConfigurationVersion => remoteConfiguration?.Version ?? 0;
     readonly CharacterEventGacha characterEvents = new CharacterEventGacha();
 
     internal void ApplyRemoteConfiguration(RemoteGachaConfiguration configuration)

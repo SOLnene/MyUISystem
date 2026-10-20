@@ -3,7 +3,7 @@ using System.Threading;
 using System.IO;
 using Cysharp.Threading.Tasks;
 
-internal sealed class CloudGameSaveSession
+internal sealed partial class CloudGameSaveSession
 {
     internal const string SaveKey = "game_save";
     const string SourcePrefix = "cloud-account:";
@@ -72,6 +72,7 @@ internal sealed class CloudGameSaveSession
         var session = new CloudGameSaveSession(playerId, username, snapshot?.saveJson,
             snapshot?.revision ?? 0, client);
         session.RequireOwner();
+        await session.RecoverGachaAsync(cancellationToken);
         return session;
     }
 
@@ -80,6 +81,8 @@ internal sealed class CloudGameSaveSession
         RequireOwner();
         if (HasConflict)
             throw new InvalidOperationException("云存档已被其他设备更新，请重新启动并登录。");
+        if (HasPendingGacha)
+            throw new InvalidOperationException("抽卡结果尚未确认，请先恢复抽卡结果再保存。");
         pendingJson = json;
     }
 
@@ -90,6 +93,8 @@ internal sealed class CloudGameSaveSession
         RequireOwner();
         if (HasConflict)
             throw new InvalidOperationException("云存档存在版本冲突，停止自动覆盖。");
+        if (HasPendingGacha)
+            throw new InvalidOperationException("抽卡结果尚未确认，请先重试抽卡或重新登录。");
         if (pendingJson == null)
             return;
         IsSaving = true;

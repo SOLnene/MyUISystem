@@ -3,7 +3,7 @@ using System.Threading;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
-public sealed class GameSaveCoordinator : SingletonMono<GameSaveCoordinator>
+public sealed partial class GameSaveCoordinator : SingletonMono<GameSaveCoordinator>
 {
     const float SaveDelay = 1f;
 
@@ -31,6 +31,8 @@ public sealed class GameSaveCoordinator : SingletonMono<GameSaveCoordinator>
     {
         if (CloudGameSaveSession.IsCloudSource(GameContext.Instance.ActiveSaveDirectory))
         {
+            if (CloudGameSaveSession.Current?.HasPendingGacha ?? false)
+                return false;
             if (!dirty && !isFlushing && !(CloudGameSaveSession.Current?.HasPendingSave ?? false))
                 return true;
             if (!isFlushing)
@@ -70,6 +72,8 @@ public sealed class GameSaveCoordinator : SingletonMono<GameSaveCoordinator>
                 throw LastCloudError ?? new InvalidOperationException("当前进度尚未保存，请先完成保存再切换。");
         }
         cancellationToken.ThrowIfCancellationRequested();
+        if (CloudGameSaveSession.Current?.HasPendingGacha ?? false)
+            throw new InvalidOperationException("抽卡结果尚未确认，请先重试抽卡；也可退出后重新登录恢复。");
         dirty = false;
         dirtyRevision++;
         LastCloudError = null;
@@ -84,6 +88,11 @@ public sealed class GameSaveCoordinator : SingletonMono<GameSaveCoordinator>
             await UniTask.Yield();
         }
         cancellationToken.ThrowIfCancellationRequested();
+        if (CloudGameSaveSession.Current?.HasPendingGacha ?? false)
+        {
+            LastCloudError = new InvalidOperationException("抽卡结果尚未确认，请先恢复抽卡结果再保存。");
+            return false;
+        }
         if (!dirty && !(CloudGameSaveSession.Current?.HasPendingSave ?? false))
             return true;
         isFlushing = true;
@@ -139,6 +148,9 @@ public sealed class GameSaveCoordinator : SingletonMono<GameSaveCoordinator>
             Debug.LogWarning("云存档存在冲突，本次未确认的改动不会覆盖云端版本。");
             return true;
         }
+        // An uncertain draw is journaled before sending; the next login reconciles it without overwriting rewards.
+        if (!isFlushing && (CloudGameSaveSession.Current?.HasPendingGacha ?? false))
+            return true;
         if (allowQuit || !CloudGameSaveSession.IsCloudSource(GameContext.Instance.ActiveSaveDirectory) ||
             (!dirty && !isFlushing && !(CloudGameSaveSession.Current?.HasPendingSave ?? false)))
             return true;
@@ -176,6 +188,7 @@ public sealed class GameSaveCoordinator : SingletonMono<GameSaveCoordinator>
             (!CloudGameSaveSession.IsCloudSource(GameContext.Instance.ActiveSaveDirectory) ||
                 (CloudGameSaveSession.Current?.IsReady ?? false)) &&
             !(CloudGameSaveSession.Current?.HasConflict ?? false) &&
+            !(CloudGameSaveSession.Current?.HasPendingGacha ?? false) &&
             Time.realtimeSinceStartup >= saveAt)
         {
             Flush();

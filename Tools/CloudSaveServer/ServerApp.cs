@@ -33,6 +33,8 @@ internal static class ServerApp
         builder.Services.AddSingleton<SaveStore>();
         builder.Services.AddSingleton(new GachaConfigStore(
             builder.Configuration["GachaConfigRoot"] ?? builder.Environment.ContentRootPath));
+        builder.Services.AddSingleton(new GachaCatalog(Path.Combine(
+            builder.Configuration["GachaConfigRoot"] ?? builder.Environment.ContentRootPath, "gacha-catalog.json")));
         LocalAccountAuthentication.Add(builder.Services, builder.Configuration.GetValue<bool>("EnableLegacyUnityAuthentication"));
         builder.Services.AddAuthorization();
         builder.Services.AddRateLimiter(options =>
@@ -105,6 +107,7 @@ internal static class ServerApp
                     "Gacha configuration is unavailable; retry later.", context.TraceIdentifier), statusCode: 503);
             }
         }).RequireAuthorization().RequireRateLimiting("saves");
+        GachaEndpoints.Map(app);
         var saves = app.MapGroup("/v1/save").RequireAuthorization().RequireRateLimiting("saves");
         saves.MapGet("", (HttpContext context, SaveStore store) =>
         {

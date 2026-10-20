@@ -40,8 +40,8 @@ internal sealed record SaveWriteRequest(long? ExpectedRevision, Guid? RequestId,
             if (json.RootElement.ValueKind != JsonValueKind.Object ||
                 !json.RootElement.TryGetProperty("version", out var version) ||
                 version.ValueKind != JsonValueKind.Number ||
-                !version.TryGetInt32(out var number) || number is < 1 or > 7)
-                return "saveJson must be an object with a supported integer version (1-7).";
+                !version.TryGetInt32(out var number) || number < 1)
+                return "saveJson must be an object with a positive integer version.";
         }
         catch (JsonException)
         {

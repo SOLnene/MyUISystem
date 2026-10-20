@@ -1,4 +1,5 @@
 using System;
+using Cysharp.Threading.Tasks;
 using System.Collections;
 using System.Collections.Generic;
 using Game.Domain.Character;
@@ -36,6 +37,8 @@ public class GachaViewModel : IDisposable
     // ⚠ 后续可能拆为 isBusy / canInput
     public ReactiveProperty<bool> isDrawing = new ReactiveProperty<bool>(false);
     GachaSessionViewModel currentSession;
+    bool disposed;
+    internal Subject<string> DrawFailed { get; } = new Subject<string>();
     
     public IReadOnlyList<GachaPoolUIConfig> PoolConfigs { get; }
     public IReadOnlyReactiveProperty<GachaPoolUIConfig> CurrentPoolConfig => currentPoolConfig;
@@ -67,63 +70,88 @@ public class GachaViewModel : IDisposable
             .Subscribe(
                 count =>
                 {
-                    Draw(count);
+                    Draw(count).Forget();
                 }).AddTo(disposable);
         currentPoolConfig.Where(config => config != null).Subscribe(
             config =>Debug.Log($"切换卡池到 {config.gachaKey}"))
             .AddTo(disposable);
     }
 
-    void Draw(int count)
+    async UniTaskVoid Draw(int count)
     {
         isDrawing.Value = true;
-        lastDrawnItems.Clear();
-
-        var gachaKey = currentPoolConfig.Value.gachaKey; // 快照
-        var result = gachaService.Draw(count,gachaKey);
-
-        foreach (var e in result.Entries)
+        try
         {
-            CharacterModel character = null;
-            InventoryItem item = null;
+            lastDrawnItems.Clear();
 
-            if (e.entryType == GachaEntryType.Character)
+            var gachaKey = currentPoolConfig.Value.gachaKey; // 快照
+            var result = await GachaDrawOperation.ExecuteAsync(gachaService, count, gachaKey);
+            if (disposed) return;
+            int resultIndex = 0;
+
+            foreach (var e in result.Entries)
             {
-                var definition = GameDatabase.CharacterDatabase.Get(e.entryKey);
-                character = GameContext.Instance.CharacterRepository.GetByKey(e.entryKey);
-                if (character != null)
+                CharacterModel character = null;
+                InventoryItem item = null;
+
+                if (result.ServerConfirmed)
                 {
-                    character.AddTalentToken(1);
+                    if (e.entryType == GachaEntryType.Character)
+                        character = GameContext.Instance.CharacterRepository.GetByKey(e.entryKey);
+                    else if (e.entryType == GachaEntryType.Equip)
+                        GameContext.Instance.InventoryRepository.TryGetItem(result.AwardedInstanceIds[resultIndex], out item);
                 }
-                else
+                else if (e.entryType == GachaEntryType.Character)
                 {
-                    character = GameContext.Instance.CharacterRepository.Add(definition);
+                    var definition = GameDatabase.CharacterDatabase.Get(e.entryKey);
+                    character = GameContext.Instance.CharacterRepository.GetByKey(e.entryKey);
+                    if (character != null)
+                    {
+                        character.AddTalentToken(1);
+                    }
+                    else
+                    {
+                        character = GameContext.Instance.CharacterRepository.Add(definition);
+                    }
                 }
-            }
-            else if (e.entryType == GachaEntryType.Equip)
-            {
-                var definition = GameDatabase.ItemDatabase.GetItemByKey(e.entryKey) as EquipDefinition;
-                item = new EquipItem(definition);
-                GameContext.Instance.InventoryRepository.AddItem(item);
+                else if (e.entryType == GachaEntryType.Equip)
+                {
+                    var definition = GameDatabase.ItemDatabase.GetItemByKey(e.entryKey) as EquipDefinition;
+                    item = new EquipItem(definition);
+                    GameContext.Instance.InventoryRepository.AddItem(item);
+                }
+
+                var vm = new GachaEntryViewModel(e,visualProvider, character, item);
+                lastDrawnItems.Add(vm);
+                resultIndex++;
             }
 
-            var vm = new GachaEntryViewModel(e,visualProvider, character, item);
-            lastDrawnItems.Add(vm);
+            if (!result.ServerConfirmed)
+            {
+                AchievementProgressService.Instance.AddProgress(
+                    AchievementProgressKeys.GachaDraw,
+                    count);
+                GameSaveCoordinator.Instance.MarkDirty();
+            }
+
+            currentSession?.Dispose();
+            currentSession = new GachaSessionViewModel(lastDrawnItems);
+            isDrawing.Value = false;
+            //开始展示流程
+            //TODO：再包一层
+            //UIManager.Instance.Open(UIType.GachaResultDetailPopup,sessionVM);
+            //ShowNext();
+            OnSessionStarted.OnNext(currentSession);
         }
-
-        AchievementProgressService.Instance.AddProgress(
-            AchievementProgressKeys.GachaDraw,
-            count);
-        GameSaveCoordinator.Instance.MarkDirty();
-        
-        currentSession?.Dispose();
-        currentSession = new GachaSessionViewModel(lastDrawnItems);
-        isDrawing.Value = false;
-        //开始展示流程
-        //TODO：再包一层
-        //UIManager.Instance.Open(UIType.GachaResultDetailPopup,sessionVM);
-        //ShowNext();
-        OnSessionStarted.OnNext(currentSession);
+        catch (Exception exception)
+        {
+            if (!disposed) DrawFailed.OnNext(GachaDrawOperation.Feedback(exception));
+            Debug.LogWarning($"Gacha request failed: {exception.Message}");
+        }
+        finally
+        {
+            isDrawing.Value = false;
+        }
     }
 
     internal void ApplyPoolConfigs(IReadOnlyList<GachaPoolUIConfig> configs)
@@ -170,6 +198,7 @@ public class GachaViewModel : IDisposable
     
     public void Dispose()
     {
+        disposed = true;
         currentSession?.Dispose();
         disposable.Dispose();
     }

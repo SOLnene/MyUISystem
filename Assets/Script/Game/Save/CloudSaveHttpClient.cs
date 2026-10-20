@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
 
-internal sealed class CloudSaveHttpClient
+internal sealed partial class CloudSaveHttpClient
 {
     internal const string ServiceUrl = "http://127.0.0.1:5127";
     internal static CloudSaveHttpClient Default { get; } = new CloudSaveHttpClient(ServiceUrl);

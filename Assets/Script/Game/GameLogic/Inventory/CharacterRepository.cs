@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Game.Domain.Character;
 using UnityEngine;
@@ -20,6 +21,30 @@ public class CharacterRepository
     }
 
     public IReadOnlyList<CharacterModel> Characters => characters;
+
+    internal CharacterModel ApplyGachaCharacter(CharacterSaveData data)
+    {
+        var existing = GetByKey(data.characterKey);
+        if (existing != null)
+        {
+            if (data.talentTokenCount < existing.TalentTokenCount)
+                throw new InvalidOperationException("抽卡命星与当前角色状态冲突，请重新登录。");
+            existing.AddTalentToken(data.talentTokenCount - existing.TalentTokenCount);
+            return existing;
+        }
+        var definition = GameDatabase.CharacterDatabase.Get(data.characterKey)
+            ?? throw new InvalidOperationException("当前客户端缺少抽卡角色定义。");
+        if (!inventoryRepository.TryGetEquip(data.equippedWeaponInstanceId, out var starter) ||
+            starter.EquipDefinition.weaponType != definition.weaponType)
+            throw new InvalidOperationException("抽卡角色的初始武器未同步。");
+        // The server already granted the starter; the local factory must not grant a second copy.
+        var model = new CharacterModel(definition, data.level, data.exp, data.rank,
+            data.talentLevel, data.talentTokenCount);
+        model.ChangeEquip(starter);
+        characters.Add(model);
+        characterMap.Add(definition.key, model);
+        return model;
+    }
 
     public CharacterModel Add(CharacterDefinition definition)
     {

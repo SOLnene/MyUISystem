@@ -26,6 +26,26 @@ public class InventoryRepository
 
     public IEnumerable<ItemStack> GetAllStacks() => itemStacks.Values;
 
+    internal EquipItem ApplyGachaEquip(EquipItemSaveData data)
+    {
+        if (TryGetEquip(data.instanceId, out var existing))
+        {
+            if (existing.Id != data.itemId)
+                throw new InvalidOperationException("抽卡武器实例与当前背包冲突，请重新登录。");
+            return existing;
+        }
+        var definition = GameDatabase.ItemDatabase.GetItemByID(data.itemId) as EquipDefinition
+            ?? throw new InvalidOperationException("当前客户端缺少抽卡武器定义。");
+        var equip = new EquipItem(definition, data.level, data.refinementLevel, data.exp, rank: data.rank);
+        equip.SetInstanceId(data.instanceId);
+        nextInstanceId = Math.Max(nextInstanceId, checked(data.instanceId + 1));
+        items.Add(equip);
+        itemsByInstanceId.Add(equip.InstanceId, equip);
+        MarkNewItem(equip);
+        changed.OnNext(new InventoryChangedEvent(InventoryChangeType.Added, equip));
+        return equip;
+    }
+
     public IObservable<InventoryChangedEvent> ObserveChanged()
     {
         return changed;
