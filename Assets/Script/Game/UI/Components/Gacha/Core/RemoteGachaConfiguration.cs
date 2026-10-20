@@ -142,6 +142,9 @@ internal sealed class RemoteGachaConfiguration : IGachaPoolProvider, IDisposable
         {
             if (item is not EquipDefinition weapon || (weapon.stars != 3 && weapon.stars != 4))
                 continue;
+            // Keep the legacy training weapon readable in saves, but exclude it from new event rewards.
+            if (weapon.key == "Claymore_Aniki")
+                continue;
             if (string.IsNullOrWhiteSpace(weapon.key) || !weaponKeys.Add(weapon.key) ||
                 items.GetItemByKey(weapon.key) != weapon)
                 throw new InvalidDataException("Automatic weapon tiers require unique, registered weapon definitions.");

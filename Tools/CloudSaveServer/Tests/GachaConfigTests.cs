@@ -89,7 +89,7 @@ internal static partial class Program
         await SetSchedule(schedule);
         string poolPath = Path.Combine(root, "gacha-CharPool_Hutao.json");
         string originalPool = await File.ReadAllTextAsync(poolPath);
-        var pool = JsonSerializer.Deserialize<GachaPoolConfig>(originalPool, GachaJson)!;
+        var pool = initial.Pools[0] with { EventRules = null };
         async Task SetPool(GachaPoolConfig value) =>
             await File.WriteAllTextAsync(poolPath, JsonSerializer.Serialize(value, GachaJson));
         await SetPool(pool with { PityCount = 7, Entries = pool.Entries.Select(e => e with { Weight = 3 }).ToList() });

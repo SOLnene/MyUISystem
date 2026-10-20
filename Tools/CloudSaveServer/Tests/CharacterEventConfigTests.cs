@@ -7,7 +7,7 @@ internal static partial class Program
     {
         Directory.CreateDirectory(root);
         string sourceRoot = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../"));
-        string[] roles = ["Furina", "Keqing", "Citlali", "Columbina", "Odette"];
+        string[] roles = ["Hutao", "Eula", "Furina", "Keqing", "Citlali", "Columbina", "Odette"];
         foreach (string name in roles.Select(r => "gacha-CharPool_" + r + ".json").Append("gacha-common-character-event.json"))
             File.Copy(Path.Combine(sourceRoot, name), Path.Combine(root, name));
         var slots = roles.Select(r => new GachaScheduleSlot("CharPool_" + r, true, null, null)).ToList();
@@ -15,7 +15,7 @@ internal static partial class Program
             JsonSerializer.Serialize(new GachaSchedule(2, slots), GachaJson));
         var store = new GachaConfigStore(root);
         var snapshot = await store.ReadCurrentAsync(DateTimeOffset.UtcNow, default);
-        Check(snapshot.Pools.Count == roles.Length, "All five model-backed event pools must load.");
+        Check(snapshot.Pools.Count == roles.Length, "All configured character event pools must load with one policy.");
         foreach (var pool in snapshot.Pools)
         {
             var rules = pool.EventRules!;
@@ -30,6 +30,9 @@ internal static partial class Program
             Check(pool.Entries.Any(e => e.Rarity == 5 && e.EntryKey != rules.FeaturedFiveStarKey) &&
                 !pool.Entries.Any(e => e.EntryKey == "lumine"), "50/50 needs a standard alternative; Lumine is excluded.");
         }
+        Check(snapshot.Pools.All(pool => pool.Entries.All(e => e.EntryKey != "Claymore_Aniki" &&
+            e.EntryKey != "chongyun" && e.EntryKey != "yunjin" && e.EntryKey != "ningguang")),
+            "Legacy training weapons and unavailable four-star previews must not enter new event rewards.");
         await File.WriteAllTextAsync(Path.Combine(root, "client-snapshot.json"), JsonSerializer.Serialize(snapshot, GachaJson));
         string commonPath = Path.Combine(root, "gacha-common-character-event.json");
         string originalCommon = await File.ReadAllTextAsync(commonPath);
@@ -82,6 +85,6 @@ internal static partial class Program
         }
         await File.WriteAllTextAsync(eventPath, originalEvent);
         Check((await store.ReadCurrentAsync(DateTimeOffset.UtcNow, default)).Pools.Count == roles.Length, "Corrected event data recovers immediately.");
-        Console.WriteLine("PASS: five character events, common-file hot reload, weapon tiers and authoring validation.");
+        Console.WriteLine("PASS: seven character events, common-file hot reload, weapon tiers and authoring validation.");
     }
 }
