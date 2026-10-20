@@ -514,6 +514,7 @@ GameObject:
   - component: {fileID: 7975591544788627201}
   - component: {fileID: 6870646915677702266}
   - component: {fileID: 3849991231578777627}
+  - component: {fileID: 1906927339032170826}
   m_Layer: 5
   m_Name: BackpackView
   m_TagString: Untagged
@@ -575,6 +576,24 @@ MonoBehaviour:
   middleView: {fileID: 3708456441447930240}
   bottomHub: {fileID: 5269640620436316267}
   inputBlock: {fileID: 6802024238166617397}
+--- !u!114 &1906927339032170826
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3472695310164514155}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c944fde67d876843af340b74d218ff3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  openPolicy: 0
+  closePolicy: 2
+  openClip: {fileID: 0}
+  closeClip: {fileID: 8300000, guid: ef907a1d46b009f41825e20df734b2c4, type: 3}
+  openVolume: 1
+  closeVolume: 1
 --- !u!1 &4259386448010610767
 GameObject:
   m_ObjectHideFlags: 0

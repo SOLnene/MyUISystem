@@ -168,6 +168,7 @@ GameObject:
   - component: {fileID: 7585566901615691637}
   - component: {fileID: 5491290187292327542}
   - component: {fileID: 4338396385658262088}
+  - component: {fileID: 3437228616056983019}
   m_Layer: 5
   m_Name: ItemSlot
   m_TagString: Untagged
@@ -317,6 +318,22 @@ MonoBehaviour:
   glowEffectImage: {fileID: 6874964665004858941}
   scaleRoot: {fileID: 6265829470963861269}
   button: {fileID: 5192150191466623798}
+--- !u!114 &3437228616056983019
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1785510778321851179}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f3fbf8d13fd41b6b2cc21ce234e4b51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  selectable: {fileID: 5192150191466623798}
+  clickClip: {fileID: 8300000, guid: 839202949f46bd04fbdcd91e4696e850, type: 3}
+  volume: 1
+  muteClick: 0
 --- !u!1 &3858302186352359354
 GameObject:
   m_ObjectHideFlags: 0

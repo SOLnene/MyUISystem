@@ -12,6 +12,9 @@ public sealed class UIAudioFeedback : MonoBehaviour,
 {
     [SerializeField]
     Selectable selectable;
+    [SerializeField] AudioClip clickClip;
+    [SerializeField, Range(0f, 1f)] float volume = 1f;
+    [SerializeField] bool muteClick;
 
     void Reset()
     {
@@ -28,7 +31,10 @@ public sealed class UIAudioFeedback : MonoBehaviour,
 
     public void OnPointerClick(PointerEventData eventData)
     {
-        PlayClick();
+        if (eventData.button == PointerEventData.InputButton.Left)
+        {
+            PlayClick();
+        }
     }
 
     public void OnSubmit(BaseEventData eventData)
@@ -38,11 +44,15 @@ public sealed class UIAudioFeedback : MonoBehaviour,
 
     void PlayClick()
     {
-        if (selectable != null && !selectable.IsInteractable())
+        if (muteClick || !isActiveAndEnabled ||
+            (selectable != null && (!selectable.IsActive() || !selectable.IsInteractable())))
         {
             return;
         }
 
-        AudioManager.Instance.PlayUI(UISound.ButtonClick);
+        if (clickClip != null)
+            AudioManager.Instance.PlayUI(clickClip, volume);
+        else
+            AudioManager.Instance.PlayUI(UISound.ButtonClick);
     }
 }

@@ -5682,6 +5682,7 @@ GameObject:
   - component: {fileID: 1324157177596502510}
   - component: {fileID: 6960146034905005086}
   - component: {fileID: 7012478090452132229}
+  - component: {fileID: 5447587053925384750}
   m_Layer: 5
   m_Name: Item
   m_TagString: Untagged
@@ -5779,6 +5780,22 @@ MonoBehaviour:
   m_FlexibleWidth: 1
   m_FlexibleHeight: -1
   m_LayoutPriority: 1
+--- !u!114 &5447587053925384750
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6329904680022714429}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8f3fbf8d13fd41b6b2cc21ce234e4b51, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  selectable: {fileID: 6960146034905005086}
+  clickClip: {fileID: 8300000, guid: bd3ee51225d4fc84697c2c4e79057367, type: 3}
+  volume: 1
+  muteClick: 0
 --- !u!1 &6387963313549388524
 GameObject:
   m_ObjectHideFlags: 0
@@ -7555,6 +7572,8 @@ MonoBehaviour:
   - {fileID: 4087607340199923956}
   - {fileID: 5487589789212702211}
   - {fileID: 3516543564985868075}
+  promoteClip: {fileID: 8300000, guid: a1adcf738b8e26e44a0bdae4a2a577db, type: 3}
+  promoteVolume: 0.55
 --- !u!114 &7538570462561754556
 MonoBehaviour:
   m_ObjectHideFlags: 0

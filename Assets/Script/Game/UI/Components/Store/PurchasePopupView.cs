@@ -56,6 +56,7 @@ public class PurchasePopupView : MonoBehaviour
     Button confirmButton;
     [SerializeField]
     AnimatedPanel contentAnimatedPanel;
+    [SerializeField] AudioClip quantityStepClip;
 
     PurchasePopupViewData data;
     Action<PurchasePopupViewData, int> onConfirm;
@@ -63,6 +64,8 @@ public class PurchasePopupView : MonoBehaviour
     Action onCancel;
     int purchaseCount = 1;
     bool isClosing;
+    bool isBinding;
+    float nextQuantitySoundAt;
     CancellationTokenSource itemIconRequestCts;
 
     public void Bind(
@@ -71,6 +74,9 @@ public class PurchasePopupView : MonoBehaviour
         Action cancelHandler,
         Action<ItemDefinition> itemAreaClickHandler = null)
     {
+        // A cached popup can still have its previous scrollbar listener during binding.
+        isBinding = true;
+        nextQuantitySoundAt = 0f;
         data = viewData;
         onConfirm = confirmHandler;
         onCancel = cancelHandler;
@@ -90,6 +96,7 @@ public class PurchasePopupView : MonoBehaviour
         cancelButton.onClick.AddListener(HandleCancel);
         confirmButton.onClick.RemoveListener(HandleConfirm);
         confirmButton.onClick.AddListener(HandleConfirm);
+        isBinding = false;
     }
 
     public void Show()
@@ -113,9 +120,16 @@ public class PurchasePopupView : MonoBehaviour
 
     void HandleCountChanged(float value)
     {
+        int previousCount = purchaseCount;
         int max = data.MaxPurchaseCount;
         purchaseCount = max <= 1 ? 1 : Mathf.RoundToInt(Mathf.Lerp(1, max, value));
         RefreshCount();
+        if (purchaseCount != previousCount && !isBinding && !isClosing &&
+            isActiveAndEnabled && Time.unscaledTime >= nextQuantitySoundAt)
+        {
+            nextQuantitySoundAt = Time.unscaledTime + 0.08f;
+            AudioManager.Instance.PlayUI(quantityStepClip);
+        }
     }
 
     void RefreshCount()

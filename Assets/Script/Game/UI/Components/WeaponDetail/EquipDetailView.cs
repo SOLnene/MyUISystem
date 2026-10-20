@@ -48,6 +48,9 @@ public partial class EquipDetailView : UIView
     [Header("参考图")]
     [SerializeField]
     GameObject[] finalImages;
+    [SerializeField] AudioClip promoteClip;
+    [SerializeField, Range(0f, 1f)] float promoteVolume = 0.55f;
+    AudioPlaybackHandle promoteAudio;
     EquipDetailViewModel equipDetailVm;
 
     EquipItemViewModel equipItemVm;
@@ -325,6 +328,8 @@ public partial class EquipDetailView : UIView
                     bottomView.ShowPromoteBottomResult();
                 };
 
+                AudioManager.Instance.Stop(promoteAudio);
+                promoteAudio = AudioManager.Instance.PlayUI(promoteClip, promoteVolume);
                 await enhancePanelView.PlayPromoteResult(result, onNewStateShown);
             }
 
@@ -486,6 +491,8 @@ public partial class EquipDetailView : UIView
 
     public override void OnClose()
     {
+        AudioManager.Instance.Stop(promoteAudio);
+        promoteAudio = default;
         CancelOpenTransition();
         ModelViewer.Instance.CancelPendingPreviewLoad();
         ModelViewer.Instance.StopStarFieldParticles();
@@ -504,6 +511,8 @@ public partial class EquipDetailView : UIView
 
     public override void OnRelease()
     {
+        AudioManager.Instance.Stop(promoteAudio);
+        promoteAudio = default;
         CancelOpenTransition();
         base.OnRelease();
     }

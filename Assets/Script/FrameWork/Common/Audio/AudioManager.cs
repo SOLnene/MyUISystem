@@ -19,6 +19,7 @@ public sealed class AudioManager : SingletonMono<AudioManager>
     sealed class ActivePlayback
     {
         public AudioCue Cue;
+        public AudioBus Bus;
         public AudioSource Source;
     }
 
@@ -43,6 +44,7 @@ public sealed class AudioManager : SingletonMono<AudioManager>
     readonly List<AudioSource> sources = new();
     readonly Dictionary<int, ActivePlayback> activePlaybacks = new();
     readonly Dictionary<AudioCue, float> lastPlayedTimes = new();
+    readonly Dictionary<AudioClip, float> lastUIPlayedTimes = new();
     readonly List<int> completedHandles = new();
 
     AudioSource uiSource;
@@ -85,7 +87,51 @@ public sealed class AudioManager : SingletonMono<AudioManager>
             _ => throw new ArgumentOutOfRangeException(nameof(sound), sound, null)
         };
 
+        if (clip == null || IsUIRetriggerBlocked(clip))
+        {
+            return;
+        }
+
+        lastUIPlayedTimes[clip] = Time.unscaledTime;
+        uiSource.outputAudioMixerGroup = config != null ? config.GetOutput(AudioBus.UI) : null;
         uiSource.PlayOneShot(clip, volume);
+    }
+
+    public AudioPlaybackHandle PlayUI(AudioClip clip, float volume = 1f)
+    {
+        if (clip == null || IsUIRetriggerBlocked(clip))
+        {
+            return default;
+        }
+
+        EnsureSourceRoot();
+        CleanupFinishedPlaybacks();
+        AudioSource source = AcquireSource();
+        if (source == null)
+        {
+            return default;
+        }
+
+        lastUIPlayedTimes[clip] = Time.unscaledTime;
+        source.clip = clip;
+        source.outputAudioMixerGroup = config != null ? config.GetOutput(AudioBus.UI) : null;
+        source.loop = false;
+        source.volume = Mathf.Clamp01(volume);
+        source.pitch = 1f;
+        source.spatialBlend = 0f;
+        source.priority = 128;
+        source.transform.localPosition = Vector3.zero;
+        int handleId = GetNextHandleId();
+        activePlaybacks.Add(handleId, new ActivePlayback { Bus = AudioBus.UI, Source = source });
+        source.Play();
+        return new AudioPlaybackHandle(handleId);
+    }
+
+    bool IsUIRetriggerBlocked(AudioClip clip)
+    {
+        // Pointer and submit callbacks can describe the same interaction in one frame.
+        return lastUIPlayedTimes.TryGetValue(clip, out float lastPlayedAt) &&
+               Time.unscaledTime - lastPlayedAt < 0.03f;
     }
 
     /// <summary>
@@ -191,6 +237,7 @@ public sealed class AudioManager : SingletonMono<AudioManager>
         activePlaybacks.Add(handleId, new ActivePlayback
         {
             Cue = cue,
+            Bus = cue.Bus,
             Source = source
         });
         source.Play();
@@ -216,7 +263,7 @@ public sealed class AudioManager : SingletonMono<AudioManager>
         completedHandles.Clear();
         foreach (KeyValuePair<int, ActivePlayback> pair in activePlaybacks)
         {
-            if (pair.Value.Cue.Bus == bus)
+            if (pair.Value.Bus == bus)
             {
                 completedHandles.Add(pair.Key);
             }
@@ -326,7 +373,7 @@ public sealed class AudioManager : SingletonMono<AudioManager>
             }
         }
 
-        if (sources.Count >= config.MaxSourceCount)
+        if (sources.Count >= (config != null ? config.MaxSourceCount : 12))
         {
             return null;
         }

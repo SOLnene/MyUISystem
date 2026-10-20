@@ -35,6 +35,8 @@ public partial class GachaView : UIView
     [SerializeField] GameObject configRefreshRoot;
     [SerializeField] TMP_Text configRefreshText;
     [SerializeField] Button configRefreshRetryButton;
+    [SerializeField] AudioClip drawClickClip;
+    [SerializeField] AudioClip sessionReturnClip;
     bool configurationVerified;
     string appliedConfigurationSignature;
     CancellationTokenSource configurationCancellation;
@@ -75,9 +77,12 @@ public partial class GachaView : UIView
             {
                 configRefreshRoot.SetActive(false);
                 isPresentingResults = true;
+                // Detail-to-summary is one session; only its final return owns this sound.
                 session.OnSessionFinished.Take(1).Subscribe(_ =>
                 {
                     isPresentingResults = false;
+                    if (!isClosing)
+                        AudioManager.Instance.PlayUI(sessionReturnClip);
                 }).AddTo(disposable);
                 flowController.StartSession(session);
             })
@@ -126,6 +131,7 @@ public partial class GachaView : UIView
             if (!isClosing && !isOpening && !isInputLocked && middleHub.IsReady && configurationVerified &&
                 !vm.isDrawing.Value && !isPresentingResults && vm.CurrentPoolConfig.Value != null)
             {
+                AudioManager.Instance.PlayUI(drawClickClip);
                 vm.drawCommand.Execute(1);
             }
         });
@@ -134,6 +140,7 @@ public partial class GachaView : UIView
             if (!isClosing && !isOpening && !isInputLocked && middleHub.IsReady && configurationVerified &&
                 !vm.isDrawing.Value && !isPresentingResults && vm.CurrentPoolConfig.Value != null)
             {
+                AudioManager.Instance.PlayUI(drawClickClip);
                 vm.drawCommand.Execute(10);
             }
         });

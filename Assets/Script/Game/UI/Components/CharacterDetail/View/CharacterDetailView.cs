@@ -45,6 +45,10 @@ namespace Game.UI.Components.CharacterDetail
 
         [SerializeField]
         DetailTabItem[] tabItems;
+        [SerializeField] AudioClip attributesClip;
+        [SerializeField] AudioClip artifactsClip;
+        [SerializeField] AudioClip talentsClip;
+        AudioPlaybackHandle tabAudio;
         [SerializeField]
         AnimatedPanel topPanel;
         [SerializeField]
@@ -530,6 +534,20 @@ namespace Game.UI.Components.CharacterDetail
 
                 currentIndex = index;
                 tabItems[currentIndex].SetSelected(true, instant);
+                AudioManager.Instance.Stop(tabAudio);
+                tabAudio = default;
+                // Initial binding and character resets use instant selection and stay silent.
+                if (!instant)
+                {
+                    AudioClip clip = index switch
+                    {
+                        0 => attributesClip,
+                        2 => artifactsClip,
+                        3 => talentsClip,
+                        _ => null
+                    };
+                    tabAudio = AudioManager.Instance.PlayUI(clip, index == 0 ? 0.55f : 1f);
+                }
                 await ApplyCurrentTab(instant);
             }
             finally
@@ -736,6 +754,8 @@ namespace Game.UI.Components.CharacterDetail
         
         public override void OnClose()
         {
+            AudioManager.Instance.Stop(tabAudio);
+            tabAudio = default;
             isClosing = true;
             ++operationVersion;
             currentOperation = DetailOperation.None;
@@ -753,6 +773,8 @@ namespace Game.UI.Components.CharacterDetail
 
         public override void OnRelease()
         {
+            AudioManager.Instance.Stop(tabAudio);
+            tabAudio = default;
             isClosing = true;
             ++operationVersion;
             currentOperation = DetailOperation.None;

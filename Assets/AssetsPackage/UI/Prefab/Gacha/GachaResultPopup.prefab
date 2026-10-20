@@ -206,6 +206,7 @@ GameObject:
   - component: {fileID: 5062585018414299092}
   - component: {fileID: 4812894888825151100}
   - component: {fileID: 8320399264059209857}
+  - component: {fileID: 8553638182349084740}
   m_Layer: 5
   m_Name: GachaResultPopup
   m_TagString: Untagged
@@ -284,6 +285,24 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   defaultSelect: {fileID: 0}
+--- !u!114 &8553638182349084740
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3004185455192697505}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 6c944fde67d876843af340b74d218ff3, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  openPolicy: 1
+  closePolicy: 1
+  openClip: {fileID: 0}
+  closeClip: {fileID: 0}
+  openVolume: 1
+  closeVolume: 1
 --- !u!1 &6173285466572304793
 GameObject:
   m_ObjectHideFlags: 0
