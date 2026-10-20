@@ -77,9 +77,11 @@ public partial class EquipDetailView : UIView
         //todo:view中不允许创建vm，放到类似context的地方
         
         var param = data as EquipDetailOpenParams;
-        if (param == null)
+        if (param?.Weapon?.Model == null)
         {
+            equipItemVm = null;
             Debug.LogError("缺少武器界面参数");
+            return;
         }
         else
         {

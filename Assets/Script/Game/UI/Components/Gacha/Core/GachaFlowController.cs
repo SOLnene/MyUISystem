@@ -88,7 +88,8 @@ public class GachaFlowController : IDisposable
                 return;
             }
 
-            UIManager.Instance.Open(UIType.EquipDetailView, equipVm);
+            UIManager.Instance.Open(UIType.EquipDetailView,
+                new EquipDetailOpenParams(equipVm, WeaponDetailTab.Info));
             UIManager.Instance.Close(UIType.GachaView);
             UIManager.Instance.Close(UIType.GachaResultPopup);
         }
