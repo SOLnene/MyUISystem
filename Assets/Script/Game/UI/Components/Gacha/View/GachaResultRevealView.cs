@@ -43,6 +43,11 @@ public partial class GachaResultRevealView : BindableUI
 
 
 
+    [SerializeField] AspectRatioFitter iconAspect;
+
+    // Keep normal playback and skipping at the same small reveal offset.
+    const float DetailIconOffsetX = 44f;
+
     GachaEntryViewModel vm;
     
     Sequence revealSeq;
@@ -92,7 +97,17 @@ public partial class GachaResultRevealView : BindableUI
             .Subscribe(sprite =>
             {
                 icon.sprite = sprite;
-                cardFrame.color = RarityConfig.GetColor(vm.Rarity);
+                bool weapon = entry.EntryType == GachaEntryType.Equip;
+                iconAspect.enabled = !weapon;
+                if (weapon)
+                    iconBasePos = GachaWeaponImageLayout.Fit(icon, entry, iconTarget.rect.size,
+                        iconTarget.anchoredPosition, false);
+                else
+                {
+                    icon.rectTransform.sizeDelta = iconTarget.rect.size;
+                    icon.rectTransform.anchoredPosition = iconBasePos;
+                }
+                cardFrame.color = RarityConfig.GetColor(vm.Rarity - 1);
                 PlayRevealAsync().Forget();
             })
             .AddTo(disposable);
@@ -138,7 +153,7 @@ public partial class GachaResultRevealView : BindableUI
             icon.DOColor(Color.white, 0.35f));
         //icon右移
         detailRevealSeq.Append(icon.rectTransform
-            .DOAnchorPosX(iconBasePos.x + 120.0f, 0.35f)
+            .DOAnchorPosX(iconBasePos.x + DetailIconOffsetX, 0.35f)
             .SetEase(Ease.OutCubic));
             
         //文本向左
@@ -236,7 +251,7 @@ public partial class GachaResultRevealView : BindableUI
         // icon
         icon.color = Color.white;
         icon.transform.localScale = Vector3.one;
-        icon.rectTransform.anchoredPosition = iconBasePos + Vector2.right * 120f;
+        icon.rectTransform.anchoredPosition = iconBasePos + Vector2.right * DetailIconOffsetX;
 
         // info
         infoContent.anchoredPosition = infoBasePos;

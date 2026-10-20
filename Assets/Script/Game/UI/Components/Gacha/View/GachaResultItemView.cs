@@ -36,6 +36,11 @@ public class GachaResultItemView : BindableUI
 
 
 
+    [SerializeField] Image rarityBackground;
+    [SerializeField] Image rarityBorder;
+    [SerializeField] Image rarityGlow;
+    [SerializeField] GachaResultItemFx resultFx;
+
     Sequence seq;
     GachaEntryViewModel vm;
     bool clickEnabled;
@@ -44,13 +49,43 @@ public class GachaResultItemView : BindableUI
     {
         disposable.Clear();
         vm = viewModel;
-        icon.sprite = viewModel.Icon;
+        // Keep the crisp outline and rarity halo independent from the hover feedback.
+        Color rarityColor = RarityConfig.GetColor(vm.Rarity - 1);
+        // White restores the texture colors, including when a tinted card is reused.
+        rarityBackground.color = Color.white;
+        // A bright core stays legible while the softer halo carries the rarity hue.
+        rarityBorder.color = Color.Lerp(rarityColor, Color.white, 0.55f);
+        rarityGlow.color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.5f);
+        resultFx.BindRarity(vm.Rarity, rarityColor);
+        viewModel.VisualLoaded.Subscribe(_ => ApplyVisual()).AddTo(disposable);
+        ApplyVisual();
         clickCommand = command;
+    }
+
+    void ApplyVisual()
+    {
+        icon.sprite = vm.Icon;
+        var rect = icon.rectTransform;
+        if (vm.EntryType == GachaEntryType.Equip)
+        {
+            GachaWeaponImageLayout.Fit(icon, vm, ((RectTransform)rect.parent).rect.size,
+                Vector2.zero, true);
+        }
+        else
+        {
+            // Reused slots must restore the character crop after displaying a weapon.
+            icon.preserveAspect = false;
+            rect.anchorMin = Vector2.zero;
+            rect.anchorMax = Vector2.one;
+            rect.sizeDelta = Vector2.zero;
+            rect.anchoredPosition = Vector2.zero;
+        }
     }
 
     public UniTask PlayEnter(CancellationToken token = default)
     {
         Debug.Log("View Play Enter");
+        resultFx.Play();
         seq?.Kill();
         seq = DOTween.Sequence()
             .Append(content.DOAnchorPosX(0f, 0.35f)
@@ -66,6 +101,7 @@ public class GachaResultItemView : BindableUI
 
     public void ResetForEnter()
     {
+        resultFx.StopAndClear();
         seq?.Kill();
         Debug.Log("Reset Result Item");
         content.anchoredPosition = Vector2.zero;
@@ -90,6 +126,7 @@ public class GachaResultItemView : BindableUI
         content.anchoredPosition = Vector2.zero;
         content.localScale = Vector3.one;
         contentGroup.alpha = 1;
+        resultFx.Play();
     }
 
     public void OnPointerEnter(PointerEventData eventData)
