@@ -1,17 +1,74 @@
 using System;
 using UnityEngine;
+using UnityEngine.UI;
 
 [DisallowMultipleComponent]
 public sealed class GachaResultItemFx : MonoBehaviour
 {
     [SerializeField] Canvas cardCanvas;
-    [SerializeField] ParticleSystem[] beams;
+    [SerializeField] CanvasGroup frameGlowGroup;
+    [SerializeField] Image frameOverlay;
+    [SerializeField] Sprite threeStarFrame;
+    [SerializeField] Sprite fourStarFrame;
+    [SerializeField] Sprite fiveStarFrame;
     [SerializeField] ParticleSystem[] motes;
     [SerializeField] ParticleSystem[] accents;
+    [SerializeField, ColorUsage(false)] Color fourStarGlowColor = new Color(0.32f, 0.24f, 1f);
+
+    [Serializable]
+    sealed class EffectSettings
+    {
+        [Range(0f, 1f)] public float frameOpacity = 1f;
+        [Min(0f)] public float moteScale = 1f;
+        [Min(0f)] public float moteRateScale = 1f;
+        [Min(0f)] public float accentScale = 1f;
+        public Vector2 accentSpread = Vector2.one;
+        [Min(0f)] public float accentRateScale = 1f;
+        [Min(0)] public int accentBurst = 2;
+        [Min(0f)] public float sparkleIntensity = 1f;
+    }
+
+    struct ParticleDefaults
+    {
+        public ParticleSystem.MinMaxCurve sizeX;
+        public ParticleSystem.MinMaxCurve sizeY;
+        public float rate;
+        public Vector3 area;
+
+        public ParticleDefaults(ParticleSystem system)
+        {
+            var main = system.main;
+            sizeX = main.startSizeX;
+            sizeY = main.startSizeY;
+            rate = system.emission.rateOverTimeMultiplier;
+            area = system.shape.scale;
+        }
+    }
+
+    [SerializeField] EffectSettings threeStarEffect = new EffectSettings
+    {
+        frameOpacity = 0.6f,
+        moteScale = 0.75f, moteRateScale = 0.6f, accentScale = 0.4f,
+        accentSpread = new Vector2(0.75f, 0.6f), accentRateScale = 0f,
+        accentBurst = 0, sparkleIntensity = 1f
+    };
+    [SerializeField] EffectSettings fourStarEffect = new EffectSettings
+    {
+        frameOpacity = 0.9f,
+        moteScale = 0.85f, moteRateScale = 0.8f, accentScale = 0.55f,
+        accentSpread = new Vector2(0.85f, 0.65f), accentRateScale = 0.65f,
+        accentBurst = 1, sparkleIntensity = 0.95f
+    };
+    [SerializeField] EffectSettings fiveStarEffect = new EffectSettings
+    {
+        frameOpacity = 0.95f,
+        moteScale = 1f, moteRateScale = 1.2f, accentScale = 0.65f,
+        accentSpread = new Vector2(0.9f, 0.7f), accentRateScale = 0.9f,
+        accentBurst = 1, sparkleIntensity = 1.05f
+    };
 
     static readonly int ColorId = Shader.PropertyToID("_Color");
     ParticleSystem[] particles;
-    ParticleSystemRenderer[] beamRenderers;
     ParticleSystemRenderer[] foregroundRenderers;
     CanvasGroup[] visibilityGroups;
     Canvas ownerCanvas;
@@ -19,42 +76,80 @@ public sealed class GachaResultItemFx : MonoBehaviour
     bool playing;
     int rarity;
     float pulsePhase;
+    EffectSettings effect;
+    ParticleDefaults[] moteDefaults;
+    ParticleDefaults[] accentDefaults;
 
     void Awake()
     {
         particles = GetComponentsInChildren<ParticleSystem>(true);
-        beamRenderers = Array.ConvertAll(beams, system => system.GetComponent<ParticleSystemRenderer>());
         var foreground = new ParticleSystem[motes.Length + accents.Length];
         motes.CopyTo(foreground, 0);
         accents.CopyTo(foreground, motes.Length);
         foregroundRenderers = Array.ConvertAll(foreground, system => system.GetComponent<ParticleSystemRenderer>());
         properties = new MaterialPropertyBlock();
+        // Always apply a tier against the authored baseline, never against the previous tier.
+        moteDefaults = Array.ConvertAll(motes, system => new ParticleDefaults(system));
+        accentDefaults = Array.ConvertAll(accents, system => new ParticleDefaults(system));
     }
+
+    internal Color GlowColor { get; private set; }
 
     internal void BindRarity(int value, Color color)
     {
         StopAndClear();
         rarity = value;
-        bool highlighted = rarity >= 4;
-        for (int i = 0; i < beams.Length; i++)
+        effect = rarity >= 5 ? fiveStarEffect : rarity == 4 ? fourStarEffect : threeStarEffect;
+        // Calibrate the four-star glow without changing the shared inventory and reward UI palette.
+        GlowColor = rarity == 4 ? fourStarGlowColor : color;
+        // Every sprite includes the frame and both apex lights, registered to the same card contour.
+        // Keep vertex tint white so the baked white core and colored halo retain their separate colors.
+        frameOverlay.sprite = rarity >= 5 ? fiveStarFrame : rarity == 4 ? fourStarFrame : threeStarFrame;
+        frameOverlay.color = Color.white;
+        for (int i = 0; i < motes.Length; i++)
         {
-            // Each tip serializes its halo before its bright core.
-            bool core = i % 2 == 1;
-            Color tint = core ? Color.Lerp(color, Color.white, 0.8f) : color;
-            tint.a = highlighted ? (core ? 0.85f : 0.75f) : (core ? 0.035f : 0.12f);
-            var main = beams[i].main;
-            main.startColor = tint;
+            var main = motes[i].main;
+            main.startColor = Color.Lerp(GlowColor, Color.white, 0.3f);
+            main.startSizeX = ScaleCurve(moteDefaults[i].sizeX, effect.moteScale);
+            main.startSizeY = ScaleCurve(moteDefaults[i].sizeY, effect.moteScale);
+            var emission = motes[i].emission;
+            emission.rateOverTimeMultiplier = moteDefaults[i].rate * effect.moteRateScale;
         }
-        foreach (var system in motes)
+        for (int i = 0; i < accents.Length; i++)
         {
-            var main = system.main;
-            main.startColor = Color.Lerp(color, Color.white, 0.3f);
+            var main = accents[i].main;
+            main.startColor = new ParticleSystem.MinMaxGradient(
+                Color.Lerp(GlowColor, Color.white, 0.85f), new Color(1f, 1f, 0.82f));
+            main.startSizeX = ScaleCurve(accentDefaults[i].sizeX, effect.accentScale);
+            main.startSizeY = ScaleCurve(accentDefaults[i].sizeY, effect.accentScale);
+            var shape = accents[i].shape;
+            shape.scale = Vector3.Scale(accentDefaults[i].area, new Vector3(effect.accentSpread.x, effect.accentSpread.y, 1f));
+            var emission = accents[i].emission;
+            emission.rateOverTimeMultiplier = accentDefaults[i].rate * effect.accentRateScale;
+            // Accents serialize one star/streak pair per tip; streak bursts stay sparser than stars.
+            int count = i % 2 == 0 ? effect.accentBurst : (effect.accentBurst + 1) / 2;
+            emission.SetBursts(count > 0
+                ? new[] { new ParticleSystem.Burst(0f, new ParticleSystem.MinMaxCurve(1f, count)) }
+                : Array.Empty<ParticleSystem.Burst>());
         }
-        foreach (var system in accents)
+    }
+
+    static ParticleSystem.MinMaxCurve ScaleCurve(ParticleSystem.MinMaxCurve curve, float scale)
+    {
+        switch (curve.mode)
         {
-            var main = system.main;
-            main.startColor = Color.Lerp(color, Color.white, 0.75f);
+            case ParticleSystemCurveMode.Constant:
+                curve.constant *= scale;
+                break;
+            case ParticleSystemCurveMode.TwoConstants:
+                curve.constantMin *= scale;
+                curve.constantMax *= scale;
+                break;
+            default:
+                curve.curveMultiplier *= scale;
+                break;
         }
+        return curve;
     }
 
     internal void Play()
@@ -65,16 +160,15 @@ public sealed class GachaResultItemFx : MonoBehaviour
 
         ownerCanvas = GetComponentInParent<Canvas>();
         visibilityGroups = GetComponentsInParent<CanvasGroup>();
-        foreach (var system in beams)
-            system.Play(false);
+        frameOverlay.enabled = true;
         foreach (var system in motes)
             system.Play(false);
-        if (rarity >= 4)
+        if (effect.accentRateScale > 0f || effect.accentBurst > 0)
         {
             foreach (var system in accents)
                 system.Play(false);
         }
-        pulsePhase = beams[0].randomSeed / (float)uint.MaxValue * Mathf.PI * 2f;
+        pulsePhase = motes[0].randomSeed / (float)uint.MaxValue * Mathf.PI * 2f;
         playing = true;
         SynchronizeRendering();
     }
@@ -82,6 +176,7 @@ public sealed class GachaResultItemFx : MonoBehaviour
     internal void StopAndClear()
     {
         playing = false;
+        frameOverlay.enabled = false;
         foreach (var system in particles)
             system.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
     }
@@ -112,16 +207,11 @@ public sealed class GachaResultItemFx : MonoBehaviour
         cardCanvas.sortingOrder = order + 2;
         cardCanvas.worldCamera = ownerCanvas.worldCamera;
 
-        // Native particle renderers do not inherit CanvasGroup alpha.
-        float pulse = 1f + 0.1f * Mathf.Sin(Time.unscaledTime * 2f + pulsePhase);
-        properties.SetColor(ColorId, new Color(pulse, pulse, pulse, alpha));
-        foreach (var renderer in beamRenderers)
-        {
-            renderer.sortingLayerID = layer;
-            renderer.sortingOrder = order + 1;
-            renderer.SetPropertyBlock(properties);
-        }
-        properties.SetColor(ColorId, new Color(1, 1, 1, alpha));
+        // The unified UI frame inherits parent fades; native moving particles need the alpha explicitly.
+        float wave = Mathf.Sin(Time.unscaledTime * 2f + pulsePhase);
+        frameGlowGroup.alpha = effect.frameOpacity * (0.95f + 0.05f * wave);
+        float sparkle = effect.sparkleIntensity;
+        properties.SetColor(ColorId, new Color(sparkle, sparkle, sparkle, alpha));
         foreach (var renderer in foregroundRenderers)
         {
             renderer.sortingLayerID = layer;

@@ -37,8 +37,6 @@ public class GachaResultItemView : BindableUI
 
 
     [SerializeField] Image rarityBackground;
-    [SerializeField] Image rarityBorder;
-    [SerializeField] Image rarityGlow;
     [SerializeField] GachaResultItemFx resultFx;
 
     Sequence seq;
@@ -49,13 +47,10 @@ public class GachaResultItemView : BindableUI
     {
         disposable.Clear();
         vm = viewModel;
-        // Keep the crisp outline and rarity halo independent from the hover feedback.
+        // The unified frame sprite owns the permanent outline and apex glow; hover feedback remains separate.
         Color rarityColor = RarityConfig.GetColor(vm.Rarity - 1);
         // White restores the texture colors, including when a tinted card is reused.
         rarityBackground.color = Color.white;
-        // A bright core stays legible while the softer halo carries the rarity hue.
-        rarityBorder.color = Color.Lerp(rarityColor, Color.white, 0.55f);
-        rarityGlow.color = new Color(rarityColor.r, rarityColor.g, rarityColor.b, 0.5f);
         resultFx.BindRarity(vm.Rarity, rarityColor);
         viewModel.VisualLoaded.Subscribe(_ => ApplyVisual()).AddTo(disposable);
         ApplyVisual();
