@@ -45,7 +45,7 @@ public partial class GachaResultRevealView : BindableUI
 
     [SerializeField] AspectRatioFitter iconAspect;
 
-    // Keep normal playback and skipping at the same small reveal offset.
+    // The authored target is the final center; only the entrance starts to its left.
     const float DetailIconOffsetX = 44f;
 
     GachaEntryViewModel vm;
@@ -151,9 +151,11 @@ public partial class GachaResultRevealView : BindableUI
 
         detailRevealSeq.Append(
             icon.DOColor(Color.white, 0.35f));
+        float nameRevealTime = detailRevealSeq.Duration();
         //icon右移
         detailRevealSeq.Append(icon.rectTransform
-            .DOAnchorPosX(iconBasePos.x + DetailIconOffsetX, 0.35f)
+            .DOAnchorPosX(iconBasePos.x, 0.35f)
+            .From(iconBasePos - Vector2.right * DetailIconOffsetX)
             .SetEase(Ease.OutCubic));
             
         //文本向左
@@ -163,38 +165,38 @@ public partial class GachaResultRevealView : BindableUI
             .SetEase(Ease.OutCubic));
 
         detailRevealSeq.Join(nameText
-            .DOFade(1, 0.35f)
+            .DOFade(1, 0.2f)
             .SetEase(Ease.OutCubic));
         
         //星星动画
         for (int i = 0; i < vm.Rarity; i++)
         {
             int index = i;
+            // Overlap the name entrance; spacing stays independent of each star's scale and flash.
+            float starTime = nameRevealTime + 0.1f + i * 0.12f;
 
-            detailRevealSeq.AppendCallback(() =>
+            detailRevealSeq.InsertCallback(starTime, () =>
             {
                 stars[index].gameObject.SetActive(true);
             });
 
-            detailRevealSeq.Append(
+            detailRevealSeq.Insert(starTime,
                 stars[index].transform
-                    .DOScale(1f, 0.15f)
+                    .DOScale(1f, 0.1f)
                     .From(2f)
                     .SetEase(Ease.OutBack)
                 );
 
-            detailRevealSeq.Join(
+            detailRevealSeq.Insert(starTime,
                 stars[index]
-                    .DOColor(Color.white, 0.075f)
+                    .DOColor(Color.white, 0.05f)
                     .From(starBaseColor)
                 );
 
-            detailRevealSeq.Append(
+            detailRevealSeq.Insert(starTime + 0.05f,
                 stars[index]
-                    .DOColor(starBaseColor, 0.075f)
+                    .DOColor(starBaseColor, 0.05f)
                 );
-
-            detailRevealSeq.AppendInterval(0.05f);
         }
 
         await detailRevealSeq.AsyncWaitForCompletion();
@@ -222,6 +224,7 @@ public partial class GachaResultRevealView : BindableUI
         // Reveal 阶段只关心 scale / color
         icon.transform.localScale = Vector3.one * 2f;
         icon.color = Color.black;
+        icon.rectTransform.anchoredPosition = iconBasePos - Vector2.right * DetailIconOffsetX;
         
     }
     
@@ -251,7 +254,7 @@ public partial class GachaResultRevealView : BindableUI
         // icon
         icon.color = Color.white;
         icon.transform.localScale = Vector3.one;
-        icon.rectTransform.anchoredPosition = iconBasePos + Vector2.right * DetailIconOffsetX;
+        icon.rectTransform.anchoredPosition = iconBasePos;
 
         // info
         infoContent.anchoredPosition = infoBasePos;
