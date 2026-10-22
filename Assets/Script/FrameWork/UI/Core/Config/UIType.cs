@@ -27,5 +27,6 @@ public enum UIType
 		LoginView,
 		TutorialOverlayView,
 		FriendView,
+		SettingsView,
 		Max,
 }

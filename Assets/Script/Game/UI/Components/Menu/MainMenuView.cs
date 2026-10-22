@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.UI;
 
 public enum MainMenuAction
 {
@@ -15,6 +16,7 @@ public enum MainMenuAction
     Shop,
     Achievement,
     Friend,
+    Settings,
 }
 
 public enum MainMenuRedDotKey
@@ -46,6 +48,8 @@ public class MainMenuView : UIView
     [SerializeField] private PlayerInfoView playerInfoView;
     [SerializeField] private MenuActionPanel actionPanel;
     [SerializeField] private List<MainMenuButtonData> defaultButtons = new List<MainMenuButtonData>();
+    [SerializeField] private Button backButton;
+    [SerializeField] private Button settingsButton;
 
     private MainMenuViewModel viewModel;
 
@@ -60,12 +64,24 @@ public class MainMenuView : UIView
 
         playerInfoView.Bind(viewModel.PlayerSummary);
         actionPanel.Bind(defaultButtons, viewModel.RedDotProvider, viewModel.RequestAction);
+        // Reopening may reuse the same view instance; each sidebar action must remain bound once.
+        backButton.onClick.RemoveListener(OnCancel);
+        backButton.onClick.AddListener(OnCancel);
+        settingsButton.onClick.RemoveListener(OpenSettings);
+        settingsButton.onClick.AddListener(OpenSettings);
     }
 
     public override void OnClose()
     {
+        backButton.onClick.RemoveListener(OnCancel);
+        settingsButton.onClick.RemoveListener(OpenSettings);
         actionPanel.Clear();
         base.OnClose();
+    }
+
+    void OpenSettings()
+    {
+        viewModel.RequestAction(MainMenuAction.Settings);
     }
 
 }

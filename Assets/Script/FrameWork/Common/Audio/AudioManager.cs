@@ -21,6 +21,7 @@ public sealed class AudioManager : SingletonMono<AudioManager>
         public AudioCue Cue;
         public AudioBus Bus;
         public AudioSource Source;
+        public float Volume;
     }
 
     [SerializeField]
@@ -51,6 +52,7 @@ public sealed class AudioManager : SingletonMono<AudioManager>
     Transform sourceRoot;
     int nextHandleId = 1;
     bool initialized;
+    float uiBusVolume = 1f;
 
     public bool IsInitialized => initialized;
 
@@ -116,13 +118,14 @@ public sealed class AudioManager : SingletonMono<AudioManager>
         source.clip = clip;
         source.outputAudioMixerGroup = config != null ? config.GetOutput(AudioBus.UI) : null;
         source.loop = false;
-        source.volume = Mathf.Clamp01(volume);
+        float playbackVolume = Mathf.Clamp01(volume);
+        source.volume = playbackVolume * uiBusVolume;
         source.pitch = 1f;
         source.spatialBlend = 0f;
         source.priority = 128;
         source.transform.localPosition = Vector3.zero;
         int handleId = GetNextHandleId();
-        activePlaybacks.Add(handleId, new ActivePlayback { Bus = AudioBus.UI, Source = source });
+        activePlaybacks.Add(handleId, new ActivePlayback { Bus = AudioBus.UI, Source = source, Volume = playbackVolume });
         source.Play();
         return new AudioPlaybackHandle(handleId);
     }
@@ -227,7 +230,7 @@ public sealed class AudioManager : SingletonMono<AudioManager>
         source.clip = clip;
         source.outputAudioMixerGroup = config.GetOutput(cue.Bus);
         source.loop = cue.Loop;
-        source.volume = cue.Volume;
+        source.volume = cue.Volume * (cue.Bus == AudioBus.UI ? uiBusVolume : 1f);
         source.pitch = UnityEngine.Random.Range(cue.MinPitch, cue.MaxPitch);
         source.spatialBlend = cue.SpatialBlend;
         source.priority = cue.Priority;
@@ -238,7 +241,8 @@ public sealed class AudioManager : SingletonMono<AudioManager>
         {
             Cue = cue,
             Bus = cue.Bus,
-            Source = source
+            Source = source,
+            Volume = cue.Volume
         });
         source.Play();
         return new AudioPlaybackHandle(handleId);
@@ -284,22 +288,39 @@ public sealed class AudioManager : SingletonMono<AudioManager>
     /// </summary>
     public bool SetBusVolume(AudioBus bus, float linearVolume)
     {
-        if (!initialized || config.Mixer == null)
-        {
-            return false;
-        }
-
-        string parameter = config.GetVolumeParameter(bus);
-        if (string.IsNullOrWhiteSpace(parameter))
-        {
-            return false;
-        }
-
         float clampedVolume = Mathf.Clamp01(linearVolume);
-        float decibels = clampedVolume <= 0.0001f
-            ? -80f
-            : Mathf.Log10(clampedVolume) * 20f;
-        return config.Mixer.SetFloat(parameter, decibels);
+        bool appliedToMixer = false;
+        if (initialized && config.Mixer != null)
+        {
+            string parameter = config.GetVolumeParameter(bus);
+            if (!string.IsNullOrWhiteSpace(parameter))
+            {
+                float decibels = clampedVolume <= 0.0001f ? -80f : Mathf.Log10(clampedVolume) * 20f;
+                appliedToMixer = config.Mixer.SetFloat(parameter, decibels);
+            }
+        }
+
+        if (bus == AudioBus.Master)
+        {
+            // Only one gain stage owns the master setting, even if a mixer is connected later.
+            AudioListener.volume = appliedToMixer ? 1f : clampedVolume;
+            return true;
+        }
+
+        if (bus == AudioBus.UI)
+        {
+            uiBusVolume = appliedToMixer ? 1f : clampedVolume;
+            EnsureUISource();
+            // Preserve each clip's authored loudness while changing sounds that are already playing.
+            foreach (ActivePlayback playback in activePlaybacks.Values)
+            {
+                if (playback.Bus == AudioBus.UI)
+                    playback.Source.volume = playback.Volume * uiBusVolume;
+            }
+            return true;
+        }
+
+        return appliedToMixer;
     }
 
     void Update()
@@ -404,6 +425,7 @@ public sealed class AudioManager : SingletonMono<AudioManager>
 
         uiSource.playOnAwake = false;
         uiSource.spatialBlend = 0f;
+        uiSource.volume = uiBusVolume;
     }
 
     void EnsurePoolSize(int targetSize)

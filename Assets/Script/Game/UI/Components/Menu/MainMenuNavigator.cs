@@ -21,6 +21,7 @@ internal class MainMenuNavigator
             { MainMenuAction.Shop, OpenStore },
             { MainMenuAction.Achievement, OpenAchievement },
             { MainMenuAction.Friend, OpenFriend },
+            { MainMenuAction.Settings, () => UIManager.Instance.Open(UIType.SettingsView) },
         };
     }
 
