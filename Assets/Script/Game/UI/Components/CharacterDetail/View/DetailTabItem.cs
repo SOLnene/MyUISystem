@@ -18,6 +18,7 @@ public class DetailTabItem : UIThreeStateSelectable
     private Image diamondSelected;
     [SerializeField]
     private Image arrow;
+    [SerializeField] TabSelectionFeedback selectionFeedback;
   
 
     private RectTransform textRectTransform;
@@ -83,12 +84,15 @@ public class DetailTabItem : UIThreeStateSelectable
 
         bool isSelected = state == VisualState.Selected;
         bool isHover = state == VisualState.Hover;
+        // Existing tab prefabs keep their original visuals until a particle feedback is assigned.
+        if (selectionFeedback != null)
+            selectionFeedback.SetSelected(isSelected, instant);
         float targetBackgroundAlpha = isHover ? hoverBgBaseAlpha * 0.7f : 0f;
         Color targetTextColor = SetColorAlpha(normalTextColor, isSelected ? 1f : isHover ? 0.86f : normalTextColor.a);
         Vector2 targetTextPosition = textBasePosition + new Vector2(isSelected ? 14f : isHover ? 8f : 0f, 0f);
         Vector3 targetTextScale = textBaseScale * (isSelected ? 1.08f : isHover ? 1.03f : 1f);
         float targetNormalDiamondAlpha = isSelected ? 0f : diamondNormalBaseAlpha;
-        float targetSelectedDiamondAlpha = isSelected || isHover ? diamondSelectedBaseAlpha : 0f;
+        float targetSelectedDiamondAlpha = isSelected || (isHover && selectionFeedback == null) ? diamondSelectedBaseAlpha : 0f;
 
         SetArrowActive(isSelected);
 
@@ -122,7 +126,8 @@ public class DetailTabItem : UIThreeStateSelectable
 
         stateSequence.Join(text.DOColor(targetTextColor, 0.18f).SetEase(Ease.OutCubic));
         stateSequence.Join(textRectTransform.DOAnchorPos(targetTextPosition, 0.22f).SetEase(Ease.OutCubic));
-        stateSequence.Join(textRectTransform.DOScale(targetTextScale, 0.22f).SetEase(Ease.OutBack));
+        stateSequence.Join(textRectTransform.DOScale(targetTextScale, 0.22f)
+            .SetEase(selectionFeedback != null ? Ease.OutCubic : Ease.OutBack));
     }
 
     static float GetImageAlpha(Image image)
