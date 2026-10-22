@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "activeProfile": "mondstadt_2_-1",
+  "cliPath": "F:/AnimeStudio/PbiZPOuyDADBO80D/AnimeStudio.CLI.exe",
+  "assetMap": "F:/AnimeStudio/PbiZPOuyDADBO80D/Maps/gi_7_0_0_live_48215702_47805902.map",
+  "stagingRoot": ".codex_tmp_frame_analysis/genshin_regions",
+  "assetRoot": "Assets/Art/Model",
+  "materialRoot": "Assets/Art/Material",
+  "sceneRoot": "Assets/Scenes",
+  "profiles": {
+    "mondstadt_2_-1": {
+      "id": "mondstadt_2_-1",
+      "label": "Mondstadt city and its surrounding terrain block",
+      "blockX": 2,
+      "blockZ": -1,
+      "blockSize": 1024,
+      "minimumSurfaceCoverage": 0.9,
+      "quality": "Client HLOD meshes; simplified geometry and materials, without original gameplay objects.",
+      "layoutSource": {
+        "url": "https://github.com/flatypus/hoyomap/blob/main/manifests/all_hlod_manifest.json",
+        "blobSha": "6eb6d06c067110c04c310c6b4e15abd127b4e494",
+        "cityPosition": [2275, 263, -783],
+        "cityLocalPositionRule": "cityPosition - [blockX * 1024, 0, blockZ * 1024]",
+        "coordinateNote": "OBJ export mirrors X; Unity OBJ import restores it. Terrain UVs use Unity block-local X/Z."
+      },
+      "assets": [
+        {"kind": "Mesh", "name": "Stages_BigWorld_2_-1_Constant_HLOD_Lod0"},
+        {"kind": "Texture2D", "name": "BigWorldTerrain_2_-1.bin_BaseMap"},
+        {"kind": "Mesh", "name": "Area_Mengde_City_Constant_HLOD_Lod0"},
+        {"kind": "Texture2D", "name": "Stages_Texture_Area_Mengde_City_HLOD_Combined_Diffuse"}
+      ],
+      "meshes": [
+        {
+          "name": "Stages_BigWorld_2_-1_Constant_HLOD_Lod0",
+          "texture": "BigWorldTerrain_2_-1.bin_BaseMap",
+          "role": "Terrain",
+          "uvMode": "blockPlanar",
+          "position": [0, 0, 0],
+          "meshOverrides": [
+            {
+              "meshName": "Stages_BigWorld_2_-1_Constant_HLOD_Lod0_2",
+              "role": "Water",
+              "color": [0.075, 0.33, 0.43, 1],
+              "collider": false,
+              "requireHorizontal": true
+            }
+          ]
+        },
+        {
+          "name": "Area_Mengde_City_Constant_HLOD_Lod0",
+          "texture": "Stages_Texture_Area_Mengde_City_HLOD_Combined_Diffuse",
+          "role": "City",
+          "uvMode": "original",
+          "position": [227, 263, 241]
+        }
+      ]
+    }
+  }
+}

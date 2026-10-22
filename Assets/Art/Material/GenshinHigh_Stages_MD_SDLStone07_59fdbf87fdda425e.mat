@@ -1,0 +1,110 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: GenshinHigh_Stages_MD_SDLStone07_59fdbf87fdda425e
+  m_Shader: {fileID: 4800000, guid: 4b8d2a7d0411e1243928629a9259aca8, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BumpMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _GrassDiffuse:
+        m_Texture: {fileID: 2800000, guid: 2fa2f638a00e5024da99ecf012c8b0d4, type: 3}
+        m_Scale: {x: 15, y: 15}
+        m_Offset: {x: 0, y: 0}
+    - _GrassMask:
+        m_Texture: {fileID: 2800000, guid: eaea5bf8be314784ea929397774b622b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 1eaa87fd87e876948bd9aeb7f61c8f07, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MediumDetailDiffuse:
+        m_Texture: {fileID: 2800000, guid: 1eaa87fd87e876948bd9aeb7f61c8f07, type: 3}
+        m_Scale: {x: 2.5, y: 2.5}
+        m_Offset: {x: 5.2, y: 1.02}
+    - _MediumDetailMask:
+        m_Texture: {fileID: 2800000, guid: 4e87acb201a96a04f8f99afad5f26af8, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MediumDetailNormal_MIDDLE:
+        m_Texture: {fileID: 2800000, guid: 6fa067e024f3fe54cae11150633e038d, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NearDetailDiffuse:
+        m_Texture: {fileID: 2800000, guid: 4c7cc161ea65d914992e6c83d786d76f, type: 3}
+        m_Scale: {x: 10, y: 10}
+        m_Offset: {x: 0, y: 0}
+    - _NearDetailMask_MIDDLE:
+        m_Texture: {fileID: 2800000, guid: 45394496c3d32994e869d77b0c9a3f77, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NearDetailNormal_MIDDLE:
+        m_Texture: {fileID: 2800000, guid: d0c2db51450f4ed47a56ca7a82eadc92, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _StoneDiffuse:
+        m_Texture: {fileID: 2800000, guid: 1eaa87fd87e876948bd9aeb7f61c8f07, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _StoneNormal:
+        m_Texture: {fileID: 2800000, guid: 977417f0eaeee4a41bf69acdfdb2ff88, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - Emission_Type: 0
+    - _CullMode: 2
+    - _CutOff: 0.5
+    - _DiffuseBlendIntensity: 1
+    - _DiffuseBlendMethod: 0
+    - _EmissionStrength: 4
+    - _EmissionTimeStrength: 0
+    - _EnableAlphaTest: 0
+    - _EnableFixedTiling: 0
+    - _GrassNormalMix: -1
+    - _MaskBlendIntensity: 1
+    - _MaskBlendMethod: 0
+    - _MediumDarkenIntensity: 0
+    - _MediumDetailDiffuseDistanceInverse: 0.001999996
+    - _MediumDetailDiffuseFade: 1
+    - _MediumDetailNormalScale: 0.7
+    - _NearDarkenIntensity: 0
+    - _NearDetailDiffuseDistanceInverse: 0.03333222
+    - _NearDetailDiffuseFade: 0.25
+    - _NearDetailNormalScale: 1
+    - _NormalStrength: 0
+    - _StoneNormalScale: 1
+    - _UseGrassSecondaryUV: 0
+    - _UseMediumDetail: 1
+    - _UseMediumDetailSecondaryUV: 0
+    - _UseNearDetailDiffuse: 1
+    - _UseNearDetailSecondaryUV: 0
+    - _UseTintGrassDiffuse: 0
+    - _VertRForMedium: 0
+    m_Colors:
+    - _Color: {r: 1, g: 1, b: 1, a: 0.5}
+    - _EmissionColor: {r: 0.67, g: 0.497, b: 0.18858123, a: 1}
+    - _MainColor: {r: 1, g: 1, b: 1, a: 0.5}
+    - _TintGrassDiffuseColor: {r: 1, g: 1, b: 1, a: 1}
+  m_BuildTextureStacks: []
