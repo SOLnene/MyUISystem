@@ -5,8 +5,11 @@ using System.Text.RegularExpressions;
 
 namespace CloudSaveServer;
 
-internal sealed class GachaConfigStore(string root)
+internal sealed class GachaConfigStore(string root, TimeSpan? cacheLifetime = null)
 {
+    readonly TimeSpan cacheDuration = cacheLifetime is { } duration && duration <= TimeSpan.Zero
+        ? throw new ArgumentOutOfRangeException(nameof(cacheLifetime))
+        : cacheLifetime ?? TimeSpan.FromMinutes(1);
     static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web) { MaxDepth = 16 };
     static readonly Regex KeyPattern = new("^[A-Za-z0-9_-]{1,64}$", RegexOptions.CultureInvariant);
 
@@ -17,6 +20,7 @@ internal sealed class GachaConfigStore(string root)
             throw new InvalidDataException("Invalid gacha schedule version or pool list.");
         var keys = new HashSet<string>(StringComparer.Ordinal);
         var active = new List<GachaPoolConfig>();
+        var validUntil = now.Add(cacheDuration);
         var commonPools = new Dictionary<string, CharacterEventCommon>(StringComparer.Ordinal);
         foreach (var slot in schedule.Pools)
         {
@@ -27,6 +31,12 @@ internal sealed class GachaConfigStore(string root)
             var end = ParseTime(slot.EndsAtUtc);
             if (start.HasValue && end.HasValue && start >= end)
                 throw new InvalidDataException("Gacha schedule end must follow start.");
+            // An enabled future start matters even when its pool is absent from this response.
+            if (slot.Enabled.Value)
+            {
+                if (start.HasValue && start.Value > now && start.Value < validUntil) validUntil = start.Value;
+                if (end.HasValue && end.Value > now && end.Value < validUntil) validUntil = end.Value;
+            }
             // 排期由服务端时间决定，结束时刻不再包含在开放区间内。
             if (!slot.Enabled.Value || (start.HasValue && now < start) || (end.HasValue && now >= end))
                 continue;
@@ -54,7 +64,8 @@ internal sealed class GachaConfigStore(string root)
             active.Add(pool);
         }
         cancellationToken.ThrowIfCancellationRequested();
-        return new GachaConfigSnapshot(schedule.Version, now.ToUniversalTime().ToString("O"), active);
+        return new GachaConfigSnapshot(schedule.Version, now.ToUniversalTime().ToString("O"), active,
+            validUntil.ToUniversalTime().ToString("O"));
     }
 
     static DateTimeOffset? ParseTime(string? text)
@@ -115,5 +126,6 @@ internal sealed record GachaEntryConfig([property: JsonRequired] string EntryKey
     [property: JsonRequired] int EntryType, [property: JsonRequired] int Weight,
     [property: JsonRequired] int Rarity);
 
-internal sealed record GachaConfigSnapshot(long Version, string ServerTimeUtc, List<GachaPoolConfig> Pools);
+internal sealed record GachaConfigSnapshot(long Version, string ServerTimeUtc, List<GachaPoolConfig> Pools,
+    string? ValidUntilUtc = null);
 

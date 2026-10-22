@@ -39,6 +39,7 @@ public class GachaViewModel : IDisposable
     GachaSessionViewModel currentSession;
     bool disposed;
     internal Subject<string> DrawFailed { get; } = new Subject<string>();
+    internal Subject<Unit> ConfigurationInvalidated { get; } = new Subject<Unit>();
     
     public IReadOnlyList<GachaPoolUIConfig> PoolConfigs { get; }
     public IReadOnlyReactiveProperty<GachaPoolUIConfig> CurrentPoolConfig => currentPoolConfig;
@@ -145,7 +146,13 @@ public class GachaViewModel : IDisposable
         }
         catch (Exception exception)
         {
-            if (!disposed) DrawFailed.OnNext(GachaDrawOperation.Feedback(exception));
+            if (!disposed)
+            {
+                DrawFailed.OnNext(GachaDrawOperation.Feedback(exception));
+                if (exception is CloudSaveServerException error &&
+                    (error.Code == "gacha_config_changed" || error.Code == "gacha_pool_closed"))
+                    ConfigurationInvalidated.OnNext(Unit.Default);
+            }
             Debug.LogWarning($"Gacha request failed: {exception.Message}");
         }
         finally
@@ -199,6 +206,7 @@ public class GachaViewModel : IDisposable
     public void Dispose()
     {
         disposed = true;
+        ConfigurationInvalidated.Dispose();
         currentSession?.Dispose();
         disposable.Dispose();
     }

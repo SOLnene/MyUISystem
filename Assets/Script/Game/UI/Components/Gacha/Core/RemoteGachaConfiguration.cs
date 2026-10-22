@@ -11,7 +11,20 @@ internal sealed class GachaConfigSnapshot
 {
     public long version = 0;
     public string serverTimeUtc = null;
+    public string validUntilUtc = null;
     public RemoteGachaPoolData[] pools = null;
+
+    internal TimeSpan GetCacheLifetime()
+    {
+        // Older servers have no expiry metadata; keep their cache short without requiring a simultaneous upgrade.
+        if (string.IsNullOrEmpty(validUntilUtc)) return TimeSpan.FromMinutes(1);
+        if (!DateTimeOffset.TryParse(serverTimeUtc, CultureInfo.InvariantCulture, DateTimeStyles.None,
+                out var serverTime) || serverTime.Offset != TimeSpan.Zero ||
+            !DateTimeOffset.TryParse(validUntilUtc, CultureInfo.InvariantCulture, DateTimeStyles.None,
+                out var validUntil) || validUntil.Offset != TimeSpan.Zero || validUntil <= serverTime)
+            throw new InvalidDataException("Invalid gacha configuration cache expiry.");
+        return validUntil - serverTime;
+    }
 }
 
 [Serializable]
@@ -60,6 +73,7 @@ internal sealed class RemoteGachaConfiguration : IGachaPoolProvider, IDisposable
             !DateTimeOffset.TryParse(snapshot.serverTimeUtc, CultureInfo.InvariantCulture, DateTimeStyles.None,
                 out var serverTime) || serverTime.Offset != TimeSpan.Zero)
             throw new InvalidDataException("服务器返回的卡池配置无效。");
+        snapshot.GetCacheLifetime();
         var result = new RemoteGachaConfiguration { Version = snapshot.version };
         var policies = new Dictionary<string, RemoteGachaPoolData>(StringComparer.Ordinal);
         try

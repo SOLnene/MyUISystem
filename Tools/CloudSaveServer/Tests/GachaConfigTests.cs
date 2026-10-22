@@ -29,6 +29,15 @@ internal static partial class Program
         var initial = await store.ReadCurrentAsync(now, CancellationToken.None);
         Check(initial.Version > 0 && initial.Pools.Take(3).Select(p => p.GachaKey).SequenceEqual(
             new[] { "CharPool_Hutao", "CharPool_Eula", "WeaponPool_01" }), "Seed pool order must match the Unity assets.");
+        Check(DateTimeOffset.Parse(initial.ValidUntilUtc!) == now.AddMinutes(1),
+            "Unscheduled configuration receives the default one-minute cache lifetime.");
+        var shortCache = await new GachaConfigStore(root, TimeSpan.FromSeconds(10)).ReadCurrentAsync(now, default);
+        Check(DateTimeOffset.Parse(shortCache.ValidUntilUtc!) == now.AddSeconds(10),
+            "The cache lifetime is configurable independently of game rules.");
+        bool invalidLifetime = false;
+        try { _ = new GachaConfigStore(root, TimeSpan.Zero); }
+        catch (ArgumentOutOfRangeException) { invalidLifetime = true; }
+        Check(invalidLifetime, "A non-positive server cache lifetime is rejected.");
         int seedCount = initial.Pools.Count;
         Check(initial.Pools[0].Entries.Single(e => e.EntryKey == "hutao").Weight == 1 &&
             initial.Pools[0].PityCount == 90, "Seed weights and pity must match Unity.");
@@ -40,6 +49,21 @@ internal static partial class Program
             await File.WriteAllTextAsync(schedulePath, JsonSerializer.Serialize(value, GachaJson));
         var timed = schedule with { Pools = schedule.Pools.Select((p, i) => i == 0
             ? p with { StartsAtUtc = now.AddHours(1).ToString("O"), EndsAtUtc = now.AddHours(2).ToString("O") } : p).ToList() };
+        var nearBoundary = schedule with { Pools = schedule.Pools.Select((p, i) => i == 0
+            ? p with { StartsAtUtc = now.AddSeconds(20).ToString("O"), EndsAtUtc = now.AddSeconds(40).ToString("O") } : p).ToList() };
+        await SetSchedule(nearBoundary);
+        var beforeStart = await store.ReadCurrentAsync(now, default);
+        Check(DateTimeOffset.Parse(beforeStart.ValidUntilUtc!) == now.AddSeconds(20),
+            "The start of an absent future pool expires the cached pool list.");
+        var during = await store.ReadCurrentAsync(now.AddSeconds(20), default);
+        Check(DateTimeOffset.Parse(during.ValidUntilUtc!) == now.AddSeconds(40),
+            "An open pool expires its cache at its exclusive end boundary.");
+        var afterEnd = await store.ReadCurrentAsync(now.AddSeconds(40), default);
+        Check(DateTimeOffset.Parse(afterEnd.ValidUntilUtc!) == now.AddSeconds(100),
+            "Past schedule boundaries do not repeatedly expire the cache.");
+        await SetSchedule(nearBoundary with { Pools = nearBoundary.Pools.Select(p => p with { Enabled = false }).ToList() });
+        Check(DateTimeOffset.Parse((await store.ReadCurrentAsync(now, default)).ValidUntilUtc!) == now.AddMinutes(1),
+            "Disabled pools do not schedule unnecessary refreshes.");
         await SetSchedule(timed);
         Check((await store.ReadCurrentAsync(now, default)).Pools.Count == seedCount - 1, "Future pools must stay closed.");
         Check((await store.ReadCurrentAsync(now.AddHours(1), default)).Pools.Count == seedCount, "Start time is inclusive.");

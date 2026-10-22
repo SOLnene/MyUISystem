@@ -39,9 +39,8 @@ internal sealed partial class CloudGameSaveSession
     {
         try
         {
-            // A missing receipt may race a committing POST; always resend the original ID and payload.
-            var reply = await client.FindDrawAsync(PlayerId, pendingGacha, cancellationToken)
-                ?? await client.DrawAsync(PlayerId, pendingGacha, cancellationToken);
+            // POST replays its durable receipt before checking current config, including after a pool closes.
+            var reply = await client.DrawAsync(PlayerId, pendingGacha, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
             RequireOwner();
             return reply;

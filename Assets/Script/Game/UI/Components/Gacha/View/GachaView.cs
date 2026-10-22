@@ -93,6 +93,16 @@ public partial class GachaView : UIView
             ApplyInputState();
         }).AddTo(disposable);
         vm.DrawFailed.Subscribe(message => ShowConfigRefreshStatus(message, true)).AddTo(disposable);
+        vm.ConfigurationInvalidated.Subscribe(_ =>
+        {
+            var cloud = CloudGameSaveSession.Current;
+            if (isClosing || cloud == null || !cloud.IsReady) return;
+            GameStartupData.ForCloud(cloud).Gacha.Invalidate();
+            ShowHubs(++presentationVersion).Forget();
+        }).AddTo(disposable);
+        // This checks local expiry only; closing the view clears the subscription.
+        Observable.Interval(TimeSpan.FromSeconds(1), Scheduler.MainThreadIgnoreTimeScale)
+            .Subscribe(_ => RefreshExpiredConfiguration()).AddTo(disposable);
         ShowHubs(++presentationVersion).Forget();
     }
 
@@ -172,6 +182,12 @@ public partial class GachaView : UIView
                 if (showingCachedConfiguration)
                 {
                     ApplyGachaSnapshot(cached);
+                    if (startup.Gacha.TryGetFresh(out _))
+                    {
+                        configurationVerified = true;
+                        await PresentConfiguredPoolsAsync(request.Token);
+                        return;
+                    }
                     ShowConfigRefreshStatus("正在确认卡池信息，可以浏览，确认后可抽卡。", false);
                     await PresentConfiguredPoolsAsync(request.Token);
                     request.Token.ThrowIfCancellationRequested();
@@ -190,8 +206,7 @@ public partial class GachaView : UIView
                     await UniTask.WhenAll(topHub.Bind(topVm), topHub.Show(), middleHub.Hide(), bottomHub.Hide())
                         .AttachExternalCancellation(request.Token);
                 }
-                var snapshot = !showingCachedConfiguration && startup.Gacha.TryGetCached(out var prefetched)
-                    ? prefetched : await startup.Gacha.RefreshAsync(request.Token);
+                var snapshot = await startup.Gacha.GetAsync(request.Token);
                 request.Token.ThrowIfCancellationRequested();
                 // 请求完成前关闭、重开或切换会话，旧配置都不能应用到新页面。
                 if (version != presentationVersion || isClosing || cloud != CloudGameSaveSession.Current ||
@@ -257,6 +272,17 @@ public partial class GachaView : UIView
             if (ReferenceEquals(configurationCancellation, request))
                 configurationCancellation = null;
         }
+    }
+
+    void RefreshExpiredConfiguration()
+    {
+        // Let a committed reveal finish before applying a changed pool list.
+        if (isClosing || isOpening || !configurationVerified || vm.isDrawing.Value || isPresentingResults) return;
+        var cloud = CloudGameSaveSession.Current;
+        if (cloud == null || !cloud.IsReady || GameContext.Instance.ActiveSaveDirectory != cloud.Source ||
+            !AccountSession.Current.IsAuthorized || AccountSession.Current.PlayerId != cloud.PlayerId) return;
+        if (!GameStartupData.ForCloud(cloud).Gacha.TryGetFresh(out _))
+            ShowHubs(++presentationVersion).Forget();
     }
 
     bool ApplyGachaSnapshot(GachaConfigSnapshot snapshot)

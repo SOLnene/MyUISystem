@@ -32,7 +32,8 @@ internal static class ServerApp
         builder.Services.AddSingleton(settings);
         builder.Services.AddSingleton<SaveStore>();
         builder.Services.AddSingleton(new GachaConfigStore(
-            builder.Configuration["GachaConfigRoot"] ?? builder.Environment.ContentRootPath));
+            builder.Configuration["GachaConfigRoot"] ?? builder.Environment.ContentRootPath,
+            builder.Configuration.GetValue<TimeSpan?>("GachaConfigCacheLifetime")));
         builder.Services.AddSingleton(new GachaCatalog(Path.Combine(
             builder.Configuration["GachaConfigRoot"] ?? builder.Environment.ContentRootPath, "gacha-catalog.json")));
         LocalAccountAuthentication.Add(builder.Services, builder.Configuration.GetValue<bool>("EnableLegacyUnityAuthentication"));

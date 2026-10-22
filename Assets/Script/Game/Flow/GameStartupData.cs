@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Cysharp.Threading.Tasks;
 using UnityEngine;
+using Stopwatch = System.Diagnostics.Stopwatch;
 
 internal sealed class GameStartupData
 {
@@ -61,15 +62,16 @@ internal sealed class GameStartupData
                 // Cache DTOs rather than ScriptableObjects owned/disposed by a particular GachaService.
                 using var checkedConfiguration = RemoteGachaConfiguration.Create(snapshot,
                     GameDatabase.GachaPoolUIConfigDatabase, GameDatabase.CharacterDatabase, GameDatabase.ItemDatabase);
-            });
+            }, snapshot => snapshot.GetCacheLifetime());
     }
 
-    internal StartupDataEntry<T> Register<T>(string key, Func<CancellationToken, UniTask<T>> loader, Action<T> validate = null)
+    internal StartupDataEntry<T> Register<T>(string key, Func<CancellationToken, UniTask<T>> loader,
+        Action<T> validate = null, Func<T, TimeSpan> cacheLifetime = null)
     {
         RequireCurrentSession();
         if (string.IsNullOrEmpty(key) || preloaders.ContainsKey(key))
             throw new ArgumentException("Startup data key is empty or already registered.", nameof(key));
-        var entry = new StartupDataEntry<T>(loader, validate, lifetime.Token, RequireCurrentSession);
+        var entry = new StartupDataEntry<T>(loader, validate, lifetime.Token, RequireCurrentSession, cacheLifetime);
         preloaders.Add(key, async () => { await entry.RefreshAsync(CancellationToken.None); });
         return entry;
     }
@@ -102,17 +104,24 @@ internal sealed class StartupDataEntry<T>
     readonly Action<T> validate;
     readonly CancellationToken lifetime;
     readonly Action requireOwner;
+    readonly Func<T, TimeSpan> cacheLifetime;
+    readonly Func<double> timestamp;
+    double expiresAt;
+    int generation;
     Task<T> inFlight;
     T cached;
     bool hasCached;
 
     internal StartupDataEntry(Func<CancellationToken, UniTask<T>> fetch, Action<T> validator,
-        CancellationToken cancellationToken, Action ownerCheck)
+        CancellationToken cancellationToken, Action ownerCheck,
+        Func<T, TimeSpan> lifetimeSelector = null, Func<double> clock = null)
     {
         loader = fetch ?? throw new ArgumentNullException(nameof(fetch));
         validate = validator;
         lifetime = cancellationToken;
         requireOwner = ownerCheck;
+        cacheLifetime = lifetimeSelector;
+        timestamp = clock ?? (() => Stopwatch.GetTimestamp() / (double)Stopwatch.Frequency);
     }
 
     internal bool TryGetCached(out T value)
@@ -121,6 +130,25 @@ internal sealed class StartupDataEntry<T>
         lifetime.ThrowIfCancellationRequested();
         value = cached;
         return hasCached;
+    }
+
+    internal bool TryGetFresh(out T value) =>
+        TryGetCached(out value) && timestamp() < expiresAt;
+
+    internal UniTask<T> GetAsync(CancellationToken callerCancellation)
+    {
+        callerCancellation.ThrowIfCancellationRequested();
+        return TryGetFresh(out var value) ? UniTask.FromResult(value) : RefreshAsync(callerCancellation);
+    }
+
+    internal void Invalidate()
+    {
+        requireOwner?.Invoke();
+        lifetime.ThrowIfCancellationRequested();
+        generation++;
+        expiresAt = double.NegativeInfinity;
+        // Detach an older refresh so it cannot overwrite a configuration explicitly rejected by the server.
+        inFlight = null;
     }
 
     internal UniTask<T> RefreshAsync(CancellationToken callerCancellation)
@@ -136,10 +164,17 @@ internal sealed class StartupDataEntry<T>
 
     async UniTask<T> FetchAndCacheAsync()
     {
+        int requestGeneration = generation;
+        double startedAt = timestamp();
         var value = await loader(lifetime);
         lifetime.ThrowIfCancellationRequested();
         requireOwner?.Invoke();
+        if (requestGeneration != generation)
+            throw new OperationCanceledException("Startup data request was invalidated.");
         validate?.Invoke(value);
+        // Count request latency against the server-provided lifetime; device wall-clock changes cannot extend it.
+        expiresAt = cacheLifetime == null ? double.PositiveInfinity
+            : startedAt + Math.Max(0, cacheLifetime(value).TotalSeconds);
         cached = value;
         hasCached = true;
         return value;
