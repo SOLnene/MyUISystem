@@ -174,13 +174,22 @@ def audit(run, plan):
 
 
 def sync(root, run, plan, result):
+    if not plan["assetRoot"].startswith("Assets/Art/Map/"):
+        raise ValueError("Legacy flat-directory plan; create a fresh plan for the map folders.")
     destination = project_path(root, plan["assetRoot"])
     if not destination.is_dir():
         raise FileNotFoundError(destination)
+    terrain_assets = {name for mesh in plan["profile"]["meshes"] if mesh["role"] == "Terrain"
+                      for name in (mesh["name"], mesh["texture"])}
     prepared = []
     for asset in result["files"]:
         source = Path(asset["stagedPath"])
-        target = destination / source.name
+        category = "Models" if asset["kind"] == "Mesh" else "Textures"
+        if asset["name"] in terrain_assets:
+            category = "Terrain/Meshes" if asset["kind"] == "Mesh" else "Terrain/Textures"
+        target = destination / category / source.name
+        if not target.parent.is_dir():
+            raise FileNotFoundError(target.parent)
         if digest(source) != asset["sha256"]:
             raise ValueError(f"Staged file changed after audit: {source}")
         if target.exists() and digest(target) != asset["sha256"]:

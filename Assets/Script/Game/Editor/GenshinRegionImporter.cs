@@ -43,7 +43,7 @@ namespace Game.EditorTools
             foreach (var file in files.Values)
             {
                 var assetPath = (string)file["assetPath"];
-                if (!assetPath.StartsWith("Assets/Art/Model/", StringComparison.Ordinal) ||
+                if (!assetPath.StartsWith("Assets/Art/Map/Genshin/", StringComparison.Ordinal) ||
                     HashFile(ProjectFile(assetPath)) != (string)file["sha256"])
                     throw new InvalidDataException("Project asset differs from its audited export: " + assetPath);
             }
@@ -165,7 +165,7 @@ namespace Game.EditorTools
                 var filter = filters[index];
                 if ((string)entry["uvMode"] == "blockPlanar")
                 {
-                    var meshPath = (string)plan["assetRoot"] + "/GenshinRegion_" + (string)plan["profile"]["id"] +
+                    var meshPath = (string)plan["assetRoot"] + "/Terrain/Meshes/GenshinRegion_" + (string)plan["profile"]["id"] +
                                    "_Terrain_" + ((string)source["sha256"]).Substring(0, 8) + "_" + index + ".asset";
                     var mesh = AssetDatabase.LoadAssetAtPath<Mesh>(meshPath);
                     if (mesh == null)

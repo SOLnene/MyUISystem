@@ -19,8 +19,9 @@ namespace Game.EditorTools
         private const string Run = ".codex_tmp_frame_analysis/genshin_terrain_render_20261021";
         private const string SourceScene = "Assets/Scenes/GenshinTestArchive/GenshinRegion_mondstadt_2_-1 1.unity";
         private const string ShaderPath = "Assets/Shader/GenshinStylizedTerrain.shader";
-        private const string ModelRoot = "Assets/Art/Model/";
-        private const string MaterialRoot = "Assets/Art/Material/";
+        private const string ModelRoot = "Assets/Art/Map/Genshin/Mondstadt/Terrain/Meshes/";
+        private const string TextureRoot = "Assets/Art/Map/Genshin/Mondstadt/Terrain/Textures/";
+        private const string MaterialRoot = "Assets/Art/Map/Genshin/Mondstadt/Materials/";
 
         [MenuItem("Tools/Genshin Region/Build Stylized Terrain Probe")]
         private static void Build()
@@ -35,7 +36,7 @@ namespace Game.EditorTools
             foreach (JArray record in (JArray)bindings["textures"])
             {
                 var name = (string)record[0];
-                var path = ModelRoot + name + ".png";
+                var path = TextureRoot + name + ".png";
                 CopyVerified(Path.Combine(Run, "textures/Texture2D", name + ".png"), path);
                 AssetDatabase.ImportAsset(path, ImportAssetOptions.ForceSynchronousImport);
                 var atlas = name.Contains("TerrainMesh");
@@ -77,7 +78,7 @@ namespace Game.EditorTools
             }
             var hlod = new Material(sourceMaterials[0]) { name = "GenshinStylized_mondstadt_2_-1" };
             hlod.SetFloat("_LayerMode", 0f);
-            hlod.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(ModelRoot + "BigWorldTerrain_2_-1.bin_BaseMap.png"));
+            hlod.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(TextureRoot + "BigWorldTerrain_2_-1.bin_BaseMap.png"));
             var hlodPath = AssetDatabase.GenerateUniqueAssetPath(MaterialRoot + hlod.name + ".mat");
             AssetDatabase.CreateAsset(hlod, hlodPath);
             materialPaths.Add(hlodPath);
