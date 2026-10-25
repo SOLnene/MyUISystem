@@ -8,12 +8,13 @@ Material:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_Name: GenshinStylized_mondstadt_2_-1 1
-  m_Shader: {fileID: 4800000, guid: c24245bf2a06bbe4c9bb3b0d040e1886, type: 3}
+  m_Shader: {fileID: 4800000, guid: 6fc38364c7486574a9131a1cb3a3a16a, type: 3}
   m_Parent: {fileID: 0}
   m_ModifiedSerializedProperties: 0
   m_ValidKeywords: []
   m_InvalidKeywords:
-  - _LAYERMODE_ON
+  - _TEXTURE_1_TINTENABLED_ON
+  - _TEXTURE_5_TINTENABLED_ON
   m_LightmapFlags: 4
   m_EnableInstancingVariants: 0
   m_DoubleSidedGI: 0
@@ -36,6 +37,14 @@ Material:
         m_Texture: {fileID: 2800000, guid: 8ed8f3cbf6432bf43abe2a0aaa199c8f, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _Control0:
+        m_Texture: {fileID: 2800000, guid: b1c603e6ae4d365408a3c829ca169aae, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Control1:
+        m_Texture: {fileID: 2800000, guid: de8ca3f41d9f42a46a1e306315d60172, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _MainTex:
         m_Texture: {fileID: 2800000, guid: fd77873ce9a25754ea70b775dd2afbea, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -56,6 +65,66 @@ Material:
         m_Texture: {fileID: 2800000, guid: 94860b6d62c47e047ab17a0cb879b96a, type: 3}
         m_Scale: {x: 1, y: 1}
         m_Offset: {x: 0, y: 0}
+    - _TerrainTint:
+        m_Texture: {fileID: 2800000, guid: 162def4b8cbfeb0479f9267b358dc5fe, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_1_Albedo:
+        m_Texture: {fileID: 2800000, guid: 36b8a7ee01e0a39448e23bf107f53e49, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_1_Normal:
+        m_Texture: {fileID: 2800000, guid: beccad582a5f9ea4dbdf50754afcf931, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_2_Albedo:
+        m_Texture: {fileID: 2800000, guid: 7352fad11a5bf6e4cbc6abc74574ceb9, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_2_Normal:
+        m_Texture: {fileID: 2800000, guid: 52a9a59986dc7884ca3f89b4be83ff44, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_3_Albedo:
+        m_Texture: {fileID: 2800000, guid: 7178d22427635ff449893eeb609fa88b, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_3_Normal:
+        m_Texture: {fileID: 2800000, guid: 00e3c9f62598c0049bf9a1aefa86a39c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_4_Albedo:
+        m_Texture: {fileID: 2800000, guid: ddfa09a9067c58b49a643857a3a7631c, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_4_Normal:
+        m_Texture: {fileID: 2800000, guid: a21d4ddc37a13fd42b0898419f312098, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_5_Albedo:
+        m_Texture: {fileID: 2800000, guid: 8048ab90f2361d748a806201642bd295, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_5_Normal:
+        m_Texture: {fileID: 2800000, guid: 70b7ea89dba69c641a1cab5d5e4a3358, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_6_Albedo:
+        m_Texture: {fileID: 2800000, guid: b0279512b205ce14ab5481f37bf2776a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_6_Normal:
+        m_Texture: {fileID: 2800000, guid: c6591b1a49acef6488086048068f2a8f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_7_Albedo:
+        m_Texture: {fileID: 2800000, guid: 8ed8f3cbf6432bf43abe2a0aaa199c8f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _Texture_7_Normal:
+        m_Texture: {fileID: 2800000, guid: 86d041e6af4cc414db863f0e2a0902e2, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
     - _TintMap:
         m_Texture: {fileID: 2800000, guid: 2b205e4cb5cb7414aabedc2f04015da6, type: 3}
         m_Scale: {x: 1, y: 1}
@@ -70,10 +139,32 @@ Material:
     - _NrmPow3: 1
     - _RampThreshold: 0.1
     - _RampWidth: 0.5
+    - _Terrain_Smoothness: 1
     - _TexTill1: 8
     - _TexTill2: 8
     - _TexTill3: 16
-    - _TintEnhanceFactor: 2.8
+    - _Texture_1_Normal_Power: 1
+    - _Texture_1_Tiling: 8
+    - _Texture_1_TintEnabled: 1
+    - _Texture_2_Normal_Power: 1
+    - _Texture_2_Tiling: 8
+    - _Texture_2_TintEnabled: 0
+    - _Texture_3_Normal_Power: 1
+    - _Texture_3_Tiling: 8
+    - _Texture_3_TintEnabled: 0
+    - _Texture_4_Normal_Power: 1
+    - _Texture_4_Tiling: 8
+    - _Texture_4_TintEnabled: 0
+    - _Texture_5_Normal_Power: 0.4
+    - _Texture_5_Tiling: 14
+    - _Texture_5_TintEnabled: 1
+    - _Texture_6_Normal_Power: 1
+    - _Texture_6_Tiling: 6
+    - _Texture_6_TintEnabled: 0
+    - _Texture_7_Normal_Power: 1
+    - _Texture_7_Tiling: 16
+    - _Texture_7_TintEnabled: 0
+    - _TintEnhanceFactor: 1
     - _UseTint1: 1
     - _UseTint2: 0
     - _UseTint3: 0
@@ -81,4 +172,5 @@ Material:
     - _DetailFade: {r: 40, g: 240, b: 0, a: 0}
     - _LightTint: {r: 1.04, g: 1.02, b: 0.96, a: 1}
     - _ShadowTint: {r: 0.58, g: 0.7, b: 0.82, a: 1}
+    - _SourceOrigin: {r: 2048, g: 0, b: -1024, a: 0}
   m_BuildTextureStacks: []

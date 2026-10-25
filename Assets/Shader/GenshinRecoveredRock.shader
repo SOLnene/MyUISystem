@@ -164,7 +164,10 @@ Shader "Game/Scene/Genshin Recovered Rock"
                 float3 bitangent = cross(normal, tangent) * i.tangent.w;
                 normal = normalize(tangent * normalTS.x + bitangent * normalTS.y + normal * normalTS.z);
                 UNITY_LIGHT_ATTENUATION(attenuation, i, i.worldPos);
-                float4 color = float4(GenshinSourceLighting(albedo, float3(0.04,0.04,0.04), clamp(mask.r,0.001,0.999), normal, i.worldPos, attenuation), 1);
+                float smoothness = clamp(mask.r, 0.001, 0.999);
+                float3 lighting = GenshinSourceLighting(albedo, float3(0.04,0.04,0.04), smoothness, normal, i.worldPos, attenuation);
+                lighting += GenshinEnvironmentSpecular(float3(0.04,0.04,0.04), smoothness, normal, i.worldPos, attenuation);
+                float4 color = float4(lighting, 1);
                 UNITY_APPLY_FOG(i.fogCoord, color);
                 return color;
             }

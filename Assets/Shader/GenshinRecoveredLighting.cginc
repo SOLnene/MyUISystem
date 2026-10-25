@@ -1,6 +1,10 @@
 #ifndef GENSHIN_RECOVERED_LIGHTING_INCLUDED
 #define GENSHIN_RECOVERED_LIGHTING_INCLUDED
 
+sampler2D _GenshinEnvBRDF;
+float4 _GenshinEnvBRDFTexelSize;
+float _GenshinEnvironmentEnabled;
+
 float3 GenshinRawNormal(float4 value, float strength)
 {
     float2 xy = (value.rg * 2 - 1) * strength;
@@ -49,8 +53,33 @@ float3 GenshinSourceLighting(float3 diffuse, float3 f0, float smoothness,
     float nh = saturate(dot(normal, halfDirection));
     float lh = saturate(dot(light, halfDirection));
     float3 specular = GenshinSourceSpecular(f0, smoothness, nh, lh);
-    // Unity SH and shadow coordinates bridge client-specific scene lighting buffers.
+    // Gradient environment colors supply directional sky/ground fill through Unity SH.
+    // The visibility term approximates missing client shadow-SH; it is not contact AO.
     float3 indirect = max(0, ShadeSH9(float4(normal, 1)));
-    return (diffuse + f0) * indirect + (diffuse + specular) * _LightColor0.rgb * nl * attenuation;
+    float indirectVisibility = lerp(0.75, 1, saturate(attenuation));
+    float3 ambientDiffuse = diffuse * indirect * indirectVisibility;
+    // F0 belongs to specular reflection; adding it to diffuse fill washes out dark albedo.
+    return ambientDiffuse + (diffuse + specular) * _LightColor0.rgb * nl * attenuation;
+}
+float3 GenshinEnvironmentSpecular(float3 f0, float smoothness,
+    float3 normal, float3 worldPosition, float attenuation)
+{
+    // Scene-owned binding keeps unrelated scenes on the existing lighting path.
+    if (_GenshinEnvironmentEnabled < 0.5)
+        return 0;
+
+    float3 view = normalize(UnityWorldSpaceViewDir(worldPosition));
+    float roughness = saturate(1 - smoothness);
+    float nv = saturate(dot(normal, view));
+    // The original 16x16 table uses UV = input * 0.93775 + 0.031125.
+    float2 margin = _GenshinEnvBRDFTexelSize.xy * 0.498;
+    float2 lookupUV = float2(nv, roughness) * (1 - 2 * margin) + margin;
+    float2 integratedBRDF = tex2D(_GenshinEnvBRDF, lookupUV).rg;
+    float3 reflectionDirection = reflect(-view, normal);
+    float4 encoded = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0, reflectionDirection, roughness * 6);
+    float3 environment = DecodeHDR(encoded, unity_SpecCube0_HDR);
+    // Retain the current shadow-environment approximation until spatial occlusion is available.
+    float visibility = lerp(0.75, 1, saturate(attenuation));
+    return environment * (f0 * integratedBRDF.x + integratedBRDF.y) * visibility;
 }
 #endif

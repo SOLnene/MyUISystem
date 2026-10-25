@@ -45,6 +45,14 @@ Shader "Game/Scene/Genshin Recovered Scene Uber"
         _EmissionTimeStrength ("Day / Night Emission", Range(0,1)) = 0
         _EnableCubeReflection ("Environment Reflection", Float) = 0
         _CubeMapIntensity ("Environment Intensity", Float) = 1
+        [Header(Grass Surface Styling)]
+        [Enum(Off,0,On,1)] _GrassSurface ("Grass Surface Styling", Float) = 0
+        _GrassDetailStrength ("Grass Detail Strength", Range(0,1)) = 0.85
+        _GrassDetailDistance ("Grass Detail Fade Distance (m)", Float) = 40
+        _GrassPatchSize ("Grass Color Patch Size (m)", Float) = 24
+        _GrassPatchStrength ("Grass Color Patch Strength", Range(0,1)) = 0.75
+        _GrassCoolTint ("Grass Cool Patch Tint", Color) = (0.72,0.86,0.86,1)
+        _GrassWarmTint ("Grass Warm Patch Tint", Color) = (0.98,1.0,0.91,1)
     }
     SubShader
     {
@@ -73,6 +81,8 @@ Shader "Game/Scene/Genshin Recovered Scene Uber"
             float _EnablePOM, _POMHeight, _POMUVMinStep, _POMLODBias, _POMNormalScale;
             float _POMShadowScale, _POMShadowBias, _POMShadowTransitionRange;
             float Emission_Type, _EmissionStrength, _EmissionTimeStrength, _EnableCubeReflection, _CubeMapIntensity;
+            float _GrassSurface, _GrassDetailStrength, _GrassDetailDistance, _GrassPatchSize, _GrassPatchStrength;
+            float4 _GrassCoolTint, _GrassWarmTint;
             struct appdata
             {
                 float4 vertex : POSITION;
@@ -196,6 +206,23 @@ Shader "Game/Scene/Genshin Recovered Scene Uber"
                 }
                 normalTS = normalize(lerp(float3(0,0,1),normalTS,_POMNormalScale));
                 normal = normalize(tangent * normalTS.x + bitangent * normalTS.y + normal * normalTS.z);
+                if (_GrassSurface > 0.5)
+                {
+                    // Art-directed grass only: retain source layer weights and reuse its painted texture for broad color patches.
+                    float2 grassDx = ddx(i.uv.xy * _MainTex_TexelSize.zw), grassDy = ddy(i.uv.xy * _MainTex_TexelSize.zw);
+                    // Preserve minification at long range instead of forcing a sharper fixed mip.
+                    float grassLod = max(4,0.5 * log2(max(1e-8,max(dot(grassDx,grassDx),dot(grassDy,grassDy)))));
+                    float3 broadAlbedo = tex2Dlod(_MainTex,float4(i.uv.xy,0,grassLod)).rgb * _Color.rgb;
+                    float distanceFade = smoothstep(_GrassDetailDistance * 0.2, max(0.01,_GrassDetailDistance),
+                        distance(_WorldSpaceCameraPos,i.worldPos));
+                    float detailStrength = _GrassDetailStrength * lerp(1,0.35,distanceFade);
+                    float2 patchUV = i.worldPos.xz / max(0.01,_GrassPatchSize);
+                    float2 patchDx = ddx(patchUV * _MainTex_TexelSize.zw), patchDy = ddy(patchUV * _MainTex_TexelSize.zw);
+                    float patchLod = max(5,0.5 * log2(max(1e-8,max(dot(patchDx,patchDx),dot(patchDy,patchDy)))));
+                    float patch = smoothstep(0.35,0.78,tex2Dlod(_MainTex,float4(patchUV,0,patchLod)).a);
+                    float3 patchTint = lerp(_GrassCoolTint.rgb,_GrassWarmTint.rgb,patch);
+                    albedo = lerp(broadAlbedo,albedo,detailStrength) * lerp(float3(1,1,1),patchTint,_GrassPatchStrength);
+                }
                 float metallic = saturate(mask.g);
                 float3 f0 = lerp(float3(0.04,0.04,0.04),albedo,metallic);
                 float3 diffuse = albedo * (0.96 - 0.96 * metallic);
@@ -204,8 +231,13 @@ Shader "Game/Scene/Genshin Recovered Scene Uber"
                 float3 lighting = GenshinSourceLighting(diffuse,f0,clamp(mask.r,0.001,0.999),normal,i.worldPos,attenuation);
                 if (_EnableCubeReflection > 0.5)
                 {
-                    float4 reflected = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,normal),(1-mask.r)*6);
-                    lighting += DecodeHDR(reflected,unity_SpecCube0_HDR) * f0 * _CubeMapIntensity;
+                    if (_GenshinEnvironmentEnabled > 0.5)
+                        lighting += GenshinEnvironmentSpecular(f0, clamp(mask.r,0.001,0.999), normal, i.worldPos, attenuation) * _CubeMapIntensity;
+                    else
+                    {
+                        float4 reflected = UNITY_SAMPLE_TEXCUBE_LOD(unity_SpecCube0,reflect(-view,normal),(1-mask.r)*6);
+                        lighting += DecodeHDR(reflected,unity_SpecCube0_HDR) * f0 * _CubeMapIntensity;
+                    }
                 }
                 if (Emission_Type > 0.5)
                     lighting += _EmissionColor.rgb * _EmissionStrength * emissionMask * (Emission_Type > 1.5 ? _EmissionTimeStrength : 1);
