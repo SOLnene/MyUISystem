@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UniRx;
 using UnityEngine;
 
-public class StoreViewModel : IDisposable
+public partial class StoreViewModel : IDisposable
 {
     const int PrimogemItemId = 201;
     const int MoraItemId = 202;
@@ -11,10 +11,11 @@ public class StoreViewModel : IDisposable
     const int StarglitterItemId = 221;
     const int StardustItemId = 222;
 
-    readonly StoreConfigDatabase storeDatabase;
+    StoreConfigDatabase storeDatabase;
     readonly ItemDatabase itemDatabase;
     readonly StorePurchaseService purchaseService;
     readonly CompositeDisposable disposables = new();
+    readonly CompositeDisposable currencyDisposables = new();
     readonly List<StoreItemViewModel> allItemViewModels = new();
     readonly Dictionary<int, StoreItemViewModel> itemViewModelsById = new();
     readonly Dictionary<StoreCategory, List<StoreItemViewModel>> itemViewModelsByCategory = new();
@@ -25,9 +26,10 @@ public class StoreViewModel : IDisposable
 
     public StoreViewModel(StoreConfigDatabase storeDatabase, ItemDatabase itemDatabase)
     {
-        this.storeDatabase = storeDatabase;
         this.itemDatabase = itemDatabase;
         purchaseService = GameContext.Instance.StorePurchaseService;
+        this.storeDatabase = purchaseService.UsesCloud
+            ? new StoreConfigDatabase(Array.Empty<StoreConfigItemData>()) : storeDatabase;
 
         InitializeItemViewModels();
         ObserveCostCurrencies();
@@ -103,12 +105,13 @@ public class StoreViewModel : IDisposable
 
     void ObserveCostCurrencies()
     {
+        currencyDisposables.Clear();
         foreach (int costItemId in itemViewModelsByCostItemId.Keys)
         {
             GameEconomy.Instance.ObserveCurrency(costItemId)
                 .Skip(1)
                 .Subscribe(_ => RefreshCurrencyRelatedPreviews(costItemId))
-                .AddTo(disposables);
+                .AddTo(currencyDisposables);
         }
     }
 
@@ -119,6 +122,7 @@ public class StoreViewModel : IDisposable
 
     public void Dispose()
     {
+        currencyDisposables.Dispose();
         disposables.Dispose();
         foreach (StoreItemViewModel itemViewModel in allItemViewModels)
         {

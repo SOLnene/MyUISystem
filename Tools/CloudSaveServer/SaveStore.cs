@@ -54,6 +54,7 @@ internal sealed partial class SaveStore(ServerSettings settings)
                 throw new InvalidOperationException("This database belongs to a different Unity project/environment.");
         }
         InitializeGachaSchema(connection, transaction);
+        InitializeStoreSchema(connection, transaction);
         transaction.Commit();
     }
 

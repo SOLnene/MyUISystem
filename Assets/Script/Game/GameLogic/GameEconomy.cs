@@ -109,6 +109,15 @@ public class GameEconomy : SingletonMono<GameEconomy>
         currencyChanged.OnNext(PrimogemItemId);
     }
 
+    internal void ApplyStoreBalances(CurrencySaveData saveData)
+    {
+        // Preserve currency observers when applying an authoritative store result.
+        foreach (var item in saveData.items)
+            GetCurrencyProperty(item.itemId).Value = item.amount;
+        foreach (var item in saveData.items)
+            currencyChanged.OnNext(item.itemId);
+    }
+
     public void ImportSaveData(CurrencySaveData saveData)
     {
         InitializeCurrencies();

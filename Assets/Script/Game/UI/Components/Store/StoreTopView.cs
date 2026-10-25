@@ -31,6 +31,11 @@ public class StoreTopView : MonoBehaviour
         closeButton.onClick.AddListener(() => onClose?.Invoke());
     }
 
+    internal void ShowStoreStatus(string status)
+    {
+        titleText.text = string.IsNullOrEmpty(status) ? Title : Title + " · " + status;
+    }
+
     public void BindCurrencies(IReadOnlyList<int> itemIds)
     {
         disposable.Clear();

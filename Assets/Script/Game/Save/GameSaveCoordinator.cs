@@ -31,7 +31,8 @@ public sealed partial class GameSaveCoordinator : SingletonMono<GameSaveCoordina
     {
         if (CloudGameSaveSession.IsCloudSource(GameContext.Instance.ActiveSaveDirectory))
         {
-            if (CloudGameSaveSession.Current?.HasPendingGacha ?? false)
+            if ((CloudGameSaveSession.Current?.HasPendingGacha ?? false) ||
+                (CloudGameSaveSession.Current?.HasPendingStore ?? false))
                 return false;
             if (!dirty && !isFlushing && !(CloudGameSaveSession.Current?.HasPendingSave ?? false))
                 return true;
@@ -61,6 +62,7 @@ public sealed partial class GameSaveCoordinator : SingletonMono<GameSaveCoordina
             cancellationToken.ThrowIfCancellationRequested();
             await UniTask.Yield();
         }
+        CloudGameSaveSession.Current?.RequireNoPendingStore();
         // 已进入游戏的会话先保存；取消进入时的初始候选不阻止选择本地入口。
         if ((dirty || (CloudGameSaveSession.Current?.HasPendingSave ?? false)) && GameContext.Instance.CanSave &&
             (!CloudGameSaveSession.IsCloudSource(GameContext.Instance.ActiveSaveDirectory) ||
@@ -81,6 +83,7 @@ public sealed partial class GameSaveCoordinator : SingletonMono<GameSaveCoordina
 
     internal async UniTask<bool> FlushCloudAsync(CancellationToken cancellationToken = default)
     {
+        CloudGameSaveSession.Current?.RequireNoPendingStore();
         // 并发调用等待同一次上传完成；取消等待不改变原请求的保存结果。
         while (isFlushing)
         {
@@ -142,6 +145,8 @@ public sealed partial class GameSaveCoordinator : SingletonMono<GameSaveCoordina
 
     bool RequestQuit()
     {
+        if (!isFlushing && (CloudGameSaveSession.Current?.HasPendingStore ?? false))
+            return true;
         // 冲突时不能自动覆盖云端，也不能阻止用户退出后重读云端版本。
         if (CloudGameSaveSession.Current?.HasConflict ?? false)
         {
@@ -189,6 +194,7 @@ public sealed partial class GameSaveCoordinator : SingletonMono<GameSaveCoordina
                 (CloudGameSaveSession.Current?.IsReady ?? false)) &&
             !(CloudGameSaveSession.Current?.HasConflict ?? false) &&
             !(CloudGameSaveSession.Current?.HasPendingGacha ?? false) &&
+            !(CloudGameSaveSession.Current?.HasPendingStore ?? false) &&
             Time.realtimeSinceStartup >= saveAt)
         {
             Flush();

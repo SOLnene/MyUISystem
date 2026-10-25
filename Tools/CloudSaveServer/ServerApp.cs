@@ -31,6 +31,8 @@ internal static class ServerApp
         });
         builder.Services.AddSingleton(settings);
         builder.Services.AddSingleton<SaveStore>();
+        builder.Services.AddSingleton(new StoreConfigStore(
+            builder.Configuration["StoreConfigRoot"] ?? builder.Environment.ContentRootPath));
         builder.Services.AddSingleton(new GachaConfigStore(
             builder.Configuration["GachaConfigRoot"] ?? builder.Environment.ContentRootPath,
             builder.Configuration.GetValue<TimeSpan?>("GachaConfigCacheLifetime")));
@@ -109,6 +111,7 @@ internal static class ServerApp
             }
         }).RequireAuthorization().RequireRateLimiting("saves");
         GachaEndpoints.Map(app);
+        StoreEndpoints.Map(app);
         var saves = app.MapGroup("/v1/save").RequireAuthorization().RequireRateLimiting("saves");
         saves.MapGet("", (HttpContext context, SaveStore store) =>
         {

@@ -73,12 +73,14 @@ internal sealed partial class CloudGameSaveSession
             snapshot?.revision ?? 0, client);
         session.RequireOwner();
         await session.RecoverGachaAsync(cancellationToken);
+        await session.RecoverStoreAsync(cancellationToken);
         return session;
     }
 
     internal void QueueSave(string json)
     {
         RequireOwner();
+        RequireNoPendingStore();
         if (HasConflict)
             throw new InvalidOperationException("云存档已被其他设备更新，请重新启动并登录。");
         if (HasPendingGacha)
@@ -88,6 +90,7 @@ internal sealed partial class CloudGameSaveSession
 
     internal async UniTask SavePendingAsync(CancellationToken cancellationToken = default)
     {
+        RequireNoPendingStore();
         if (IsSaving)
             throw new InvalidOperationException("已有云存档上传正在执行。");
         RequireOwner();
