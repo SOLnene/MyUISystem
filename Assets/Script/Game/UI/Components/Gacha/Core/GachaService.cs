@@ -1,3 +1,4 @@
+using InvalidOperationException = System.InvalidOperationException;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -18,6 +19,14 @@ public class GachaService: IGachaService
     {
         remoteConfiguration?.Dispose();
         remoteConfiguration = configuration;
+    }
+
+    internal GachaCost GetCost(string gachaKey)
+    {
+        var cost = (remoteConfiguration ?? poolProvider).GetPool(gachaKey)?.Cost
+            ?? throw new InvalidOperationException("Gacha payment configuration is unavailable.");
+        cost.Validate();
+        return cost;
     }
 
     //每个卡池保底计数

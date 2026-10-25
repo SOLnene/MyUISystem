@@ -100,6 +100,15 @@ public class GameEconomy : SingletonMono<GameEconomy>
         return saveData;
     }
 
+    internal void ApplyGachaBalances(int fateItemId, int fates, int primogems)
+    {
+        // Update existing properties together; rebuilding the wallet would detach live UI observers.
+        GetCurrencyProperty(fateItemId).Value = fates;
+        GetCurrencyProperty(PrimogemItemId).Value = primogems;
+        currencyChanged.OnNext(fateItemId);
+        currencyChanged.OnNext(PrimogemItemId);
+    }
+
     public void ImportSaveData(CurrencySaveData saveData)
     {
         InitializeCurrencies();

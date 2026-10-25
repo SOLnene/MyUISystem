@@ -81,6 +81,8 @@ internal sealed partial class SaveStore
         command.CommandText = "SELECT pity_json,next_instance_id FROM gacha_player_state WHERE player_id=$player;";
         using (var reader = command.ExecuteReader())
             if (reader.Read()) { pity = GachaPity.Parse(reader.GetString(0)); nextId = reader.GetInt64(1); }
+        var payment = GachaPayment.Settle(save, request,
+            pool.Cost ?? throw new InvalidDataException("Gacha cost is required."));
         var entries = GachaRoller.Draw(pool, request.Count, pity);
         var results = catalog.Grant(save, entries, ref nextId);
         string timestamp = DateTimeOffset.UtcNow.ToString("O");
@@ -94,7 +96,7 @@ internal sealed partial class SaveStore
         if (Encoding.UTF8.GetByteCount(updated) > settings.MaxSaveBytes) throw new GachaFailure("gacha_save_too_large", 400);
         long nextRevision = checked(revision + 1);
         var operation = new GachaOperation(request.RequestId, request.GachaKey, request.Count,
-            request.ConfigVersion, nextRevision, timestamp, results);
+            request.ConfigVersion, nextRevision, timestamp, results, payment);
         command.Parameters.AddWithValue("$json", updated);
         command.Parameters.AddWithValue("$revision", nextRevision);
         command.Parameters.AddWithValue("$time", timestamp);

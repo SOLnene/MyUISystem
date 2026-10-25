@@ -16,6 +16,11 @@ internal static class CloudGachaResultApplier
         if (save == null || save.version != 8 || save.inventory?.equips == null ||
             save.characters?.characters == null || save.gacha == null || save.achievements?.progress == null)
             throw new InvalidDataException("服务器返回的抽卡存档结构无效，请重新登录。");
+        var payment = operation.payment;
+        if (payment != null && (!payment.IsValid(operation.count, int.MaxValue) ||
+            GachaCost.ReadBalance(save.currencies, payment.fateItemId) != payment.fatesRemaining ||
+            GachaCost.ReadBalance(save.currencies, 201) != payment.primogemsRemaining))
+            throw new InvalidDataException("抽卡扣费与云端余额不一致。");
         var equips = new Dictionary<long, EquipItemSaveData>();
         foreach (var equip in save.inventory.equips)
             if (equip == null || equip.instanceId <= 0 || equip.instanceId == long.MaxValue ||
@@ -90,6 +95,8 @@ internal static class CloudGachaResultApplier
         foreach (string key in requiredRoles)
             characters.ApplyGachaCharacter(roles[key]);
         gacha.ImportSaveData(save.gacha);
+        if (payment != null)
+            GameEconomy.Instance.ApplyGachaBalances(payment.fateItemId, payment.fatesRemaining, payment.primogemsRemaining);
         return new GachaResult(entries, instanceIds);
     }
 }

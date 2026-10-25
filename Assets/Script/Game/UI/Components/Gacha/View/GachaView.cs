@@ -93,6 +93,10 @@ public partial class GachaView : UIView
             ApplyInputState();
         }).AddTo(disposable);
         vm.DrawFailed.Subscribe(message => ShowConfigRefreshStatus(message, true)).AddTo(disposable);
+        activeFateItemId = 0;
+        paymentConfirmationRoot.SetActive(false);
+        GameEconomy.Instance.CurrencyChanged.Subscribe(_ => RefreshPaymentDisplay()).AddTo(disposable);
+        vm.CurrentPoolConfig.Subscribe(_ => RefreshPaymentDisplay()).AddTo(disposable);
         vm.ConfigurationInvalidated.Subscribe(_ =>
         {
             var cloud = CloudGameSaveSession.Current;
@@ -116,6 +120,7 @@ public partial class GachaView : UIView
         }
         boundGachaService = GameContext.Instance.GachaService;
         disposable = new CompositeDisposable();
+        InitializePaymentControls();
         configFeedback.HideProcessing();
         configResultRoot.SetActive(false);
         configRefreshRoot.SetActive(false);
@@ -142,7 +147,7 @@ public partial class GachaView : UIView
                 !vm.isDrawing.Value && !isPresentingResults && vm.CurrentPoolConfig.Value != null)
             {
                 AudioManager.Instance.PlayUI(drawClickClip);
-                vm.drawCommand.Execute(1);
+                RequestDraw(1);
             }
         });
         Draw10Btn.onClick.AddListener(() =>
@@ -151,7 +156,7 @@ public partial class GachaView : UIView
                 !vm.isDrawing.Value && !isPresentingResults && vm.CurrentPoolConfig.Value != null)
             {
                 AudioManager.Instance.PlayUI(drawClickClip);
-                vm.drawCommand.Execute(10);
+                RequestDraw(10);
             }
         });
         closeBtn.onClick.RemoveAllListeners();
@@ -277,7 +282,8 @@ public partial class GachaView : UIView
     void RefreshExpiredConfiguration()
     {
         // Let a committed reveal finish before applying a changed pool list.
-        if (isClosing || isOpening || !configurationVerified || vm.isDrawing.Value || isPresentingResults) return;
+        if (isClosing || isOpening || !configurationVerified || vm.isDrawing.Value || isPresentingResults ||
+            paymentConfirmationRoot.activeSelf) return;
         var cloud = CloudGameSaveSession.Current;
         if (cloud == null || !cloud.IsReady || GameContext.Instance.ActiveSaveDirectory != cloud.Source ||
             !AccountSession.Current.IsAuthorized || AccountSession.Current.PlayerId != cloud.PlayerId) return;
@@ -372,7 +378,8 @@ public partial class GachaView : UIView
 
     void ApplyInputState()
     {
-        bool canSwitch = !isClosing && !isOpening && !isInputLocked && !vm.isDrawing.Value;
+        bool canSwitch = !isClosing && !isOpening && !isInputLocked && !vm.isDrawing.Value &&
+            !paymentConfirmationRoot.activeSelf;
         topHub.SetPoolSwitchEnabled(canSwitch);
         // Transient draw locks are checked in click callbacks without changing button visuals.
         closeBtn.interactable = !isClosing && !vm.isDrawing.Value;
@@ -380,6 +387,11 @@ public partial class GachaView : UIView
 
     public override void OnCancel()
     {
+        if (paymentConfirmationRoot.activeSelf)
+        {
+            CancelPaymentConfirmation();
+            return;
+        }
         if (isClosing || vm.isDrawing.Value)
         {
             return;
@@ -403,6 +415,7 @@ public partial class GachaView : UIView
 
     public override void OnClose()
     {
+        paymentConfirmationRoot.SetActive(false);
         configurationCancellation?.Cancel();
         configFeedback.HideProcessing();
         configResultRoot.SetActive(false);
@@ -426,6 +439,8 @@ public partial class GachaView : UIView
         configurationCancellation?.Cancel();
         configRetryButton.onClick.RemoveListener(RetryConfiguration);
         configRefreshRetryButton.onClick.RemoveListener(RetryConfiguration);
+        paymentConfirmButton.onClick.RemoveListener(ConfirmPayment);
+        paymentCancelButton.onClick.RemoveListener(CancelPaymentConfirmation);
         flowController.Dispose();
         base.OnRelease();
     }

@@ -58,7 +58,7 @@ internal sealed class GachaConfigStore(string root, TimeSpan? cacheLifetime = nu
             {
                 if (source.FeaturedFiveStarKey != null)
                     throw new InvalidDataException("A featured event character requires a common configuration.");
-                pool = new GachaPoolConfig(source.GachaKey, source.PityCount, source.Entries!);
+                pool = new GachaPoolConfig(source.GachaKey, source.PityCount, source.Entries!, Cost: source.Cost ?? new(224, 160));
             }
             ValidatePool(pool, slot.GachaKey);
             active.Add(pool);
@@ -83,6 +83,7 @@ internal sealed class GachaConfigStore(string root, TimeSpan? cacheLifetime = nu
         if (pool.GachaKey != expectedKey || pool.PityCount is < 1 or > 10000 ||
             pool.Entries is null || pool.Entries.Count is < 1 or > 1024)
             throw new InvalidDataException("Invalid gacha pool definition.");
+        (pool.Cost ?? throw new InvalidDataException("Gacha cost is required.")).Validate();
         long total = 0;
         var entries = new HashSet<string>(StringComparer.Ordinal);
         foreach (var entry in pool.Entries)
@@ -119,7 +120,7 @@ internal sealed record GachaScheduleSlot([property: JsonRequired] string GachaKe
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed record GachaPoolConfig([property: JsonRequired] string GachaKey,
     [property: JsonRequired] int PityCount, [property: JsonRequired] List<GachaEntryConfig> Entries,
-    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CharacterEventRules? EventRules = null);
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] CharacterEventRules? EventRules = null, GachaPaymentConfig? Cost = null);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed record GachaEntryConfig([property: JsonRequired] string EntryKey,

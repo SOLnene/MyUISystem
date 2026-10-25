@@ -7,11 +7,14 @@ using System.Text.RegularExpressions;
 namespace CloudSaveServer;
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
-internal sealed record GachaDrawRequest(Guid RequestId, string GachaKey, int Count, long ExpectedRevision, long ConfigVersion)
+internal sealed record GachaDrawRequest(Guid RequestId, string GachaKey, int Count, long ExpectedRevision, long ConfigVersion,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int PaymentVersion = 0,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingDefault)] int MaxPrimogemCost = 0)
 {
     internal bool IsValid => RequestId != Guid.Empty && GachaKey != null &&
         Regex.IsMatch(GachaKey, "\\A[A-Za-z0-9_-]{1,64}\\z") &&
-        Count is 1 or 10 && ExpectedRevision is > 0 and < long.MaxValue && ConfigVersion > 0;
+        Count is 1 or 10 && ExpectedRevision is > 0 and < long.MaxValue && ConfigVersion > 0 &&
+        PaymentVersion is 0 or 1 && MaxPrimogemCost >= 0;
 
     internal string Fingerprint() => Convert.ToHexString(SHA256.HashData(
         JsonSerializer.SerializeToUtf8Bytes(this, GachaJson.Options)));
@@ -19,7 +22,8 @@ internal sealed record GachaDrawRequest(Guid RequestId, string GachaKey, int Cou
 
 internal sealed record GachaAward(string EntryKey, int EntryType, int Rarity, long InstanceId, bool NewCharacter);
 internal sealed record GachaOperation(Guid RequestId, string GachaKey, int Count, long ConfigVersion,
-    long CommittedRevision, string CreatedAtUtc, List<GachaAward> Results);
+    long CommittedRevision, string CreatedAtUtc, List<GachaAward> Results,
+    [property: JsonIgnore(Condition = JsonIgnoreCondition.WhenWritingNull)] GachaPayment? Payment = null);
 internal sealed record GachaDrawReply(GachaOperation Operation, SaveSnapshot State, bool Replayed);
 internal sealed class GachaFailure(string code, int status = 409, long? revision = null) : Exception(code)
 {
@@ -165,6 +169,8 @@ internal static class GachaEndpoints
                 // A committed retry must work even after a pool closes or its configuration becomes unavailable.
                 var replay = saves.FindGacha(owner, request.RequestId, request.Fingerprint());
                 if (replay != null) return Results.Ok(replay);
+                // Old durable receipts remain recoverable, but new draws require explicit payment support.
+                if (request.PaymentVersion != 1) throw new GachaFailure("gacha_client_upgrade_required");
                 var config = await configs.ReadCurrentAsync(clock.GetUtcNow(), context.RequestAborted);
                 if (config.Version != request.ConfigVersion) throw new GachaFailure("gacha_config_changed");
                 var pool = config.Pools.SingleOrDefault(p => p.GachaKey == request.GachaKey)

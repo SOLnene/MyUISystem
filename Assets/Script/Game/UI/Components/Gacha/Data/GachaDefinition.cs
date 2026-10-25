@@ -11,6 +11,8 @@ public class GachaDefinition : ScriptableObject
     
     //保底规则  
     public int pityCount = 90;
+    [SerializeField] GachaCost cost = new GachaCost(223, 160);
+    internal GachaCost Cost { get => cost; set => cost = value; }
     // Remote-only rules are intentionally excluded from serialized legacy assets.
     internal GachaEventRules EventRules { get; set; }
 }

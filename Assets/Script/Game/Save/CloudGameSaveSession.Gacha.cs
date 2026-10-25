@@ -14,7 +14,7 @@ internal sealed partial class CloudGameSaveSession
         "gacha-request-" + client.GachaJournalKey(PlayerId) + ".json");
 
     internal async UniTask<CloudGachaReply> DrawAsync(string key, int count, long configVersion,
-        CancellationToken cancellationToken)
+        int maxPrimogemCost, CancellationToken cancellationToken)
     {
         RequireOwner();
         if (HasConflict || !IsReady || IsSaving || HasPendingSave)
@@ -24,7 +24,8 @@ internal sealed partial class CloudGameSaveSession
             var request = new CloudGachaRequest
             {
                 requestId = Guid.NewGuid().ToString("D"), gachaKey = key, count = count,
-                configVersion = configVersion, expectedRevision = revision
+                configVersion = configVersion, expectedRevision = revision,
+                paymentVersion = 1, maxPrimogemCost = maxPrimogemCost
             };
             if (!request.IsValid) throw new InvalidOperationException("抽卡参数或卡池版本无效，请刷新卡池。");
             WriteGachaJournal(GachaJournalPath, request);

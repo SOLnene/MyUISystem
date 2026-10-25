@@ -34,6 +34,7 @@ internal sealed class RemoteGachaPoolData
     public int pityCount = 0;
     public RemoteGachaEntryData[] entries = null;
     public GachaEventRules eventRules = null;
+    public GachaCost cost = null;
 }
 
 [Serializable]
@@ -84,6 +85,7 @@ internal sealed class RemoteGachaConfiguration : IGachaPoolProvider, IDisposable
                     data.pityCount < 1 || data.pityCount > 10000 || data.entries == null ||
                     data.entries.Length < 1 || data.entries.Length > 1024)
                     throw new InvalidDataException("服务器返回的卡池定义无效。");
+                (data.cost ?? throw new InvalidDataException("Gacha payment config is missing; update the server.")).Validate();
                 var visual = visuals.GetConfig(data.gachaKey);
                 if (visual == null)
                     throw new InvalidDataException($"当前客户端没有卡池 {data.gachaKey} 的显示资源。");
@@ -135,6 +137,7 @@ internal sealed class RemoteGachaConfiguration : IGachaPoolProvider, IDisposable
                 pool.pityCount = data.pityCount;
                 pool.entries = entries;
                 pool.EventRules = data.eventRules;
+                pool.Cost = data.cost;
                 result.pools.Add(data.gachaKey, pool);
                 result.uiConfigs.Add(visual);
             }

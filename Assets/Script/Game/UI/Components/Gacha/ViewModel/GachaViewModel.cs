@@ -38,6 +38,7 @@ public class GachaViewModel : IDisposable
     public ReactiveProperty<bool> isDrawing = new ReactiveProperty<bool>(false);
     GachaSessionViewModel currentSession;
     bool disposed;
+    int confirmedPrimogemCost;
     internal Subject<string> DrawFailed { get; } = new Subject<string>();
     internal Subject<Unit> ConfigurationInvalidated { get; } = new Subject<Unit>();
     
@@ -78,6 +79,14 @@ public class GachaViewModel : IDisposable
             .AddTo(disposable);
     }
 
+    internal void DrawWithPayment(int count, int maxPrimogemCost)
+    {
+        // Consent applies to this synchronous command dispatch, never to a later button click.
+        confirmedPrimogemCost = maxPrimogemCost;
+        try { drawCommand.Execute(count); }
+        finally { confirmedPrimogemCost = 0; }
+    }
+
     async UniTaskVoid Draw(int count)
     {
         isDrawing.Value = true;
@@ -86,7 +95,7 @@ public class GachaViewModel : IDisposable
             lastDrawnItems.Clear();
 
             var gachaKey = currentPoolConfig.Value.gachaKey; // 快照
-            var result = await GachaDrawOperation.ExecuteAsync(gachaService, count, gachaKey);
+            var result = await GachaDrawOperation.ExecuteAsync(gachaService, count, gachaKey, confirmedPrimogemCost);
             if (disposed) return;
             int resultIndex = 0;
 

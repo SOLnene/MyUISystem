@@ -40,7 +40,8 @@ internal static class CharacterEventConfigBuilder
             entries.Add(new GachaEntryConfig(source.FeaturedFiveStarKey!, 0, 1, 5));
         return new GachaPoolConfig(source.GachaKey, rules.FiveStarPityCount, entries,
             new CharacterEventRules(rules.PityGroup, rules.FiveStarProbability, rules.FourStarProbability,
-                rules.FourStarPityCount, source.FeaturedFiveStarKey!, rules.FeaturedFiveStarProbability));
+                rules.FourStarPityCount, source.FeaturedFiveStarKey!, rules.FeaturedFiveStarProbability),
+            source.Cost ?? common.Cost ?? new GachaPaymentConfig(223, 160));
     }
 
     static bool ValidKey(string? value) => value != null && KeyPattern.IsMatch(value);
@@ -48,12 +49,13 @@ internal static class CharacterEventConfigBuilder
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed record GachaPoolSource([property: JsonRequired] string GachaKey, int PityCount = 0,
-    List<GachaEntryConfig>? Entries = null, string? CommonPool = null, string? FeaturedFiveStarKey = null);
+    List<GachaEntryConfig>? Entries = null, string? CommonPool = null, string? FeaturedFiveStarKey = null,
+    GachaPaymentConfig? Cost = null);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed record CharacterEventCommon([property: JsonRequired] CharacterEventCommonRules Rules,
     [property: JsonRequired] List<string> ThreeStarWeapons, [property: JsonRequired] List<string> FourStarWeapons,
-    [property: JsonRequired] List<string> StandardFiveStarCharacters);
+    [property: JsonRequired] List<string> StandardFiveStarCharacters, GachaPaymentConfig? Cost = null);
 
 [JsonUnmappedMemberHandling(JsonUnmappedMemberHandling.Disallow)]
 internal sealed record CharacterEventCommonRules([property: JsonRequired] string PityGroup,

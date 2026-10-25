@@ -9,7 +9,7 @@ using Microsoft.Extensions.DependencyInjection;
 internal static partial class Program
 {
     const string DrawSave = """
-        {"version":8,"currencies":{"items":[{"itemId":1,"amount":100}]},"inventory":{"stacks":[{"itemId":2,"count":3}],"equips":[]},
+        {"version":8,"currencies":{"items":[{"itemId":1,"amount":100},{"itemId":201,"amount":1000},{"itemId":223,"amount":20},{"itemId":224,"amount":20}]},"inventory":{"stacks":[{"itemId":2,"count":3}],"equips":[]},
         "characters":{"characters":[]},"gacha":{"pityCounters":[],"eventPityCounters":[]},"achievements":{"progress":[],"claimedIds":[]}}
         """;
 
@@ -67,9 +67,9 @@ internal static partial class Program
                 equips[0]!["instanceId"]!.GetValue<long>(), "A ten-draw batch grants the starter exactly once.");
             Check(save["inventory"]!["unseenEquipInstanceIds"]?.AsArray().Count is null or 0,
                 "Three-star starter weapons keep the existing no-attention behavior.");
-            Check(JsonNode.DeepEquals(save["currencies"], JsonNode.Parse(DrawSave)!["currencies"]) &&
+            Check(reply.Operation.Payment is { FateItemId: 223, FatesSpent: 10, PrimogemsSpent: 0, FatesRemaining: 10 } &&
                 JsonNode.DeepEquals(save["inventory"]!["stacks"], JsonNode.Parse(DrawSave)!["inventory"]!["stacks"]),
-                "Free gacha leaves currencies and existing materials unchanged.");
+                "Ticket payment consumes ten event fates and leaves existing materials unchanged.");
             Check(save["achievements"]!["progress"]![0]!["value"]!.GetValue<int>() == 10,
                 "Gacha progress is counted once.");
             var repeated = await DrawOk(server.Client, token, original);
@@ -135,8 +135,8 @@ internal static partial class Program
             await File.WriteAllTextAsync(Path.Combine(root, "broken-catalog.json"), """
                 {"schemaVersion":1,"weapons":[],"characters":[{"key":"furina","weaponType":"Sword","starterWeaponKey":"missing"}]}
                 """);
-            var badPool = new GachaPoolConfig("broken", 1, [new("furina", 0, 1, 5)]);
-            var failedRequest = new GachaDrawRequest(Guid.NewGuid(), "broken", 1, finalRevision, 9);
+            var badPool = new GachaPoolConfig("broken", 1, [new("furina", 0, 1, 5)], Cost: new(224, 160));
+            var failedRequest = new GachaDrawRequest(Guid.NewGuid(), "broken", 1, finalRevision, 9, PaymentVersion: 1);
             bool failed = false;
             try { store.DrawGacha(owner, failedRequest, badPool, broken); } catch (InvalidDataException) { failed = true; }
             Check(failed && store.Load(owner)!.SaveJson == beforeFailure &&
@@ -156,6 +156,7 @@ internal static partial class Program
             attentionSave["inventory"]!["unseenEquipInstanceIds"]![0]!.GetValue<long>() == 1,
             "Only four-star-or-higher awards add weapon attention markers.");
         ValidatePityRules();
+        await ValidateGachaPayments(Path.Combine(root, "payment-tests"));
         Console.WriteLine("PASS: gacha settlement, starter/duplicate grants, durable retries, concurrency, ownership and legacy-save compatibility.");
     }
 
@@ -202,6 +203,7 @@ internal static partial class Program
 
     static async Task<HttpResponseMessage> Draw(HttpClient client, string? token, GachaDrawRequest value)
     {
+        value = value with { PaymentVersion = 1 };
         using var request = new HttpRequestMessage(HttpMethod.Post,"/v1/gacha/draw") {Content=JsonContent.Create(value)};
         if(token!=null)request.Headers.Authorization=new AuthenticationHeaderValue("Bearer",token);
         return await client.SendAsync(request);

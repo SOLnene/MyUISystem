@@ -8,7 +8,7 @@ public sealed partial class GameSaveCoordinator
     uint? gachaDirtyRevision;
 
     internal async UniTask<GachaResult> DrawGachaAsync(GachaService service, string key, int count,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default, int maxPrimogemCost = 0)
     {
         while (isFlushing)
         {
@@ -36,7 +36,7 @@ public sealed partial class GameSaveCoordinator
         try
         {
             CloudGameSaveSession.RequireSession(source);
-            var reply = await session.DrawAsync(key, count, service.ConfigurationVersion, cancellationToken);
+            var reply = await session.DrawAsync(key, count, service.ConfigurationVersion, maxPrimogemCost, cancellationToken);
             await UniTask.SwitchToMainThread(cancellationToken);
             if (!ReferenceEquals(service, context.GachaService) ||
                 CloudGameSaveSession.RequireSession(source) != session)
