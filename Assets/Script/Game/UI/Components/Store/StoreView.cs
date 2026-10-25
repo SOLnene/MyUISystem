@@ -30,6 +30,10 @@ public class StoreView : UIView
     bool isPurchasing;
     bool isRefreshing;
     CancellationTokenSource storeLifetime;
+    bool refreshRequested;
+    bool applicationPaused;
+    double nextRefreshAttemptAt;
+    double refreshRetryDelay;
 
     public override void OnOpen(object data)
     {
@@ -41,6 +45,9 @@ public class StoreView : UIView
         storeLifetime?.Cancel();
         storeLifetime?.Dispose();
         storeLifetime = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        refreshRequested = true;
+        nextRefreshAttemptAt = 0;
+        refreshRetryDelay = 5;
         disposable.Clear();
         topView.Bind(OnCancel);
         viewModel = new StoreViewModel(GameDatabase.StoreConfigDatabase, GameDatabase.ItemDatabase);
@@ -83,6 +90,24 @@ public class StoreView : UIView
 
         isClosing = true;
         CloseWithAnimation().Forget();
+    }
+
+    void OnApplicationFocus(bool focused)
+    {
+        if (focused) RequestCloudRefresh();
+    }
+
+    void OnApplicationPause(bool paused)
+    {
+        applicationPaused = paused;
+        if (!paused) RequestCloudRefresh();
+    }
+
+    void RequestCloudRefresh()
+    {
+        if (storeLifetime == null || isClosing || !viewModel.UsesCloud) return;
+        refreshRequested = true;
+        nextRefreshAttemptAt = 0;
     }
 
     async UniTask ShowPanels()
@@ -148,7 +173,6 @@ public class StoreView : UIView
         try
         {
             await viewModel.PurchaseAsync(popupData.StoreItemId, count, cancellationToken);
-            if (viewModel.UsesCloud) await viewModel.RefreshCloudAsync(cancellationToken);
             topView.ShowStoreStatus(null);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
@@ -158,6 +182,8 @@ public class StoreView : UIView
             {
                 topView.ShowStoreStatus("等待刷新");
                 UIManager.Instance.Open(UIType.TipView, StoreFeedback.Message(error));
+                refreshRequested = true;
+                nextRefreshAttemptAt = Time.realtimeSinceStartup + 5;
                 if (viewModel.UsesCloud && !(CloudGameSaveSession.Current?.HasPendingStore ?? false))
                     await RefreshStoreAsync(cancellationToken);
             }
@@ -174,14 +200,21 @@ public class StoreView : UIView
 
     async UniTask RefreshStoreLoop(CancellationToken cancellationToken)
     {
+        var previousReachability = Application.internetReachability;
         try
         {
             while (!cancellationToken.IsCancellationRequested)
             {
-                if (!isPurchasing) await RefreshStoreAsync(cancellationToken);
+                var reachability = Application.internetReachability;
+                if (previousReachability == NetworkReachability.NotReachable && reachability != NetworkReachability.NotReachable)
+                    RequestCloudRefresh();
+                previousReachability = reachability;
                 // Use elapsed time against the server's deadline; changing the local clock cannot reset stock.
-                double delay = viewModel.RefreshDelay;
-                await UniTask.Delay(TimeSpan.FromSeconds(delay > 0 ? Math.Min(30, delay + 0.1) : 5),
+                // This local check sends no HTTP request until an event, expiry, or failed-request retry is due.
+                if (!isClosing && !applicationPaused && !isPurchasing && !isRefreshing &&
+                    (refreshRequested || viewModel.RefreshDelay <= 0) && Time.realtimeSinceStartup >= nextRefreshAttemptAt)
+                    await RefreshStoreAsync(cancellationToken);
+                await UniTask.Delay(TimeSpan.FromSeconds(1),
                     ignoreTimeScale: true, cancellationToken: cancellationToken);
             }
         }
@@ -191,11 +224,15 @@ public class StoreView : UIView
     async UniTask RefreshStoreAsync(CancellationToken cancellationToken)
     {
         isRefreshing = true;
+        // Clear before awaiting so a foreground/reconnect event during the request is retained.
+        refreshRequested = false;
         topView.ShowStoreStatus("正在刷新…");
         try
         {
             bool changed = await viewModel.RefreshCloudAsync(cancellationToken);
             if (changed) purchasePopup.HideImmediate();
+            nextRefreshAttemptAt = 0;
+            refreshRetryDelay = 5;
             topView.ShowStoreStatus(null);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
@@ -203,6 +240,9 @@ public class StoreView : UIView
         {
             if (!cancellationToken.IsCancellationRequested)
             {
+                refreshRequested = true;
+                nextRefreshAttemptAt = Time.realtimeSinceStartup + refreshRetryDelay;
+                refreshRetryDelay = Math.Min(60, refreshRetryDelay * 2);
                 topView.ShowStoreStatus("暂时不可用，稍后重试");
                 Debug.LogWarning(StoreFeedback.Message(error));
             }

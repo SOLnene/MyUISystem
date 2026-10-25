@@ -73,10 +73,25 @@ partial class StorePurchaseService
         return new StoreConfigDatabase(snapshot.items.Select(i => i.offer).ToList());
     }
 
-    internal UniTask PurchaseCloudAsync(int id, int count, CancellationToken cancellationToken)
+    internal async UniTask PurchaseCloudAsync(int id, int count, CancellationToken cancellationToken)
     {
         if (RefreshDelay <= 0) throw new InvalidOperationException("商店正在刷新，请稍后重新选择商品。");
-        return GameSaveCoordinator.Instance.PurchaseStoreAsync(this, id, count, ConfigurationToken, cancellationToken);
+        await GameSaveCoordinator.Instance.PurchaseStoreAsync(this, id, count, ConfigurationToken, cancellationToken);
+        var records = purchaseRepository.ExportSaveData().records.ToDictionary(r => r.storeItemId);
+        // Settlement imported these authoritative counters. Never use the repository's local-date reset here.
+        if (!records.TryGetValue(id, out var purchased) || purchased.periodKey != CurrentPeriod)
+        {
+            // The server crossed a reset boundary while purchasing; fetch the new period before further purchases.
+            remoteStore = null;
+            remainingLimits.Clear();
+            return;
+        }
+        foreach (var listing in remoteStore.items)
+        {
+            int purchasedCount = records.TryGetValue(listing.offer.StoreItemId, out var record) && record.periodKey == CurrentPeriod
+                ? record.purchasedCount : 0;
+            remainingLimits[listing.offer.StoreItemId] = Math.Max(0, listing.offer.DailyPurchaseLimit - purchasedCount);
+        }
     }
 }
 

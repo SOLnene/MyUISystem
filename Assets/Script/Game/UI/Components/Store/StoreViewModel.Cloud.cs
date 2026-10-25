@@ -29,7 +29,11 @@ public partial class StoreViewModel
 
     internal async UniTask PurchaseAsync(int id, int count, CancellationToken cancellationToken)
     {
-        if (UsesCloud) await purchaseService.PurchaseCloudAsync(id, count, cancellationToken);
+        if (UsesCloud)
+        {
+            await purchaseService.PurchaseCloudAsync(id, count, cancellationToken);
+            foreach (var item in allItemViewModels) item.RefreshPurchasePreview();
+        }
         else if (!TryPurchase(id, count)) throw new InvalidOperationException("购买失败，请检查余额和剩余购买次数。");
     }
 }
