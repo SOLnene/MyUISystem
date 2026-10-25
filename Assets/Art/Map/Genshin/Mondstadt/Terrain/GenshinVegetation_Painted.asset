@@ -1,0 +1,30 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: cbc78fd302204444f8e8cade3b84edaf, type: 3}
+  m_Name: GenshinVegetation_Painted
+  m_EditorClassIdentifier: 
+  sourceKey: painted/3e37ed3647074fecaed0bce74ec2e263
+  sourceHash: authored-v1
+  sourceScene: Assets/Scenes/GenshinTerrainStylized_mondstadt_2_-1 1.unity
+  worldOrigin: {x: 0, y: 0, z: 0}
+  prototypes:
+  - key: Grass
+    mesh: {fileID: 4300000, guid: ce7a3711b7efbd846ba5379fc3aca73d, type: 2}
+    material: {fileID: 2100000, guid: 89ab9e5ddfa889d4ab73b79c1fca1c66, type: 2}
+  - key: Area_MdProps_Flower02_Vo
+    mesh: {fileID: 4300000, guid: d9b0c163b19bf7841a1b1553c81c4cde, type: 2}
+    material: {fileID: 2100000, guid: 313d112329d33c34cb4769b5687cb9ce, type: 2}
+  - key: Area_MdProps_Flower03_Vo
+    mesh: {fileID: 4300000, guid: fdcd475aaf6f97a42befe16d44dde46f, type: 2}
+    material: {fileID: 2100000, guid: 313d112329d33c34cb4769b5687cb9ce, type: 2}
+  sourceInstances: []
+  edits: []
