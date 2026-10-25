@@ -77,7 +77,7 @@ public class StoreItemView : MonoBehaviour
     [SerializeField]
     Button button;
     [SerializeField]
-    string remainFormat = "本月剩余数量:{0}";
+    string remainFormat = "剩余购买次数:{0}";
     [SerializeField]
     AnimatedPanel anim;
 
