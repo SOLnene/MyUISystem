@@ -20,6 +20,7 @@ public class AnimatedPanel : MonoBehaviour
     InputControlMode inputControlMode = InputControlMode.RaycastOnly;
 
     int requestVersion;
+    bool isDisposed;
 
     internal float TransitionDuration =>
         motion != null ? motion.TransitionDuration : 0f;
@@ -57,6 +58,11 @@ public class AnimatedPanel : MonoBehaviour
 
     public async UniTask Show(bool instant = false)
     {
+        if (isDisposed)
+        {
+            return;
+        }
+
         int version = ++requestVersion;
 
         panelRoot.SetActive(true);
@@ -77,6 +83,11 @@ public class AnimatedPanel : MonoBehaviour
 
     public async UniTask<bool> Hide(bool instant = false)
     {
+        if (isDisposed)
+        {
+            return false;
+        }
+
         int version = ++requestVersion;
 
         SetInteractable(false);
@@ -97,10 +108,28 @@ public class AnimatedPanel : MonoBehaviour
 
     public void HideImmediate()
     {
+        if (isDisposed)
+        {
+            return;
+        }
+
         ++requestVersion;
         SetInteractable(false);
         motion?.Cancel();
         panelRoot.SetActive(false);
+    }
+
+    void OnApplicationQuit()
+    {
+        // Motion cancellation can resume Show/Hide before Unity finishes destroying this panel.
+        isDisposed = true;
+        ++requestVersion;
+    }
+
+    void OnDestroy()
+    {
+        isDisposed = true;
+        ++requestVersion;
     }
 
     void SetInteractable(bool interactable)

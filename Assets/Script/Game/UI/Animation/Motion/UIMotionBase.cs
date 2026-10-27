@@ -11,6 +11,7 @@ public abstract class UIMotionBase : MonoBehaviour
     bool isPlaying;
     bool isShown;
     bool playingTargetShown;
+    bool isDisposed;
     int requestVersion;
     CancellationTokenSource motionCts;
     protected Sequence seq;
@@ -29,6 +30,11 @@ public abstract class UIMotionBase : MonoBehaviour
 
     async UniTask PlayToState(bool shown, bool instant, bool replay)
     {
+        if (isDisposed)
+        {
+            return;
+        }
+
         if (isPlaying == false && isShown == shown && replay == false)
         {
             return;
@@ -102,6 +108,11 @@ public abstract class UIMotionBase : MonoBehaviour
     
     public void Cancel()
     {
+        if (isDisposed)
+        {
+            return;
+        }
+
         ++requestVersion;
         StopCurrentAnimation();
         ApplyEndState(false);
@@ -118,5 +129,23 @@ public abstract class UIMotionBase : MonoBehaviour
         StopCurrentAnimation();
         ApplyEndState(playingTargetShown);
         isShown = playingTargetShown;
+    }
+
+    void OnApplicationQuit()
+    {
+        DisposeMotion();
+    }
+
+    void OnDestroy()
+    {
+        DisposeMotion();
+    }
+
+    void DisposeMotion()
+    {
+        // Invalidate completions before cancellation; teardown must never apply a final UI state.
+        isDisposed = true;
+        ++requestVersion;
+        StopCurrentAnimation();
     }
 }
