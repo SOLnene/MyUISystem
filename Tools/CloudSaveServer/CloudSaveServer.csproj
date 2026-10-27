@@ -12,6 +12,7 @@
     <PackageReference Include="Microsoft.Data.Sqlite" Version="10.0.12" />
     <InternalsVisibleTo Include="CloudSaveServer.Tests" />
     <Compile Remove="Tests/**/*.cs" />
+    <Compile Include="../../Assets/Script/Game/Domain/Enhance/WeaponEnhanceRules.cs" Link="WeaponEnhanceRules.cs" />
     <Content Remove="Tests/**;out/**;data/**" />
     <None Remove="Tests/**;out/**;data/**" />
   </ItemGroup>

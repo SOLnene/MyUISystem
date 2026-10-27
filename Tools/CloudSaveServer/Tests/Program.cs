@@ -41,6 +41,7 @@ internal static partial class Program
             await ValidateAccounts(Path.Combine(runRoot, "accounts"));
             await ValidateDraws(Path.Combine(runRoot, "draws"));
             await ValidateStore(Path.Combine(runRoot, "store"));
+            await ValidateWeaponEnhancement(Path.Combine(runRoot, "weapon-enhance"));
             if (args.Contains("--live-auth")) await ValidateUnity(Path.Combine(runRoot, "live.db"));
             Console.WriteLine($"PASS: {passed} checks. Test databases: {runRoot}");
             return 0;

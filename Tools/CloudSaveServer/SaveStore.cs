@@ -55,6 +55,7 @@ internal sealed partial class SaveStore(ServerSettings settings)
         }
         InitializeGachaSchema(connection, transaction);
         InitializeStoreSchema(connection, transaction);
+        InitializeWeaponEnhanceSchema(connection, transaction);
         transaction.Commit();
     }
 
