@@ -76,9 +76,6 @@ public class CharacterMaterialView : BindableUI<CharacterEnhanceViewmodel>
 		Vm.materialInput.TotalGoldRp
 			.Subscribe(value => costText.text = value.ToString())
 			.AddTo(this);
-		Vm.materialInput.TotalExpRp
-			.Subscribe(value => upgradeBtn.interactable = value > 0)
-			.AddTo(this);
 		upgradeBtn.onClick.RemoveAllListeners();
 		upgradeBtn.onClick.AddListener((() => Vm.ConfirmEnhance()));
 	}

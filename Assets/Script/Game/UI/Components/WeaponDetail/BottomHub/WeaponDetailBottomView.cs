@@ -57,9 +57,6 @@ public class WeaponDetailBottomView : MonoBehaviour
                 SetCostGold(value);
             })
             .AddTo(disposable);
-        vm.canEnhance
-            .Subscribe(value => enhanceBtn.interactable = value)
-            .AddTo(disposable);
 
         // 按钮事件绑定（ReactiveCommand 绑定）
         if (storyBtn)
