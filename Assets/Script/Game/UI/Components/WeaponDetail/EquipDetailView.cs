@@ -44,6 +44,8 @@ public partial class EquipDetailView : UIView
     [Header("输入锁")]
     [SerializeField]
     GameObject inputBlocker;
+    [SerializeField]
+    CanvasGroup[] enhanceInputGroups;
     //参考图
     [Header("参考图")]
     [SerializeField]
@@ -226,6 +228,7 @@ public partial class EquipDetailView : UIView
         equipDetailVm.requestPlayEnhanceResult
             .Subscribe(result => PlayEnhanceResultFlow(result).Forget())
             .AddTo(disposable);
+        BindEnhancementState();
 
         equipDetailVm.requestPlayPromoteResult
             .Subscribe(result => PlayPromoteResultFlow(result).Forget())
@@ -305,6 +308,7 @@ public partial class EquipDetailView : UIView
         {
             isPlayingResultFlow = false;
             UnlockInput();
+            SyncEnhancementDisplay();
         }
     }
 
@@ -393,6 +397,7 @@ public partial class EquipDetailView : UIView
         currentTabIndex = equipDetailVm.currentTabIndex.Value;
         MiddleHub.Refresh();
         bottomView.Refresh();
+        if (enhanceSyncRequested || equipDetailVm.enhanceBusy.Value) SyncEnhancementDisplay();
     }
 
     async UniTask ShowTabContent()
@@ -418,6 +423,11 @@ public partial class EquipDetailView : UIView
     {
         if (inputBlocker != null)
             inputBlocker.SetActive(blocked);
+
+        // Keep material edits and submit blocked while settlement is pending, including keyboard submit.
+        bool enhanceBlocked = blocked || (equipDetailVm != null && equipDetailVm.enhanceBusy.Value);
+        for (int i = 0; i < enhanceInputGroups.Length; i++)
+            enhanceInputGroups[i].interactable = !enhanceBlocked;
     }
     
     void OnWeaponChanged(EquipItemViewModel viewModel)

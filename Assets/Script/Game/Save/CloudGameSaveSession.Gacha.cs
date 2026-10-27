@@ -18,6 +18,7 @@ internal sealed partial class CloudGameSaveSession
     {
         RequireOwner();
         RequireNoPendingStore();
+        RequireNoPendingEnhance();
         if (HasConflict || !IsReady || IsSaving || HasPendingSave)
             throw new InvalidOperationException("云端存档尚未就绪，请先完成保存或重新登录。");
         if (pendingGacha == null)

@@ -10,6 +10,7 @@ public sealed partial class GameSaveCoordinator
     internal async UniTask<GachaResult> DrawGachaAsync(GachaService service, string key, int count,
         CancellationToken cancellationToken = default, int maxPrimogemCost = 0)
     {
+        CloudGameSaveSession.Current?.RequireNoPendingEnhance();
         while (isFlushing)
         {
             cancellationToken.ThrowIfCancellationRequested();

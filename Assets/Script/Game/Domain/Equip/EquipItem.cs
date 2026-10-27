@@ -6,16 +6,16 @@ using UniRx;
 using UnityEngine;
 
 [Serializable]
-public class EquipItem : InventoryItem, IEnhanceable, IPromotable
+public partial class EquipItem : InventoryItem, IEnhanceable, IPromotable
 {
     public int Level => LevelSystem.Level;
     public int RefinementLevel { get; private set; }
     
     public int CurrentExp => LevelSystem.CurrentExp;
     //todo:改成计算，删了这个
-    public int NextLevelExp => LevelSystem.NextLevelExp; 
+    public int NextLevelExp => EnhanceExpRequired(Level);
     
-    public int GetNextLevelExp() => LevelSystem.NextLevelExp;
+    public int GetNextLevelExp() => NextLevelExp;
     public int Rank => RankSystem.CurrentRank;
     readonly ReactiveProperty<int> levelRP;
     readonly ReactiveProperty<int> expRP;
@@ -115,6 +115,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
 
     public int GetExpRequiredForLevel(int targetLevel)
     {
+        if (EnhanceRules != null) return EnhanceRules.RequiredExp(Id, targetLevel);
         if (targetLevel <= 1) return 0;
         
         // 基础参数
@@ -132,6 +133,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public int GetEnhanceCost(int gainedExp)
     {
+        if (EnhanceRules != null) return checked(gainedExp * EnhanceRules.GoldPerExp);
         return GrowthCostFormula.GetEnhanceGoldCost(gainedExp);
     }
     
@@ -141,6 +143,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     /// </summary>
     public int GetExpValue()
     {
+        if (EnhanceRules != null) return EnhanceRules.MaterialExp(Id, Level, CurrentExp, Rank);
         // baseExp = 50，稀有度和等级加成
         int baseExp = GetBaseWeaponMaterialExp(Stars);
         int recycledExp = Mathf.RoundToInt(GetInvestedExp() * 0.8f);
@@ -276,7 +279,7 @@ public class EquipItem : InventoryItem, IEnhanceable, IPromotable
     public EquipPreview GetPreviewWithExp(int addedExp, bool promoting = false)
     {
         int maxLevel = GetCurrentMaxLevel();
-        var levelPreview = LevelSystem.GetPreviewWithExp(addedExp, maxLevel);
+        var levelPreview = PreviewEnhancement(addedExp);
         int previewRank = promoting && !RankSystem.IsMaxRank()
             ? RankSystem.CurrentRank + 1
             : RankSystem.CurrentRank;

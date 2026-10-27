@@ -33,7 +33,7 @@ public class EnhanceLevelPreviewViewModel
             .CombineLatest(model.ExpRP,
                 (level, exp) =>
                 {
-                    int max = model.LevelSystem.GetExpRequired(model.LevelSystem.Level);
+                    int max = RequiredExp(model);
                     exp = model.LevelSystem.CurrentExp;
                     Debug.Log($"currentlevel:{level}currentexp:{exp}");
                     return $"{exp}/{max}";
@@ -46,7 +46,7 @@ public class EnhanceLevelPreviewViewModel
             .CombineLatest(model.ExpRP,
                 (level, exp) =>
                 {
-                    int max = model.LevelSystem.GetExpRequired(model.LevelSystem.Level);
+                    int max = RequiredExp(model);
                     return (float)model.LevelSystem.CurrentExp / max;
                 })
             .DistinctUntilChanged()
@@ -54,8 +54,8 @@ public class EnhanceLevelPreviewViewModel
             .AddTo(disposable);
         
         var previewData = previewExp
-            .Select(addedExp => model.LevelSystem.GetPreviewWithExp(addedExp,
-                model.GetCurrentMaxLevel() ))
+            .Select(addedExp => model is EquipItem weapon ? weapon.PreviewEnhancement(addedExp) :
+                model.LevelSystem.GetPreviewWithExp(addedExp, model.GetCurrentMaxLevel()))
             .Share();
 
         expPlusAmountText = previewExp
@@ -80,7 +80,7 @@ public class EnhanceLevelPreviewViewModel
                 previewExp,
                 (level, exp, added) =>
                 {
-                    int max = model.LevelSystem.GetExpRequired(model.LevelSystem.Level);
+                    int max = RequiredExp(model);
                     return (float)(model.LevelSystem.CurrentExp + added) / max;
                 })
             .DistinctUntilChanged()
@@ -99,6 +99,9 @@ public class EnhanceLevelPreviewViewModel
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
     }
+
+    static int RequiredExp(IEnhanceable model) => model is EquipItem weapon
+        ? weapon.EnhanceExpRequired(weapon.Level) : model.LevelSystem.GetExpRequired();
 
     public void Dispose()
     {

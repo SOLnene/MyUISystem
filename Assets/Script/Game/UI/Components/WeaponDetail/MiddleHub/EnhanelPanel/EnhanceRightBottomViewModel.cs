@@ -19,6 +19,7 @@ public class EnhanceRightBottomViewModel: IDisposable
     int starLimit = 1;
     
     readonly MaterialSelectService selectService;
+    internal long[] SelectedMaterialIds => selectService.SelectedItems.Select(i => i.InstanceId).ToArray();
 
     public readonly ReactiveProperty<EquipItemViewModel> vm;
     
@@ -40,17 +41,7 @@ public class EnhanceRightBottomViewModel: IDisposable
         }
         selectService.SelectedItems.ObserveCountChanged().Subscribe(_ =>
         {
-            var items = selectService.SelectedItems;
-            currentConsume.Value = items.Count;
-            int total = 0;
-            foreach (var item in items)
-            {
-                if (item is EquipItem equip)
-                    total += equip.GetExpValue();
-            }
-            var preview = vm.Value.Model.GetPreviewWithExp(total);
-            totalExp.Value = preview.maxGainExp;
-            totalGoldCost.Value = preview.costGold;
+            RefreshSelection();
         }).AddTo(disposables);
         selectService.OnDelta.Subscribe(delta =>
         {
@@ -73,10 +64,11 @@ public class EnhanceRightBottomViewModel: IDisposable
 
     public void OnQuickAddClicked()
     {
+        if (GameSaveCoordinator.Instance.EnhanceSending.Value || (CloudGameSaveSession.Current?.HasPendingEnhance ?? false)) return;
         var allItems = GameContext.Instance.InventoryRepository.GetAllItems();
     
         // 根据当前筛选星数过滤
-        var filter = new ItemFilter(ItemCategory.Equip, starLimit);
+        var filter = new ItemFilter(ItemCategory.Equip, starLimit, predicate: item => GameSaveCoordinator.CanConsumeForEnhancement(item, vm.Value.Model));
         var filteredItems = allItems.Where(item => filter.Match(item));
     
         int addedCount = 0;
@@ -105,10 +97,11 @@ public class EnhanceRightBottomViewModel: IDisposable
 
     public void OnSlotClick(ItemSlotViewModel viewModel)
     {
+        if (GameSaveCoordinator.Instance.EnhanceSending.Value || (CloudGameSaveSession.Current?.HasPendingEnhance ?? false)) return;
         int index = slotViewModels.IndexOf(viewModel);
         
         MaterialSelectParams materialSelectParams = new MaterialSelectParams(index
-            ,new ItemFilter(ItemCategory.Equip,starLimit)
+            ,new ItemFilter(ItemCategory.Equip,starLimit, predicate: item => GameSaveCoordinator.CanConsumeForEnhancement(item, vm.Value.Model))
             ,maxConsume
             ,selectService);
         requestOpenItemSelectPanel.OnNext(materialSelectParams);
@@ -170,6 +163,15 @@ public class EnhanceRightBottomViewModel: IDisposable
         }
     }
     
+    internal void RefreshSelection()
+    {
+        currentConsume.Value = selectService.SelectedItems.Count;
+        int total = 0;
+        foreach (var equip in selectService.SelectedItems.OfType<EquipItem>()) total = checked(total + equip.GetExpValue());
+        var preview = vm.Value.Model.GetPreviewWithExp(total);
+        totalExp.Value = preview.maxGainExp; totalGoldCost.Value = preview.costGold;
+    }
+
     public void ClearSelectedMaterials()
     {
         selectService.Clear();

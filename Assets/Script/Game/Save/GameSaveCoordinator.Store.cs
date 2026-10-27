@@ -10,6 +10,7 @@ public sealed partial class GameSaveCoordinator
     internal async UniTask PurchaseStoreAsync(StorePurchaseService service, int storeItemId, int count,
         string configVersion, CancellationToken cancellationToken)
     {
+        CloudGameSaveSession.Current?.RequireNoPendingEnhance();
         while (isFlushing) { cancellationToken.ThrowIfCancellationRequested(); await UniTask.Yield(); }
         var context = GameContext.Instance;
         string source = context.ActiveSaveDirectory;

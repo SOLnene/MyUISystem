@@ -29,6 +29,7 @@ internal sealed partial class CloudGameSaveSession
     internal async UniTask<CloudStoreReply> PurchaseStoreAsync(int storeItemId, int count, string configVersion,
         CancellationToken cancellationToken)
     {
+        RequireNoPendingEnhance();
         RequireOwner();
         if (HasConflict || !IsReady || IsSaving || HasPendingSave || HasPendingGacha)
             throw new InvalidOperationException("云端存档尚未就绪，请先确认上一次操作。");

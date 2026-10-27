@@ -1,10 +1,12 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
+using Cysharp.Threading.Tasks;
 using UniRx;
 using UnityEngine;
 
-public class EquipDetailViewModel: IDisposable
+public partial class EquipDetailViewModel: IDisposable
 {
     /// <summary>
     /// 当前武器数据流，用于特有界面
@@ -62,7 +64,7 @@ public class EquipDetailViewModel: IDisposable
         }).AddTo(disposables);
         enhanceVM.previewExp.Subscribe(exp =>
         {
-            bottomVM.canEnhance.Value = exp > 0;
+            UpdateEnhanceAvailability();
         }).AddTo(disposables);
         
         refineVM.previewCost.Subscribe(cost =>
@@ -72,18 +74,24 @@ public class EquipDetailViewModel: IDisposable
         
         bottomVM.onEnhanceClick.Subscribe(_ =>
         {
+            if (!bottomVM.canEnhance.Value) return;
+            if (IsCloudEnhancement) { SubmitCloudEnhancementAsync().Forget(); return; }
             
-            if (enhanceVM.previewExp.Value <= 0)
+            if (enhanceVM.previewExp.Value <= 0 || currentWeaponVM.Value.Model.Level >= currentWeaponVM.Value.Model.GetCurrentMaxLevel())
             {
                 return;
             }
-            if (GameEconomy.Instance.TrySpendGold(enhanceVM.previewCost.Value)||true)
+            var materials = enhanceVM.rightBottomVM.SelectedMaterialIds
+                .Select(id => repo.TryGetEquip(id, out var item) ? item : null).ToArray();
+            if (materials.Length == 0 || materials.Any(m => m == null || !GameSaveCoordinator.CanConsumeForEnhancement(m, currentWeaponVM.Value.Model))) return;
+            if (GameEconomy.Instance.TrySpendGold(enhanceVM.previewCost.Value))
             {
                 var weapon = currentWeaponVM.Value;
                 int oldLevel = weapon.level.Value;
                 float oldProgress = GetExpProgress(weapon);
                 int levelUpCount = enhanceVM.enhanceLevelPreviewVm.levelUpCount.Value;
                 weapon.AddExp(enhanceVM.previewExp.Value);
+                foreach (var material in materials) repo.RemoveItem(material);
                 int newLevel = weapon.level.Value;
                 float newProgress = GetExpProgress(weapon);
                 bool needSwitchContent = weapon.needBreak.Value;
@@ -108,6 +116,7 @@ public class EquipDetailViewModel: IDisposable
         
         bottomVM.onBreakoutClick.Subscribe(_ =>
         {
+            if (enhanceBusy.Value || (CloudGameSaveSession.Current?.HasPendingEnhance ?? false)) return;
             var weapon = currentWeaponVM.Value;
             int oldRank = weapon.rank.Value;
             int oldMaxLevel = weapon.Model.GetCurrentMaxLevel();
@@ -127,6 +136,7 @@ public class EquipDetailViewModel: IDisposable
 
         bottomVM.onRefineClick.Subscribe(_ =>
         {
+            if (enhanceBusy.Value || (CloudGameSaveSession.Current?.HasPendingEnhance ?? false)) return;
             if (!refineVM.CanApplyRefine())
                 return;
 
@@ -151,6 +161,7 @@ public class EquipDetailViewModel: IDisposable
         refineVM.requestOpenItemSelectPanel
             .Subscribe(requestOpenItemSelectPanel.OnNext)
             .AddTo(disposables);
+        InitializeEnhancement();
     }
     
     public void SetWeapon(EquipItemViewModel viewModel)
@@ -172,6 +183,7 @@ public class EquipDetailViewModel: IDisposable
     
     public void Dispose()
     {
+        DisposeEnhancement();
         disposables.Dispose();
         MiddleVM.Dispose();
         infoVm.Dispose();
@@ -185,7 +197,7 @@ public class EquipDetailViewModel: IDisposable
         if (weapon == null || weapon.Model == null || weapon.Model.LevelSystem == null)
             return 0f;
 
-        int max = weapon.Model.LevelSystem.GetExpRequired(weapon.Model.LevelSystem.Level);
+        int max = weapon.Model.EnhanceExpRequired(weapon.Model.Level);
         if (max <= 0)
             return 0f;
 
