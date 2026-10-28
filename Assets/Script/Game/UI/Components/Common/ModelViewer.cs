@@ -79,12 +79,10 @@ public class ModelViewer : SingletonMono<ModelViewer>
     }
 
     [Header("Transforms")]
-    [SerializeField] Transform modelRoot;
     [SerializeField] ModelPreviewController previewController;
     //角色胸口
     [SerializeField] Transform cameraPivot;
     [FormerlySerializedAs("modelCamera")][SerializeField] Camera displayCamera;
-    [SerializeField] Camera modelCamera;
     [SerializeField] Transform planeTransform;
     [SerializeField] Renderer planeRenderer;
     [SerializeField] PlanarReflectionManager reflectionManager;
@@ -113,11 +111,9 @@ public class ModelViewer : SingletonMono<ModelViewer>
     [SerializeField] float resetSpeed = 0.5f; //相机后移复位速度
     // 目标值（输入直接修改这些）
     CameraPose targetCameraPose;
-    float moveAmount;
 
     // 记录初始的相机局部位置，用于 ResetView
     private Vector3 initialCameraLocalPos;
-    Vector3 initialCameraWorldPos;
     // 当前值（用于插值平滑）
     CameraPose renderedCameraPose;
     
@@ -127,7 +123,6 @@ public class ModelViewer : SingletonMono<ModelViewer>
     bool isInTransition;
     bool cameraTransitionPending;
     bool animationTransitionPending;
-    bool faceTransitionPending;
     bool transitionAllowDrag;
 
     CameraTransition activeCameraTransition;
@@ -141,7 +136,6 @@ public class ModelViewer : SingletonMono<ModelViewer>
     int currentPresetIndex;
     //先这样测试
     [SerializeField]public  CameraPreset[] presets;
-    [SerializeField] public FaceExpressionPreset[] facePresets;
     
     int starFieldUserCount;
 
@@ -200,11 +194,6 @@ public class ModelViewer : SingletonMono<ModelViewer>
             nextPose.Position);
         SetRenderedCameraPose(nextPose);
     }
-    void LateUpdate()
-    {
-       // modelCamera.cullingMatrix = displayCamera.projectionMatrix * displayCamera.worldToCameraMatrix;
-    }
-
     void ApplyTransforms()
     {
         // 相机父节点只绕 X 轴转（抬头/低头）
@@ -376,15 +365,11 @@ public class ModelViewer : SingletonMono<ModelViewer>
         }
 
         CameraPreset preset = presets[index];
-        FaceExpressionPreset facePreset = facePresets != null && index >= 0 && index < facePresets.Length
-            ? facePresets[index]
-            : null;
 
         currentPresetIndex = index;
         BeginTransition(preset.allowDrag);
         StartCameraTransition(preset, immediate);
         StartAnimationTransition(preset, immediate);
-        StartFaceTransition(facePreset);
     }
 
     public void SwitchToPreset(CameraPreset preset,bool immediate = false)
@@ -397,8 +382,6 @@ public class ModelViewer : SingletonMono<ModelViewer>
         BeginTransition(preset.allowDrag);
         StartCameraTransition(preset, immediate);
         StartAnimationTransition(preset, immediate);
-        faceTransitionPending = false;
-        TryCompleteTransition();
     }
 
     internal async UniTask PlayCameraTransitionAsync(
@@ -490,7 +473,6 @@ public class ModelViewer : SingletonMono<ModelViewer>
         canDrag = false;
         cameraTransitionPending = true;
         animationTransitionPending = true;
-        faceTransitionPending = true;
     }
 
     void StartCameraTransition(CameraPreset preset, bool immediate)
@@ -641,17 +623,6 @@ public class ModelViewer : SingletonMono<ModelViewer>
             MarkAnimationTransitionComplete);
     }
     
-    public void SwitchFacePreset(FaceExpressionPreset preset)
-    {
-        previewController.ApplyFacePreset(preset);
-    }
-
-    void StartFaceTransition(FaceExpressionPreset preset)
-    {
-        SwitchFacePreset(preset);
-        MarkFaceTransitionComplete();
-    }
-
     void MarkCameraTransitionComplete()
     {
         cameraTransitionPending = false;
@@ -670,15 +641,10 @@ public class ModelViewer : SingletonMono<ModelViewer>
         TryCompleteTransition();
     }
 
-    void MarkFaceTransitionComplete()
-    {
-        faceTransitionPending = false;
-        TryCompleteTransition();
-    }
-
     void TryCompleteTransition()
     {
-        if (cameraTransitionPending || animationTransitionPending || faceTransitionPending)
+        // Presentation profiles own facial phases; the viewer waits for the camera and presentation task.
+        if (cameraTransitionPending || animationTransitionPending)
         {
             return;
         }
@@ -942,7 +908,6 @@ public class ModelViewer : SingletonMono<ModelViewer>
         isInTransition = false;
         cameraTransitionPending = false;
         animationTransitionPending = false;
-        faceTransitionPending = false;
         canDrag = preset.allowDrag;
     }
 
@@ -956,7 +921,6 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
         ApplyPreviewCamera(preset);
         previewController.ApplyAnimationPreset(preset, true, null);
-        ApplyCurrentCharacterFacePreset();
     }
 
     CameraPreset GetCurrentCharacterPreset()
@@ -975,17 +939,6 @@ public class ModelViewer : SingletonMono<ModelViewer>
         {
             previewController.ApplyAnimationPreset(preset, false, null);
         }
-
-        ApplyCurrentCharacterFacePreset();
-    }
-
-    void ApplyCurrentCharacterFacePreset()
-    {
-        FaceExpressionPreset facePreset =
-            facePresets != null && currentPresetIndex < facePresets.Length
-                ? facePresets[currentPresetIndex]
-                : null;
-        previewController.ApplyFacePreset(facePreset);
     }
 
     void SetPlaneReflection(bool enabled)

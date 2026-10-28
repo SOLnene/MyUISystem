@@ -585,14 +585,6 @@ public sealed class ModelPreviewController : MonoBehaviour
         }
     }
 
-    public void ApplyFacePreset(FaceExpressionPreset preset)
-    {
-        if (IsCharacterPreviewActive && characterPresentation.Profile == null)
-        {
-            characterPresentation.ApplyFacePreset(preset);
-        }
-    }
-
     public void CancelPendingLoad()
     {
         // Ready 对象直接回收；Loading 对象由加载任务在收到取消后统一回收。
