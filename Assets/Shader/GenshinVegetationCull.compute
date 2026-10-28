@@ -1,0 +1,35 @@
+#pragma kernel CullInstances
+
+// 192-byte layout matches GenshinVegetationGpuBatch.Instance and the procedural grass vertex shader.
+struct GrassGpuInstance
+{
+    float4x4 objectToWorld;
+    float4x4 worldToObject;
+    float4 rootTint;
+    float4 tipTint;
+    float4 boundsCenter;
+    float4 boundsExtents;
+};
+
+StructuredBuffer<GrassGpuInstance> _GrassGpuInstances;
+AppendStructuredBuffer<uint> _GrassVisibleIndices;
+float4 _GrassCullPlanes[6];
+float4 _GrassCullCamera;
+uint _GrassInstanceCount;
+
+[numthreads(64, 1, 1)]
+void CullInstances(uint3 id : SV_DispatchThreadID)
+{
+    if (id.x >= _GrassInstanceCount) return;
+    GrassGpuInstance instance = _GrassGpuInstances[id.x];
+    float3 center = instance.boundsCenter.xyz;
+    float3 extents = instance.boundsExtents.xyz;
+    float3 offset = max(abs(center - _GrassCullCamera.xyz) - extents, 0);
+    if (dot(offset, offset) > _GrassCullCamera.w) return;
+    [unroll] for (uint plane = 0; plane < 6; plane++)
+    {
+        float4 equation = _GrassCullPlanes[plane];
+        if (dot(equation.xyz, center) + equation.w + dot(abs(equation.xyz), extents) < 0) return;
+    }
+    _GrassVisibleIndices.Append(id.x);
+}

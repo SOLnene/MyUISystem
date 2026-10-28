@@ -15,6 +15,7 @@ namespace Game.EditorTools
         {
             public string key;
             public float value = 1;
+            public int maskChannel = -1;
         }
 
         [Serializable]
@@ -24,6 +25,14 @@ namespace Game.EditorTools
             public float density = 6;
             public float minimumSpacing = 0.25f;
             public Vector2 scaleRange = new Vector2(0.8f, 1.2f);
+            public bool usePenPressure = true;
+            public Vector2 pressureHeightRange = new Vector2(0.25f, 1.5f);
+            public bool paintTint;
+            public bool sampleSurfaceColor = true;
+            public Color rootTint = new Color(0.3f, 0.45f, 0.2f, 1);
+            public Color tipTint = new Color(0.6f, 0.8f, 0.3f, 1);
+            public float tintStrength = 1;
+            public float tintPower = 1;
             public float maximumSlope = 40;
             public bool alignToNormal = true;
             public float edgeFalloff = 0.25f;
@@ -33,11 +42,12 @@ namespace Game.EditorTools
             public List<Weight> weights = new List<Weight>();
             public List<Collider> blockers = new List<Collider>();
             public Texture2D mask;
+            public bool maskControlsSpecies;
             public Vector2 maskOrigin;
             public Vector2 maskSize = new Vector2(64, 64);
         }
 
-        internal sealed class Stroke
+        internal sealed class Stroke : IDisposable
         {
             private struct Placed
             {
@@ -52,8 +62,10 @@ namespace Game.EditorTools
             private readonly Dictionary<Vector3Int, List<Placed>> cells = new Dictionary<Vector3Int, List<Placed>>();
             private readonly HashSet<string> erased = new HashSet<string>();
             private readonly float[] weights;
+            private readonly int[] maskChannels;
             private readonly float totalWeight;
             private readonly float cellSize;
+            private GenshinVegetationSurfaceSampler colorSampler;
 
             internal Stroke(GenshinVegetationData data, Collider surface, Matrix4x4 localToWorld, Settings settings, bool eraseOnly = false)
             {
@@ -75,6 +87,9 @@ namespace Game.EditorTools
                     !Finite(settings.clusterStrength) || settings.clusterStrength < 0 || settings.clusterStrength > 1 ||
                     !Finite(settings.clusterSize) || settings.clusterSize <= 0)
                     throw new InvalidOperationException("Brush size, density, scale, slope and clustering must be within their displayed ranges.");
+                if (settings.usePenPressure && (!Finite(settings.pressureHeightRange.x) || !Finite(settings.pressureHeightRange.y) ||
+                    settings.pressureHeightRange.x <= 0 || settings.pressureHeightRange.y < settings.pressureHeightRange.x))
+                    throw new InvalidOperationException("Pressure height limits must be finite, positive and ordered.");
                 if (Mathf.Pow(2 * settings.radius * Mathf.Sqrt(settings.density) + 3, 2) > 25000)
                     throw new InvalidOperationException("Reduce brush radius or density: a stamp supports up to 25000 candidate cells.");
                 if (settings.mask != null && (!settings.mask.isReadable || !Finite(settings.maskSize.x) ||
@@ -85,12 +100,18 @@ namespace Game.EditorTools
                     if (blocker != null && (blocker == surface || blocker.gameObject.scene != surface.gameObject.scene))
                         throw new InvalidOperationException("Exclusion colliders must belong to the target scene and differ from the planting surface.");
                 weights = data.Prototypes.Select(p => settings.weights.Find(w => w.key == p.key)?.value ?? 1).ToArray();
+                maskChannels = data.Prototypes.Select((p, i) => {
+                    int channel = settings.weights.Find(w => w.key == p.key)?.maskChannel ?? -1;
+                    return channel < 0 ? Mathf.Min(i, 3) : channel;
+                }).ToArray();
+                if (settings.mask != null && settings.maskControlsSpecies && maskChannels.Any(c => c > 3))
+                    throw new InvalidOperationException("Distribution channels must be R, G, B or A.");
                 if (weights.Any(w => !Finite(w) || w < 0) || !Finite(weights.Sum()) || weights.Sum() <= 0)
                     throw new InvalidOperationException("At least one grass type must have a positive finite weight.");
                 totalWeight = weights.Sum();
             }
 
-            internal int Plant(Vector3 center)
+            internal int Plant(Vector3 center, float pressure = -1)
             {
                 float step = 1 / Mathf.Sqrt(settings.density);
                 int minimumX = Mathf.FloorToInt((center.x - settings.radius) / step);
@@ -111,25 +132,75 @@ namespace Game.EditorTools
                         sample.z / settings.clusterSize + ((settings.seed >> 10) & 1023));
                     chance *= Mathf.Lerp(1, Mathf.SmoothStep(0, 1, Mathf.InverseLerp(0.25f, 0.75f, noise)), settings.clusterStrength);
                     Vector3 local = worldToLocal.MultiplyPoint3x4(hit.point);
+                    Color distribution = Color.white;
+                    float availableWeight = totalWeight;
                     if (settings.mask != null)
                     {
                         float u = (local.x - settings.maskOrigin.x) / settings.maskSize.x;
                         float v = (local.z - settings.maskOrigin.y) / settings.maskSize.y;
                         if (u < 0 || u > 1 || v < 0 || v > 1) continue;
-                        chance *= Mathf.Clamp01(settings.mask.GetPixelBilinear(u, v).r);
+                        distribution = settings.mask.GetPixelBilinear(u, v);
+                        if (settings.maskControlsSpecies)
+                        {
+                            availableWeight = 0;
+                            float coverage = 0;
+                            for (int i = 0; i < weights.Length; i++)
+                            {
+                                float channel = Mathf.Clamp01(distribution[maskChannels[i]]);
+                                availableWeight += weights[i] * channel;
+                                if (weights[i] > 0) coverage = Mathf.Max(coverage, channel);
+                            }
+                            // Coverage controls total density; weighted channels choose the species independently.
+                            // A fully red region stays dense even when other palette entries use G/B/A.
+                            chance *= coverage;
+                        }
+                        else chance *= Mathf.Clamp01(distribution.r);
                     }
-                    if (Random(x, z, 3) >= chance || Nearby(hit.point, Mathf.Max(0.001f, settings.minimumSpacing)).Any()) continue;
-                    float pick = Random(x, z, 4) * totalWeight;
+                    if (availableWeight <= 0 || Random(x, z, 3) >= chance || Nearby(hit.point, Mathf.Max(0.001f, settings.minimumSpacing)).Any()) continue;
+                    float pick = Random(x, z, 4) * availableWeight;
                     int kind = 0;
-                    for (; kind < weights.Length - 1; kind++) { pick -= weights[kind]; if (pick < 0) break; }
+                    for (; kind < weights.Length - 1; kind++)
+                    {
+                        float weight = weights[kind];
+                        if (settings.mask != null && settings.maskControlsSpecies)
+                            weight *= Mathf.Clamp01(distribution[maskChannels[kind]]);
+                        pick -= weight;
+                        if (pick < 0) break;
+                    }
                     Vector3 up = worldToLocal.MultiplyVector(settings.alignToNormal ? hit.normal : Vector3.up).normalized;
                     var value = new GenshinVegetationData.Instance { id = "local/" + Guid.NewGuid().ToString("N"),
                         prototype = data.Prototypes[kind].key, position = local,
                         rotation = Quaternion.FromToRotation(Vector3.up, up) * Quaternion.AngleAxis(Random(x, z, 5) * 360, Vector3.up),
                         scale = Vector3.one * Mathf.Lerp(settings.scaleRange.x, settings.scaleRange.y, Random(x, z, 6)) };
+                    value.scale.y *= HeightFromPressure(settings, pressure);
+                    ApplyTint(ref value, hit);
                     data.SetEdit(value); AddToIndex(value, hit.point); count++;
                 }
                 return count;
+            }
+
+            internal void ApplyTint(ref GenshinVegetationData.Instance value, RaycastHit hit)
+            {
+                if (!settings.paintTint) return;
+                if (!Finite(settings.tintStrength) || settings.tintStrength < 0 || settings.tintStrength > 1 ||
+                    !Finite(settings.tintPower) || settings.tintPower <= 0)
+                    throw new InvalidOperationException("Tint strength and gradient must be finite and within their ranges.");
+                Color root = settings.rootTint;
+                if (settings.sampleSurfaceColor)
+                {
+                    if (colorSampler == null) colorSampler = new GenshinVegetationSurfaceSampler(surface);
+                    root = colorSampler.Sample(hit);
+                }
+                value.rootTint = root;
+                value.tipTint = settings.tipTint;
+                value.tintStrength = settings.tintStrength;
+                value.tintPower = settings.tintPower;
+            }
+
+            public void Dispose()
+            {
+                colorSampler?.Dispose();
+                colorSampler = null;
             }
 
             internal int Erase(Vector3 center, float radius)
@@ -183,6 +254,13 @@ namespace Game.EditorTools
                 hash = unchecked(hash * 0x846ca68bu); hash ^= hash >> 16;
                 return (hash & 0xffffff) / 16777216f;
             }
+        }
+
+        internal static float HeightFromPressure(Settings settings, float pressure)
+        {
+            // A negative value denotes a mouse event; it must keep the original height even when pen limits change.
+            return !settings.usePenPressure || !Finite(pressure) || pressure < 0 ? 1 :
+                Mathf.Lerp(settings.pressureHeightRange.x, settings.pressureHeightRange.y, Mathf.Clamp01(pressure));
         }
 
         internal static bool TrySurfaceHit(Collider surface, Vector3 point, out RaycastHit hit)

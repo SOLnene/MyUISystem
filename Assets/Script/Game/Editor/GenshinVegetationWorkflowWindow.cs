@@ -170,6 +170,7 @@ namespace Game.EditorTools
             EditorGUILayout.LabelField("源实例 " + data.SourceInstances.Length + " / 当前 " + points.Length + " / 修改 " + data.EditCount);
             if (data.OrphanedEditCount() > 0)
                 EditorGUILayout.HelpBox("存在已不在当前源数据中的修改，保留待核对：" + data.OrphanedEditCount(), MessageType.Warning);
+            DrawVegetationLibrary();
             bool show = EditorGUILayout.Toggle("Scene 落点与操纵柄", preview);
             if (show != preview) { preview = show; SceneView.RepaintAll(); }
             brushMode = GUILayout.Toolbar(brushMode, new[] { "选择 / 移动", "单点补种", "范围擦除", "范围种植" });
@@ -183,6 +184,7 @@ namespace Game.EditorTools
                 eraseRadius = EditorGUILayout.Slider("擦除半径", eraseRadius, 0.1f, 10);
                 }
                 else DrawRangeBrush();
+                if (brushMode == 1) DrawPlantAppearance();
                 EditorGUILayout.HelpBox("在 Scene 视图左键操作。补种仅使用指定表面；原始实例高度不会被吸附。Alt 保留视角操作。", MessageType.Info);
             }
             if (points.Length > 0)
@@ -284,10 +286,14 @@ namespace Game.EditorTools
             prototypeIndex = Mathf.Clamp(prototypeIndex, 0, data.Prototypes.Length - 1);
             Undo.RecordObject(data, "Edit vegetation at surface");
             if (brushMode == 1)
-                data.SetEdit(new GenshinVegetationData.Instance { id = "local/" + Guid.NewGuid().ToString("N"),
+            {
+                var value = new GenshinVegetationData.Instance { id = "local/" + Guid.NewGuid().ToString("N"),
                     prototype = data.Prototypes[prototypeIndex].key, position = matrix.inverse.MultiplyPoint3x4(hit.point),
                     rotation = Quaternion.Inverse(matrix.rotation) * Quaternion.FromToRotation(Vector3.up, hit.normal),
-                    scale = Vector3.one * newScale });
+                    scale = new Vector3(newScale, newScale * GenshinVegetationBrush.HeightFromPressure(rangeBrush, lastStrokePressure), newScale) };
+                brushStroke.ApplyTint(ref value, hit);
+                data.SetEdit(value);
+            }
             else
                 foreach (var value in points)
                     if (Vector3.Distance(matrix.MultiplyPoint3x4(value.position), hit.point) <= eraseRadius) data.SetEdit(value, true);
@@ -332,6 +338,13 @@ namespace Game.EditorTools
                 renderer = Undo.AddComponent<GenshinVegetationRenderer>(root);
             }
             Undo.RecordObject(renderer, "Bind vegetation block");
+            var serialized = new SerializedObject(renderer);
+            var cullingShader = serialized.FindProperty("cullingShader");
+            if (cullingShader.objectReferenceValue == null)
+            {
+                cullingShader.objectReferenceValue = AssetDatabase.LoadAssetAtPath<ComputeShader>("Assets/Shader/GenshinVegetationCull.compute");
+                serialized.ApplyModifiedProperties();
+            }
             renderer.Configure(source); renderer.Rebuild();
             if (!string.IsNullOrEmpty(renderer.ValidationError)) throw new InvalidOperationException(renderer.ValidationError);
             EditorSceneManager.MarkSceneDirty(scene);

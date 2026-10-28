@@ -22,6 +22,11 @@ namespace Game.Vegetation
             public Vector3 position;
             public Quaternion rotation;
             public Vector3 scale;
+            public Color rootTint;
+            public Color tipTint;
+            // Zero keeps assets authored before per-instance coloring on the material's original appearance.
+            public float tintStrength;
+            public float tintPower;
         }
 
         [Serializable]
@@ -158,6 +163,12 @@ namespace Game.Vegetation
             float length = q.x * q.x + q.y * q.y + q.z * q.z + q.w * q.w;
             if (float.IsNaN(length) || float.IsInfinity(length) || Mathf.Abs(length - 1) > 0.001f)
                 throw new InvalidOperationException("Rotation must be a normalized quaternion: " + instance.id);
+            if (float.IsNaN(instance.tintStrength) || float.IsInfinity(instance.tintStrength) ||
+                instance.tintStrength < 0 || instance.tintStrength > 1 ||
+                (instance.tintStrength > 0 && (!Finite(new Vector3(instance.rootTint.r, instance.rootTint.g, instance.rootTint.b)) ||
+                !Finite(new Vector3(instance.tipTint.r, instance.tipTint.g, instance.tipTint.b)) ||
+                float.IsNaN(instance.tintPower) || float.IsInfinity(instance.tintPower) || instance.tintPower <= 0)))
+                throw new InvalidOperationException("Invalid vegetation tint: " + instance.id);
         }
 
         private static bool Finite(Vector3 value)
