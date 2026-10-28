@@ -68,6 +68,10 @@ namespace Game.UI.Components.CharacterDetail
         [SerializeField]
         [Tooltip("负数提前，正数延后，单位为秒")]
         float cameraPushStartOffsetSeconds;
+        [SerializeField]
+        CanvasGroup[] resultInputGroups;
+        [SerializeField]
+        GameObject inputBlocker;
         private const float TOP_BAR_HEIGHT = 150f;   
         private const float BOTTOM_BAR_HEIGHT = 140f;
 
@@ -102,6 +106,10 @@ namespace Game.UI.Components.CharacterDetail
         int BeginOperation(DetailOperation operation)
         {
             currentOperation = operation;
+            if (operation == DetailOperation.SwitchingTab)
+                SetTabTransitionBlocked(true);
+            if (operation == DetailOperation.PlayingResult)
+                SetResultInputBlocked(true);
             return ++operationVersion;
         }
 
@@ -109,7 +117,28 @@ namespace Game.UI.Components.CharacterDetail
         {
             // 关闭或重新打开后，旧任务的 finally 不得解除新操作的限制。
             if (version == operationVersion)
+            {
                 currentOperation = DetailOperation.None;
+                SetTabTransitionBlocked(false);
+                SetResultInputBlocked(false);
+            }
+        }
+
+        void SetResultInputBlocked(bool blocked)
+        {
+            // Result visuals may return to normal before the flow ends; only the page releases input.
+            for (int i = 0; i < resultInputGroups.Length; i++)
+                resultInputGroups[i].interactable = !blocked;
+        }
+
+        void SetTabTransitionBlocked(bool blocked)
+        {
+            inputBlocker.SetActive(blocked);
+            for (int i = 0; i < tabItems.Length; i++)
+                tabItems[i].SetTransitionLocked(blocked);
+#if UNITY_EDITOR
+            Debug.Log($"[TabSync] Input blocked={blocked} tab={currentIndex} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
         }
 
         public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
@@ -122,6 +151,8 @@ namespace Game.UI.Components.CharacterDetail
             base.OnOpen(data);
             ++operationVersion;
             currentOperation = DetailOperation.None;
+            SetTabTransitionBlocked(false);
+            SetResultInputBlocked(false);
             CancelEquipEnhanceTransition();
             ModelViewer.Instance.BeginCharacterPreview();
             ModelViewer.Instance.PlayStarFieldParticles();
@@ -525,6 +556,9 @@ namespace Game.UI.Components.CharacterDetail
             int version = ownsOperation
                 ? BeginOperation(DetailOperation.SwitchingTab)
                 : operationVersion;
+#if UNITY_EDITOR
+            Debug.Log($"[TabSync] TabStart target={index} version={version} instant={instant} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
             try
             {
                 if (currentIndex >= 0 && currentIndex < tabItems.Length)
@@ -549,6 +583,24 @@ namespace Game.UI.Components.CharacterDetail
                     tabAudio = AudioManager.Instance.PlayUI(clip, index == 0 ? 0.55f : 1f);
                 }
                 await ApplyCurrentTab(instant);
+#if UNITY_EDITOR
+                Debug.Log($"[TabSync] ContentDone target={index} version={version} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
+                if (ownsOperation && !instant)
+                {
+                    var viewer = ModelViewer.Instance;
+#if UNITY_EDITOR
+                    Debug.Log($"[TabSync] ModelWaitStart busy={viewer != null && viewer.IsInTransition} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
+                    // Content can finish before the camera and pose handoff; keep one unlock boundary.
+                    await UniTask.WaitUntil(
+                        () => isClosing || version != operationVersion
+                              || viewer == null || !viewer.IsInTransition,
+                        cancellationToken: this.GetCancellationTokenOnDestroy());
+#if UNITY_EDITOR
+                    Debug.Log($"[TabSync] ModelWaitDone version={version} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
+                }
             }
             finally
             {
@@ -584,7 +636,8 @@ namespace Game.UI.Components.CharacterDetail
 
         public override void OnCancel()
         {
-            if (isClosing || currentOperation == DetailOperation.NavigatingToEquip)
+            if (isClosing || currentOperation == DetailOperation.NavigatingToEquip
+                          || currentOperation == DetailOperation.SwitchingTab)
                 return;
 
             CloseWithTransition().Forget();
@@ -759,6 +812,8 @@ namespace Game.UI.Components.CharacterDetail
             isClosing = true;
             ++operationVersion;
             currentOperation = DetailOperation.None;
+            SetTabTransitionBlocked(false);
+            SetResultInputBlocked(false);
             CancelEquipEnhanceTransition();
             ModelViewer.Instance.CancelPendingPreviewLoad();
             ModelViewer.Instance.StopStarFieldParticles();
@@ -778,11 +833,20 @@ namespace Game.UI.Components.CharacterDetail
             isClosing = true;
             ++operationVersion;
             currentOperation = DetailOperation.None;
+            SetTabTransitionBlocked(false);
+            SetResultInputBlocked(false);
             CancelEquipEnhanceTransition();
             base.OnRelease();
             characterDisposable.Dispose();
             disposable.Dispose();
             
+        }
+
+        void OnApplicationQuit()
+        {
+            // Cancelling panel tweens can resume pending page tasks during shutdown.
+            isClosing = true;
+            ++operationVersion;
         }
     }
 }

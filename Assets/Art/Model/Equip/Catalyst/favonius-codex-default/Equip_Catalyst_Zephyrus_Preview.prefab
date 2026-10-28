@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 424376413128708612}
+  - component: {fileID: 920251025000000001}
   m_Layer: 0
   m_Name: Equip_Catalyst_Zephyrus_Preview
   m_TagString: Untagged
@@ -16,6 +17,27 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &920251025000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8958945450077506963}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fdc93a504ce94e58b315b9b5fcd6817a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  heldPose:
+  - bone: {fileID: 920251025000000011}
+    localEulerAngles: {x: 0, y: 0, z: 70}
+  - bone: {fileID: 920251025000000012}
+    localEulerAngles: {x: 0, y: 0, z: -70}
+  - bone: {fileID: 920251025000000013}
+    localEulerAngles: {x: 0, y: 0, z: 110}
+  - bone: {fileID: 920251025000000014}
+    localEulerAngles: {x: 0, y: 0, z: 140}
 --- !u!4 &424376413128708612
 Transform:
   m_ObjectHideFlags: 0
@@ -92,5 +114,25 @@ PrefabInstance:
 --- !u!4 &940157139241809970 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 77442db2eac63aa4d9bb08f76d6df7ad, type: 3}
+  m_PrefabInstance: {fileID: 758472337945485273}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &920251025000000011 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8280801110382640512, guid: 77442db2eac63aa4d9bb08f76d6df7ad, type: 3}
+  m_PrefabInstance: {fileID: 758472337945485273}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &920251025000000012 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 7615793545518412905, guid: 77442db2eac63aa4d9bb08f76d6df7ad, type: 3}
+  m_PrefabInstance: {fileID: 758472337945485273}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &920251025000000013 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -4842786830228115598, guid: 77442db2eac63aa4d9bb08f76d6df7ad, type: 3}
+  m_PrefabInstance: {fileID: 758472337945485273}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &920251025000000014 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -2013911153040892717, guid: 77442db2eac63aa4d9bb08f76d6df7ad, type: 3}
   m_PrefabInstance: {fileID: 758472337945485273}
   m_PrefabAsset: {fileID: 0}

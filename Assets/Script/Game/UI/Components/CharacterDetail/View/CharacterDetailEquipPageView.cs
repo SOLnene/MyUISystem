@@ -99,7 +99,15 @@ public class CharacterDetailEquipPageView : MonoBehaviour
         }
 
         if (nameText != null) nameText.text = weapon.name.Value;
-        //if (typeText != null) typeText.text = weapon.Model.Category.ToString();
+        typeText.text = weapon.Model.EquipDefinition.weaponType switch
+        {
+            "Sword" => "单手剑",
+            "Claymore" => "双手剑",
+            "Polearm" => "长柄武器",
+            "Bow" => "弓",
+            "Catalyst" => "法器",
+            _ => string.Empty
+        };
         if (firstStatValueText != null) firstStatValueText.text = weapon.Model.GetDisplayMainStatText();
         if (secondStatValueText != null) secondStatValueText.text = weapon.Model.GetDisplaySubStatText();
         if (levelText != null) levelText.text = $"Lv.{weapon.level.Value}";

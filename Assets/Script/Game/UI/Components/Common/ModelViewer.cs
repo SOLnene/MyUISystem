@@ -655,12 +655,18 @@ public class ModelViewer : SingletonMono<ModelViewer>
     void MarkCameraTransitionComplete()
     {
         cameraTransitionPending = false;
+#if UNITY_EDITOR
+        Debug.Log($"[TabSync] CameraDone preset={currentPresetIndex} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
         TryCompleteTransition();
     }
 
     void MarkAnimationTransitionComplete()
     {
         animationTransitionPending = false;
+#if UNITY_EDITOR
+        Debug.Log($"[TabSync] AnimationDone preset={currentPresetIndex} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
         TryCompleteTransition();
     }
 
@@ -679,6 +685,9 @@ public class ModelViewer : SingletonMono<ModelViewer>
 
         isInTransition = false;
         canDrag = transitionAllowDrag;
+#if UNITY_EDITOR
+        Debug.Log($"[TabSync] TransitionDone preset={currentPresetIndex} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
         OnPreviewTransitionCompleted?.Invoke();
     }
 

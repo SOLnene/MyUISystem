@@ -9,6 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 7790403765659724409}
+  - component: {fileID: 920251025000000001}
   m_Layer: 0
   m_Name: Equip_Catalyst_Fourwinds_Preview
   m_TagString: Untagged
@@ -16,6 +17,27 @@ GameObject:
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
   m_IsActive: 1
+--- !u!114 &920251025000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9014953943337953317}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fdc93a504ce94e58b315b9b5fcd6817a, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  heldPose:
+  - bone: {fileID: 920251025000000011}
+    localEulerAngles: {x: 0, y: 0, z: 70}
+  - bone: {fileID: 920251025000000012}
+    localEulerAngles: {x: 0, y: 0, z: -70}
+  - bone: {fileID: 920251025000000013}
+    localEulerAngles: {x: 0, y: 0, z: 110}
+  - bone: {fileID: 920251025000000014}
+    localEulerAngles: {x: 0, y: 0, z: 140}
 --- !u!4 &7790403765659724409
 Transform:
   m_ObjectHideFlags: 0
@@ -92,5 +114,25 @@ PrefabInstance:
 --- !u!4 &3824384928216696191 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: -8679921383154817045, guid: 48cf3a69f99a48f4693de1a9a75a269f, type: 3}
+  m_PrefabInstance: {fileID: 3645743789379396244}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &920251025000000011 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -2672033543177826855, guid: 48cf3a69f99a48f4693de1a9a75a269f, type: 3}
+  m_PrefabInstance: {fileID: 3645743789379396244}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &920251025000000012 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 4368353778895145079, guid: 48cf3a69f99a48f4693de1a9a75a269f, type: 3}
+  m_PrefabInstance: {fileID: 3645743789379396244}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &920251025000000013 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 5140719386228611990, guid: 48cf3a69f99a48f4693de1a9a75a269f, type: 3}
+  m_PrefabInstance: {fileID: 3645743789379396244}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &920251025000000014 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -8768302972067888035, guid: 48cf3a69f99a48f4693de1a9a75a269f, type: 3}
   m_PrefabInstance: {fileID: 3645743789379396244}
   m_PrefabAsset: {fileID: 0}

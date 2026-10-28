@@ -352,8 +352,13 @@ public sealed class CharacterPresentationController : MonoBehaviour
         {
             TransitionStep step = plan[i];
             if (Time.timeAsDouble - startedAt < step.StartAt)
+            {
+#if UNITY_EDITOR
+                Debug.Log($"[TabSync] ActorWait state={step.State} from={currentPhase} next={step.Phase} until={step.StartAt:F4} elapsed={Time.timeAsDouble - startedAt:F4} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
                 await UniTask.WaitUntil(() => Time.timeAsDouble - startedAt >= step.StartAt,
                     cancellationToken: cancellationToken);
+            }
             cancellationToken.ThrowIfCancellationRequested();
 
             transitionStage = step.Phase == PresentationPhase.Loop ? TransitionStage.BlendingIntoLoop
@@ -363,12 +368,18 @@ public sealed class CharacterPresentationController : MonoBehaviour
             // 以计划的绝对时间交接，帧误差不逐段累加；片段起点独立于混合权重。
             float blend = Mathf.Min(step.BlendDuration,
                 Mathf.Max(0f, step.StartAt + step.BlendDuration - (float)(Time.timeAsDouble - startedAt)));
+#if UNITY_EDITOR
+            Debug.Log($"[TabSync] ActorPlay state={step.State} phase={step.Phase} body={clips.body?.name} length={clips.body?.length:F4} start={step.ClipStartTime:F4} blend={blend:F4} elapsed={Time.timeAsDouble - startedAt:F4} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
             PlayPhase(clips.body, clips.auxiliary, clips.faceA, clips.faceB, clips.faceSource,
                 blend > 0f, blend, step.ClipStartTime, step.ClipStartTime,
                 holdAtEnd: step.Phase != PresentationPhase.Loop);
             if (blend > 0f)
             {
                 await animationController.WaitForLayeredBlendCompleteAsync(cancellationToken);
+#if UNITY_EDITOR
+                Debug.Log($"[TabSync] ActorBlendDone phase={step.Phase} elapsed={Time.timeAsDouble - startedAt:F4} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
                 // 只有表情资源时也必须等待其混合完成，不能依赖身体播放器的状态。
                 if (Time.timeAsDouble - startedAt < step.StartAt + step.BlendDuration)
                     await UniTask.WaitUntil(() => Time.timeAsDouble - startedAt >= step.StartAt + step.BlendDuration,

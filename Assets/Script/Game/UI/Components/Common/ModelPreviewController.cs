@@ -12,6 +12,10 @@ public sealed class ModelPreviewController : MonoBehaviour
     [SerializeField]
     Transform equipRoot;
 
+    // Animation-only preview scenes can omit automatic equipment rotation.
+    [SerializeField]
+    EquipPreviewRotator equipRotator;
+
     [SerializeField]
     ParticleSystem characterSwitchParticles;
 
@@ -79,6 +83,7 @@ public sealed class ModelPreviewController : MonoBehaviour
     ActivePreviewState activePreviewState = ActivePreviewState.DefaultCharacter;
     bool preserveCharacterOnNextEquipActivation;
     bool hasLoadFailed;
+    bool isDisposing;
     string weaponCharacterKey;
     string characterWeaponKey;
 
@@ -450,7 +455,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         {
             if (previewObject != null)
             {
-                ResourceManager.Instance.Recycle(previewObject);
+                ResourceManager.Instance.Recycle(previewObject, forceDestroy: isDisposing);
             }
 
             if (preparation.State == PreviewPreparationState.Loading)
@@ -602,7 +607,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         preparation.Completion.TrySetResult(null);
         if (preparation.PreviewObject != null)
         {
-            ResourceManager.Instance.Recycle(preparation.PreviewObject);
+            ResourceManager.Instance.Recycle(preparation.PreviewObject, forceDestroy: isDisposing);
             preparation.PreviewObject = null;
             return;
         }
@@ -712,6 +717,11 @@ public sealed class ModelPreviewController : MonoBehaviour
         else
         {
             characterPresentation.Unbind();
+            if (previewObject.TryGetComponent(out WeaponPreviewPose weaponPose))
+            {
+                weaponPose.ApplyStandalonePose();
+            }
+            equipRotator?.BindPreview(previewObject);
         }
 
         if (previousPreviewObject != null)
@@ -784,7 +794,7 @@ public sealed class ModelPreviewController : MonoBehaviour
             characterPresentation.Unbind();
         }
 
-        ResourceManager.Instance.Recycle(activePreviewObject);
+        ResourceManager.Instance.Recycle(activePreviewObject, forceDestroy: isDisposing);
         activePreviewObject = null;
         activePreviewDefinition = null;
     }
@@ -797,7 +807,7 @@ public sealed class ModelPreviewController : MonoBehaviour
             return;
         }
 
-        ResourceManager.Instance.Recycle(suspendedCharacterPreviewObject);
+        ResourceManager.Instance.Recycle(suspendedCharacterPreviewObject, forceDestroy: isDisposing);
         suspendedCharacterPreviewObject = null;
         suspendedCharacterPreviewDefinition = null;
     }
@@ -823,8 +833,16 @@ public sealed class ModelPreviewController : MonoBehaviour
         CancelCharacterSwitch();
     }
 
+    void OnApplicationQuit()
+    {
+        // Pool reparenting during teardown can rescue a model from its destroyed hierarchy.
+        isDisposing = true;
+        CancelPendingLoad();
+    }
+
     void OnDestroy()
     {
+        isDisposing = true;
         CancelCharacterSwitch();
         CancelPendingLoad();
         ReleaseSuspendedCharacter();
