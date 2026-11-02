@@ -13,6 +13,9 @@
     <InternalsVisibleTo Include="CloudSaveServer.Tests" />
     <Compile Remove="Tests/**/*.cs" />
     <Compile Include="../../Assets/Script/Game/Domain/Enhance/WeaponEnhanceRules.cs" Link="WeaponEnhanceRules.cs" />
+    <Compile Include="../../Assets/Script/Game/Domain/Enhance/WeaponRefineRules.cs" Link="WeaponRefineRules.cs" />
+    <Compile Include="../../Assets/Script/Game/Domain/Enhance/CharacterEnhanceRules.cs" Link="CharacterEnhanceRules.cs" />
+    <Compile Include="../../Assets/Script/Game/Domain/Promote/PromotionRules.cs" Link="PromotionRules.cs" />
     <Content Remove="Tests/**;out/**;data/**" />
     <None Remove="Tests/**;out/**;data/**" />
   </ItemGroup>

@@ -39,9 +39,13 @@ internal static partial class Program
             await ValidateGacha(Path.Combine(runRoot, "gacha"));
             await ValidateCharacterEvents(Path.Combine(runRoot, "character-events"));
             await ValidateAccounts(Path.Combine(runRoot, "accounts"));
+            await ValidateSocial(Path.Combine(runRoot, "social"));
             await ValidateDraws(Path.Combine(runRoot, "draws"));
             await ValidateStore(Path.Combine(runRoot, "store"));
             await ValidateWeaponEnhancement(Path.Combine(runRoot, "weapon-enhance"));
+            await ValidateWeaponRefinement(Path.Combine(runRoot, "weapon-refine"));
+            await ValidateCharacterEnhancement(Path.Combine(runRoot, "character-enhance"));
+            await ValidatePromotion(Path.Combine(runRoot, "promote"));
             if (args.Contains("--live-auth")) await ValidateUnity(Path.Combine(runRoot, "live.db"));
             Console.WriteLine($"PASS: {passed} checks. Test databases: {runRoot}");
             return 0;

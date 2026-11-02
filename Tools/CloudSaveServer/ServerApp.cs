@@ -31,6 +31,13 @@ internal static class ServerApp
         });
         builder.Services.AddSingleton(settings);
         builder.Services.AddSingleton<SaveStore>();
+        builder.Services.AddSingleton<SocialStore>();
+        builder.Services.AddSingleton(new PromoteConfigStore(
+            builder.Configuration["PromoteConfigRoot"] ?? builder.Environment.ContentRootPath));
+        builder.Services.AddSingleton(new CharacterEnhanceConfigStore(
+            builder.Configuration["CharacterEnhanceConfigRoot"] ?? builder.Environment.ContentRootPath));
+        builder.Services.AddSingleton(new WeaponRefineConfigStore(
+            builder.Configuration["WeaponRefineConfigRoot"] ?? builder.Environment.ContentRootPath));
         builder.Services.AddSingleton(new WeaponEnhanceConfigStore(
             builder.Configuration["WeaponEnhanceConfigRoot"] ?? builder.Environment.ContentRootPath));
         builder.Services.AddSingleton(new StoreConfigStore(
@@ -64,6 +71,7 @@ internal static class ServerApp
         var app = builder.Build();
         app.Services.GetRequiredService<SaveStore>().Initialize();
         app.Services.GetRequiredService<AccountStore>().Initialize();
+        app.Services.GetRequiredService<SocialStore>().Initialize();
         app.UseExceptionHandler(handler => handler.Run(async context =>
         {
             var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
@@ -97,6 +105,7 @@ internal static class ServerApp
         app.UseRateLimiter();
         app.MapGet("/health", () => Results.Ok(new { status = "ok" }));
         LocalAccountAuthentication.MapEndpoints(app);
+        SocialEndpoints.Map(app);
         app.MapGet("/v1/gacha/config", async (HttpContext context, GachaConfigStore config,
             ILogger<GachaConfigStore> logger) =>
         {
@@ -115,6 +124,9 @@ internal static class ServerApp
         GachaEndpoints.Map(app);
         StoreEndpoints.Map(app);
         WeaponEnhanceEndpoints.Map(app);
+        WeaponRefineEndpoints.Map(app);
+        CharacterEnhanceEndpoints.Map(app);
+        PromoteEndpoints.Map(app);
         var saves = app.MapGroup("/v1/save").RequireAuthorization().RequireRateLimiting("saves");
         saves.MapGet("", (HttpContext context, SaveStore store) =>
         {
