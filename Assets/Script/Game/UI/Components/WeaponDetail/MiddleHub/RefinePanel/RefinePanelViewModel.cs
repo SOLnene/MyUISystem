@@ -19,6 +19,10 @@ public class RefinePanelViewModel : IDisposable
     static int maxConsume = 4;
     
     MaterialSelectService selectService;
+    internal long[] SelectedMaterialIds => selectService.SelectedItems.Select(item => item.InstanceId).ToArray();
+
+    bool CanSelectMaterial(InventoryItem item) => GameSaveCoordinator.CanConsumeForRefinement(item, equipItem.Value.Model) &&
+        GameContext.Instance.InventoryRepository.TryGetEquip(item.InstanceId, out var owned) && ReferenceEquals(owned, item);
     
     public RefinePanelViewModel(ReactiveProperty<EquipItemViewModel> viewModel)
     {
@@ -54,7 +58,7 @@ public class RefinePanelViewModel : IDisposable
         var allItems = GameContext.Instance.InventoryRepository.GetAllItems();
     
         // 根据当前筛选星数过滤
-        var filter = new ItemFilter(ItemCategory.Equip, (int)ItemRarity.Max,equipItem.Value.Model.Id);
+        var filter = new ItemFilter(ItemCategory.Equip, (int)ItemRarity.Max,equipItem.Value.Model.Id, CanSelectMaterial);
         var filteredItems = allItems.Where(item => filter.Match(item));
     
         foreach (var item in filteredItems)
@@ -80,7 +84,7 @@ public class RefinePanelViewModel : IDisposable
 
         int index = slotViewModels.IndexOf(viewModel);
         Debug.Log(index);
-        MaterialSelectParams materialSelectParams = new MaterialSelectParams(index,new ItemFilter(ItemCategory.Equip,(int)ItemRarity.Max,equipItem.Value.Model.Id),
+        MaterialSelectParams materialSelectParams = new MaterialSelectParams(index,new ItemFilter(ItemCategory.Equip,(int)ItemRarity.Max,equipItem.Value.Model.Id, CanSelectMaterial),
             GetAvailableRefineCount(),selectService);
         requestOpenItemSelectPanel.OnNext(materialSelectParams);
     }
@@ -91,18 +95,27 @@ public class RefinePanelViewModel : IDisposable
             return false;
 
         var model = equipItem.Value.Model;
-        return model.RefinementLevel < model.GetRefineCap();
+        return model.RefinementLevel < model.GetRefineCap() && selectService.SelectedItems.Count <= GetAvailableRefineCount()
+            && selectService.SelectedItems.All(CanSelectMaterial);
     }
 
     public void ApplyRefine()
     {
+        if (!CanApplyRefine()) return;
+        var materials = selectService.SelectedItems.ToArray();
         int refineCount = GetSelectedRefineCount();
 
         for (int i = 0; i < refineCount; i++)
         {
             equipItem.Value.Refine();
+            GameContext.Instance.InventoryRepository.RemoveItem(materials[i]);
         }
 
+        ClearSelectedMaterials();
+    }
+
+    internal void ClearSelectedMaterials()
+    {
         selectService.Clear();
         previewCost.Value = 0;
     }
@@ -125,7 +138,7 @@ public class RefinePanelViewModel : IDisposable
             return 0;
 
         var model = equipItem.Value.Model;
-        return Mathf.Max(0, model.GetRefineCap() - model.RefinementLevel);
+        return Mathf.Clamp(model.GetRefineCap() - model.RefinementLevel, 0, model.RefineMaterialLimit);
     }
 
     bool HasReachedRefineMaterialLimit()

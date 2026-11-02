@@ -219,7 +219,7 @@ public class FlowManager : SingletonMono<FlowManager>
             }
             cancellationToken.ThrowIfCancellationRequested();
             cloud.IsReady = true;
-            GameStartupData.StartForCloud(cloud, this.GetCancellationTokenOnDestroy());
+            await GameStartupData.StartForCloud(cloud, this.GetCancellationTokenOnDestroy()).PreloadAsync();
             var closed = new UniTaskCompletionSource();
             UIManager.Instance.Close(UIType.LoginView, () =>
             {

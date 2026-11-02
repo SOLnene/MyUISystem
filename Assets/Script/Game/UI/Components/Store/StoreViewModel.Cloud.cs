@@ -29,7 +29,7 @@ public partial class StoreViewModel
 
     internal async UniTask PurchaseAsync(int id, int count, CancellationToken cancellationToken)
     {
-        if (UsesCloud)
+        if (UsesCloud && CloudGameSaveSession.UsesServerSettlement)
         {
             await purchaseService.PurchaseCloudAsync(id, count, cancellationToken);
             foreach (var item in allItemViewModels) item.RefreshPurchasePreview();

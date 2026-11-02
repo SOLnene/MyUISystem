@@ -6,6 +6,9 @@ class StorePurchaseRepository
 {
     readonly Dictionary<int, StorePurchaseRecord> records = new();
     readonly Subject<int> changed = new();
+    Func<string> periodKey;
+
+    internal void BindPeriod(Func<string> currentPeriod) => periodKey = currentPeriod;
 
     public IObservable<int> Changed => changed;
 
@@ -69,7 +72,7 @@ class StorePurchaseRepository
 
     StorePurchaseRecord GetTodayRecord(int storeItemId)
     {
-        string periodKey = DateTime.Now.ToString("yyyy-MM-dd");
+        string periodKey = this.periodKey?.Invoke() ?? DateTime.Now.ToString("yyyy-MM-dd");
         if (!records.TryGetValue(storeItemId, out StorePurchaseRecord record))
         {
             record = new StorePurchaseRecord(periodKey);

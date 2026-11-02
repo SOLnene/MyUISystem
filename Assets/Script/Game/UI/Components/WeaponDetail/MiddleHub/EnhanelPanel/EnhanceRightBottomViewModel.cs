@@ -2,6 +2,7 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
+using Game.Domain.Enhance;
 using UnityEngine;
 using UniRx;
 
@@ -15,8 +16,10 @@ public class EnhanceRightBottomViewModel: IDisposable
     
     public readonly int maxConsume = 40;
 
-    public List<int> availabelLevels = new List<int>(){1,2,3};
-    int starLimit = 1;
+    public List<int> availabelLevels = new List<int>(){3,4,5};
+    int starLimit = 3;
+    internal int FilterStarLimit => starLimit;
+    internal readonly ReactiveProperty<int> providedExp = new();
     
     readonly MaterialSelectService selectService;
     internal long[] SelectedMaterialIds => selectService.SelectedItems.Select(i => i.InstanceId).ToArray();
@@ -168,8 +171,13 @@ public class EnhanceRightBottomViewModel: IDisposable
         currentConsume.Value = selectService.SelectedItems.Count;
         int total = 0;
         foreach (var equip in selectService.SelectedItems.OfType<EquipItem>()) total = checked(total + equip.GetExpValue());
-        var preview = vm.Value.Model.GetPreviewWithExp(total);
-        totalExp.Value = preview.maxGainExp; totalGoldCost.Value = preview.costGold;
+        providedExp.Value = total;
+    }
+
+    internal void ApplyPreview(EnhancementPreviewData preview)
+    {
+        // Preserve the existing public projections; only raw material EXP drives the parent calculation.
+        totalExp.Value = preview.AcceptedExp; totalGoldCost.Value = preview.GoldCost;
     }
 
     public void ClearSelectedMaterials()

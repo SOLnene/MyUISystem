@@ -142,6 +142,24 @@ public class InventoryRepository
         return null;
     }
 
+    internal void ApplyStackCount(int itemId, int count)
+    {
+        if (count < 0) throw new ArgumentOutOfRangeException(nameof(count));
+        var item = FindStackItem(itemId);
+        if (item is not MaterialItem material || !itemStacks.TryGetValue(itemId, out var stack))
+        {
+            if (count == 0 && item == null) return;
+            throw new InvalidOperationException("Cannot reconcile a missing material stack.");
+        }
+        if (count == 0) { RemoveItem(material); return; }
+        // Update both stored quantity and the existing display item before notifying observers.
+        stack.ApplyCount(count);
+        int delta = count - material.Count;
+        if (delta > 0) material.Add(delta);
+        else if (delta < 0) material.Use(-delta);
+        changed.OnNext(new InventoryChangedEvent(InventoryChangeType.StackChanged, material, stack));
+    }
+
     public void RemoveItem(InventoryItem inventoryItem)
     {
         ClearUnseen(inventoryItem);

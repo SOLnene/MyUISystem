@@ -11,6 +11,7 @@ internal sealed class GameStartupData
 {
     internal static GameStartupData Current { get; private set; }
     internal StartupDataEntry<GachaConfigSnapshot> Gacha { get; private set; }
+    internal StartupDataEntry<CloudStoreSnapshot> Store { get; private set; }
     readonly CloudGameSaveSession cloud;
     readonly CancellationTokenSource lifetime;
     readonly Dictionary<string, Func<UniTask>> preloaders = new Dictionary<string, Func<UniTask>>(StringComparer.Ordinal);
@@ -56,13 +57,14 @@ internal sealed class GameStartupData
     {
         // Register future startup data here; each entry retains its own cache and deduplicates concurrent callers.
         Gacha = Register("gacha-configuration",
-            token => CloudSaveHttpClient.Default.LoadGachaConfigAsync(cloud.PlayerId, token),
+            token => cloud.LoadClientGachaConfigAsync(token),
             snapshot =>
             {
                 // Cache DTOs rather than ScriptableObjects owned/disposed by a particular GachaService.
                 using var checkedConfiguration = RemoteGachaConfiguration.Create(snapshot,
                     GameDatabase.GachaPoolUIConfigDatabase, GameDatabase.CharacterDatabase, GameDatabase.ItemDatabase);
-            }, snapshot => snapshot.GetCacheLifetime());
+            });
+        Store = Register("store-configuration", cloud.LoadStoreAsync, snapshot => snapshot.Validate());
     }
 
     internal StartupDataEntry<T> Register<T>(string key, Func<CancellationToken, UniTask<T>> loader,
@@ -72,7 +74,7 @@ internal sealed class GameStartupData
         if (string.IsNullOrEmpty(key) || preloaders.ContainsKey(key))
             throw new ArgumentException("Startup data key is empty or already registered.", nameof(key));
         var entry = new StartupDataEntry<T>(loader, validate, lifetime.Token, RequireCurrentSession, cacheLifetime);
-        preloaders.Add(key, async () => { await entry.RefreshAsync(CancellationToken.None); });
+        preloaders.Add(key, async () => { await entry.GetAsync(CancellationToken.None); });
         return entry;
     }
 

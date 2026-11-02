@@ -74,7 +74,9 @@ internal sealed partial class CloudGameSaveSession
         session.RequireOwner();
         await session.RecoverGachaAsync(cancellationToken);
         await session.RecoverStoreAsync(cancellationToken);
-        await session.RecoverEnhancementAsync(cancellationToken);
+        await session.RecoverProgressionAsync(cancellationToken);
+        await session.RestoreClientSaveAsync(cancellationToken);
+        await session.LoadClientRulesAsync(cancellationToken);
         return session;
     }
 
@@ -82,17 +84,18 @@ internal sealed partial class CloudGameSaveSession
     {
         RequireOwner();
         RequireNoPendingStore();
-        RequireNoPendingEnhance();
+        RequireNoPendingProgression();
         if (HasConflict)
             throw new InvalidOperationException("云存档已被其他设备更新，请重新启动并登录。");
         if (HasPendingGacha)
             throw new InvalidOperationException("抽卡结果尚未确认，请先恢复抽卡结果再保存。");
         pendingJson = json;
+        PersistClientSave();
     }
 
     internal async UniTask SavePendingAsync(CancellationToken cancellationToken = default)
     {
-        RequireNoPendingEnhance();
+        RequireNoPendingProgression();
         RequireNoPendingStore();
         if (IsSaving)
             throw new InvalidOperationException("已有云存档上传正在执行。");
@@ -110,6 +113,7 @@ internal sealed partial class CloudGameSaveSession
         string snapshot = inFlightRequest.saveJson;
         try
         {
+            PersistClientSave();
             // 首次创建用版本 0；创建与更新均由服务端事务检查，重试沿用原请求。
             var receipt = await client.SaveAsync(PlayerId, inFlightRequest, cancellationToken);
             cancellationToken.ThrowIfCancellationRequested();
@@ -120,6 +124,7 @@ internal sealed partial class CloudGameSaveSession
             // 上传期间的新快照必须保留，不能被旧响应清掉。
             if (pendingJson == snapshot)
                 pendingJson = null;
+            PersistClientSave();
         }
         catch (CloudSaveServerException exception) when (exception.StatusCode == 409)
         {

@@ -102,6 +102,8 @@ public class ItemStack
         Count = Mathf.Max(0, count);
     }
 
+    internal void ApplyCount(int count) => Count = count;
+
     public void Add(int amount)
     {
         if (amount <= 0)

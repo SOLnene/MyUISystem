@@ -244,7 +244,7 @@ public partial class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public int GetPromoteGoldCost()
     {
-        return GrowthCostFormula.GetPromoteGoldCost(RankSystem.CurrentRank, (int)ItemRarity + 1);
+        return PromotionParticipant.For(this).GoldCost;
     }
 
     public bool TryRefine()
@@ -259,6 +259,7 @@ public partial class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public int GetRefineCost(int currentLevel)
     {
+        if (RefineRules != null) return RefineRules.Cost(Id, currentLevel);
         int star = Mathf.Max(1, Stars);
         int baseCost = 500 * star * star;
         float exponent = 1.15f;
@@ -267,6 +268,7 @@ public partial class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public int GetRefineCap()
     {
+        if (RefineRules != null) return RefineRules.RefinementCap;
         //默认为5
         return 5;
     }
@@ -278,8 +280,13 @@ public partial class EquipItem : InventoryItem, IEnhanceable, IPromotable
     
     public EquipPreview GetPreviewWithExp(int addedExp, bool promoting = false)
     {
-        int maxLevel = GetCurrentMaxLevel();
         var levelPreview = PreviewEnhancement(addedExp);
+        return BuildEquipPreview(levelPreview, promoting);
+    }
+
+    internal EquipPreview BuildEquipPreview(LevelPreview levelPreview, bool promoting = false)
+    {
+        int maxLevel = GetCurrentMaxLevel();
         int previewRank = promoting && !RankSystem.IsMaxRank()
             ? RankSystem.CurrentRank + 1
             : RankSystem.CurrentRank;
@@ -304,6 +311,11 @@ public partial class EquipItem : InventoryItem, IEnhanceable, IPromotable
     public List<StatPreviewData> GetStatPreview(int addedExp,bool promoting = false)
     {
         var preview = GetPreviewWithExp(addedExp, promoting);
+        return BuildStatPreview(preview);
+    }
+
+    internal List<StatPreviewData> BuildStatPreview(EquipPreview preview)
+    {
         return new List<StatPreviewData>
         {
             new StatPreviewData

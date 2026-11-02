@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using Game.Domain.Character;
 using UniRx;
 using UnityEngine;
@@ -15,6 +16,7 @@ namespace Game.UI.Components.CharacterDetail
     public class CharacterPromoteViewmodel : IDisposable
     {
         public readonly IPromotable model;
+        internal readonly PromotionActionViewModel promotion;
 
         // 阶级与等级显示
         public ReadOnlyReactiveProperty<int> rank;
@@ -43,14 +45,14 @@ namespace Game.UI.Components.CharacterDetail
             
             currentLevelText = model.RankRP.Select(_ =>
                 {
-                    var currentCap = model.RankSystem.GetCurrentRankMaxLevel();
+                    var currentCap = GetCurrentLevel();
                     return $"等级{currentCap}/{currentCap}";
                 })
                 .ToReadOnlyReactiveProperty().AddTo(disposable);
 
             nextLevelCapText = model.RankRP.Select(_ =>
             {
-                var nextCap = model.RankSystem.GetNextRankMaxLevel();
+                var nextCap = PromotionParticipant.For((IEnhanceable)model).NextLevelCap;
                 return $"等级上限开放至{nextCap}级";
             }).ToReadOnlyReactiveProperty().AddTo(disposable);
 
@@ -77,10 +79,14 @@ namespace Game.UI.Components.CharacterDetail
             itemSlotViewModels = new List<ItemSlotViewModel>();
             //现在只有一个rule，先写死
             CreateMaterialVMs(rank.Value);
+            promotion = new PromotionActionViewModel(PromotionParticipant.For((IEnhanceable)model));
+            promotion.PlayResult.Subscribe(requestPlayPromoteResult.OnNext).AddTo(disposable);
         }
 
         public void UpdatePreview(int exp,bool promoting)
         {
+            // Keep this operation's before/after attributes while its predicted rank is awaiting confirmation.
+            if (promotion?.Pending == true) return;
             var previews = model.GetStatPreview(exp,promoting);
 
             for (int i = 0; i < previews.Count; i++)
@@ -92,26 +98,9 @@ namespace Game.UI.Components.CharacterDetail
         
         void CreateMaterialVMs(int currentRank)
         {
+            foreach (var slot in itemSlotViewModels) slot.Dispose();
             itemSlotViewModels.Clear();
-
-            var promoteDefinition = GameDatabase.PromoteDatabase.Get("hutao");
-            
-            if (currentRank >= promoteDefinition.rankRules.Count)
-                return;
-
-            var materials = promoteDefinition.rankRules[currentRank].materials;
-
-            foreach (var cost in materials)
-            {
-                MaterialItem item = ItemFactory.CreateItem(cost.materialKey) as MaterialItem;
-                if(item == null)
-                {
-                    return;
-                }
-                item.SetNeeded(cost.count);
-                var itemSlotVm = new ItemSlotViewModel(item);
-                itemSlotViewModels.Add(itemSlotVm);
-            }
+            itemSlotViewModels.AddRange(PromotionActionViewModel.CreateMaterialSlots((IEnhanceable)model));
         }
 
         public void RefreshMaterialVMs()
@@ -121,10 +110,12 @@ namespace Game.UI.Components.CharacterDetail
         
         public bool Promote()
         {
+            if (PromotionParticipant.IsCloud) { promotion.SubmitAsync().Forget(); return false; }
+            if (GameSaveCoordinator.Instance.PromoteSending.Value) return false;
             int oldRank = model.RankRP.Value;
             int oldMaxLevel = model.GetCurrentMaxLevel();
             int currentLevel = GetCurrentLevel();
-            if (model.Promote())
+            if (ClientProgressionService.TryPromote(PromotionParticipant.For((IEnhanceable)model)))
             {
                 int newRank = model.RankRP.Value;
                 int newMaxLevel = model.GetCurrentMaxLevel();
@@ -155,6 +146,7 @@ namespace Game.UI.Components.CharacterDetail
         
         public void Dispose()
         {
+            promotion.Dispose();
             disposable.Dispose();
         }
     }

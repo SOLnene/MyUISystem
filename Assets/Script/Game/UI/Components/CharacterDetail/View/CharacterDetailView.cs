@@ -101,6 +101,8 @@ namespace Game.UI.Components.CharacterDetail
         bool CanStartPresentationChange =>
             !isClosing
             && currentOperation == DetailOperation.None
+            && !(vm?.enhanceViewmodel?.enhancementBusy.Value ?? false)
+            && !(vm?.promoteViewmodel?.promotion.Busy.Value ?? false)
             && (ModelViewer.Instance == null || !ModelViewer.Instance.IsInTransition);
 
         int BeginOperation(DetailOperation operation)
@@ -121,14 +123,16 @@ namespace Game.UI.Components.CharacterDetail
                 currentOperation = DetailOperation.None;
                 SetTabTransitionBlocked(false);
                 SetResultInputBlocked(false);
+                SyncCharacterEnhancementDisplay();
             }
         }
 
         void SetResultInputBlocked(bool blocked)
         {
+            bool processing = !isClosing && ((vm?.enhanceViewmodel?.enhancementBusy.Value ?? false) || (vm?.promoteViewmodel?.promotion.Busy.Value ?? false));
             // Result visuals may return to normal before the flow ends; only the page releases input.
             for (int i = 0; i < resultInputGroups.Length; i++)
-                resultInputGroups[i].interactable = !blocked;
+                resultInputGroups[i].interactable = !blocked && !processing;
         }
 
         void SetTabTransitionBlocked(bool blocked)
@@ -225,6 +229,7 @@ namespace Game.UI.Components.CharacterDetail
             enhancePanelView.Bind(vm.enhanceViewmodel);
             promotePanelView.Bind(vm.promoteViewmodel);
             BackToDetailMainViewImmediate();
+            BindCharacterEnhancementState();
             // 初始化时先决定显示哪个面板
             //RefreshUpgradeOrPromotePanel();
 
@@ -312,7 +317,7 @@ namespace Game.UI.Components.CharacterDetail
             // 规则：小于当前 rank 最大等级 -> 升级；达到/超过 -> 突破
             int level = vm.model.LevelRP.Value;
             int maxLevel = vm.model.GetCurrentMaxLevel();
-            bool showUpgrade = level < maxLevel;
+            bool showUpgrade = (level < maxLevel || vm.enhanceViewmodel.HasPendingEnhancement) && !vm.promoteViewmodel.promotion.Pending;
 
             if (showUpgrade)
             {
@@ -339,6 +344,8 @@ namespace Game.UI.Components.CharacterDetail
 
         void BackToDetailMainView()
         {
+            if (currentOperation == DetailOperation.PlayingResult || vm.enhanceViewmodel.enhancementBusy.Value) return;
+            if (vm.promoteViewmodel.promotion.Busy.Value) return;
             BackToDetailMainViewAsync(false).Forget();
             Debug.Log("返回角色详情主界面");
         }
@@ -489,6 +496,13 @@ namespace Game.UI.Components.CharacterDetail
                 promotePanelView.ShowPromoteProcessing();
 
                 Action onNewStateShown = () => promotePanelView.ShowPromoteResultText("突破成功");
+                var showConfirmedResult = onNewStateShown;
+                onNewStateShown = () =>
+                {
+                    if (vm.promoteViewmodel.promotion.HoldTargetView) promotePanelView.ShowPromoteProcessing();
+                    else if (vm.model.RankRP.Value != result.newRank) promotePanelView.ShowPromoteNormal(false);
+                    else showConfirmedResult();
+                };
 
                 await promotePanelView.PlayPromoteResult(result, () =>
                 {
@@ -497,7 +511,7 @@ namespace Game.UI.Components.CharacterDetail
                 });
                 if (isClosing || version != operationVersion)
                     return;
-                await RefreshUpgradeOrPromotePanelAsync(false);
+                if (!vm.promoteViewmodel.promotion.HoldTargetView) await RefreshUpgradeOrPromotePanelAsync(false);
             }
             finally
             {
@@ -637,6 +651,9 @@ namespace Game.UI.Components.CharacterDetail
         public override void OnCancel()
         {
             if (isClosing || currentOperation == DetailOperation.NavigatingToEquip
+                          || (vm?.enhanceViewmodel?.enhancementBusy.Value ?? false)
+                          || (vm?.promoteViewmodel?.promotion.Busy.Value ?? false)
+                          || currentOperation == DetailOperation.PlayingResult
                           || currentOperation == DetailOperation.SwitchingTab)
                 return;
 

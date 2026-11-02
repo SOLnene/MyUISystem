@@ -1,6 +1,8 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using Game.Domain.Character;
+using Game.Domain.Enhance;
 using UniRx;
 using UnityEngine;
 
@@ -23,48 +25,36 @@ public class EnhanceLevelPreviewViewModel
     CompositeDisposable disposable = new CompositeDisposable();
     
     public EnhanceLevelPreviewViewModel(IEnhanceable model,IReadOnlyReactiveProperty<int> previewExp)
+        : this(EnhancementPreviewCalculator.Observe(model, previewExp))
+    { }
+
+    internal EnhanceLevelPreviewViewModel(IObservable<EnhancementPreviewData> preview)
     {
-        levelText = model.LevelRP
-            .Select(l => $"Lv.{l}")
+        var previewData = preview.Replay(1).RefCount();
+        levelText = previewData
+            .Select(data => $"Lv.{data.CurrentLevel}")
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
         //todo:先这样写，之后可能要改成发一个levelstruct而不是两个信号
-        expText = model.LevelRP
-            .CombineLatest(model.ExpRP,
-                (level, exp) =>
-                {
-                    int max = RequiredExp(model);
-                    exp = model.LevelSystem.CurrentExp;
-                    Debug.Log($"currentlevel:{level}currentexp:{exp}");
-                    return $"{exp}/{max}";
-                })
+        expText = previewData
+            .Select(data => $"{data.CurrentExp}/{data.CurrentRequiredExp}")
             .DistinctUntilChanged()
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
         
-        expProgress = model.LevelRP
-            .CombineLatest(model.ExpRP,
-                (level, exp) =>
-                {
-                    int max = RequiredExp(model);
-                    return (float)model.LevelSystem.CurrentExp / max;
-                })
+        expProgress = previewData
+            .Select(data => (float)data.CurrentExp / data.CurrentRequiredExp)
             .DistinctUntilChanged()
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
         
-        var previewData = previewExp
-            .Select(addedExp => model is EquipItem weapon ? weapon.PreviewEnhancement(addedExp) :
-                model.LevelSystem.GetPreviewWithExp(addedExp, model.GetCurrentMaxLevel()))
-            .Share();
-
-        expPlusAmountText = previewExp
-            .Select(exp => $"+{exp}")
+        expPlusAmountText = previewData
+            .Select(data => $"+{data.DisplayExp}")
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
         
         levelUpCount = previewData
-            .Select(data => data.levelUpCount)
+            .Select(data => data.Level.levelUpCount)
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
         
@@ -73,23 +63,15 @@ public class EnhanceLevelPreviewViewModel
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
 
-        previewProgress = Observable
-            .CombineLatest(
-                model.LevelRP,
-                model.ExpRP,
-                previewExp,
-                (level, exp, added) =>
-                {
-                    int max = RequiredExp(model);
-                    return (float)(model.LevelSystem.CurrentExp + added) / max;
-                })
+        previewProgress = previewData
+            .Select(data => (float)(data.CurrentExp + data.DisplayExp) / data.CurrentRequiredExp)
             .DistinctUntilChanged()
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
         
         // 判断当前添加经验是否大于0
-        isExpAdding = previewExp
-            .Select(addedExp => addedExp > 0)
+        isExpAdding = previewData
+            .Select(data => data.DisplayExp > 0)
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
 
@@ -99,9 +81,6 @@ public class EnhanceLevelPreviewViewModel
             .ToReadOnlyReactiveProperty()
             .AddTo(disposable);
     }
-
-    static int RequiredExp(IEnhanceable model) => model is EquipItem weapon
-        ? weapon.EnhanceExpRequired(weapon.Level) : model.LevelSystem.GetExpRequired();
 
     public void Dispose()
     {

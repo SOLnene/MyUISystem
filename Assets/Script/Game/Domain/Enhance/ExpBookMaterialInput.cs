@@ -1,6 +1,7 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using Game.Domain.Enhance;
 using UniRx;
 using UnityEngine;
 
@@ -13,6 +14,15 @@ public enum ExpBookType{
 
 public class ExpBookMaterialInput : IMaterialInput
 {
+    Func<string, int> availableCount;
+    internal int AvailableCount(string key) => availableCount?.Invoke(key) ?? int.MaxValue;
+    internal void BindInventory(Func<string, int> available) => availableCount = available;
+    internal void RefreshSelectionRules()
+    {
+        foreach (var pair in Counts)
+            pair.Value.SetValueAndForceNotify(Math.Min(pair.Value.Value, AvailableCount(pair.Key)));
+    }
+
     public  Dictionary<string, ReactiveProperty<int>> Counts { get; }
 
     public IReadOnlyReactiveProperty<int> TotalExpRp { get; }
@@ -36,18 +46,12 @@ public class ExpBookMaterialInput : IMaterialInput
     
     public int GetBookExp(string key)
     {
-        switch(key)
-                {
-                    case "expbook_small": return 100;
-                    case "expbook_medium": return 500;
-                    case "expbook_large": return 2500;
-                    default: return 0;
-                }
+        return ExpBookRules.Experience(key);
     }
     
     public int GetBookCost(string key)
     {
-        return GrowthCostFormula.GetEnhanceGoldCost(GetBookExp(key));
+        return ExpBookRules.GoldCost(key);
     }
 
     public int GetTotalExp()
@@ -72,7 +76,9 @@ public class ExpBookMaterialInput : IMaterialInput
     
     public void Add(string key, int amount = 1)
     {
-        Counts[key].Value += amount;
+        if (amount <= 0) return;
+        int room = Math.Max(0, AvailableCount(key) - Counts[key].Value);
+        Counts[key].Value += Math.Min(room, amount);
     }
 
     public void Remove(string key, int amount = 1)

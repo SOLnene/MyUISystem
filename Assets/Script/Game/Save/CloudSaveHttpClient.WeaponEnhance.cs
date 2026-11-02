@@ -23,6 +23,19 @@ internal sealed partial class CloudSaveHttpClient
         using var response = await SendAsync(HttpMethod.Post, playerId, JsonConvert.SerializeObject(request), token,
             new Uri(saveUri, "/v1/weapons/enhance"));
         string body = await response.Content.ReadAsStringAsync().AsUniTask(); EnsureSuccess(response, body);
+        return ReadEnhancementReply(body, request);
+    }
+
+    internal async UniTask<CloudWeaponEnhanceReply> FindWeaponEnhancementAsync(string playerId, CloudWeaponEnhanceRequest request, CancellationToken token)
+    {
+        using var response = await SendAsync(HttpMethod.Get, playerId, null, token,
+            new Uri(saveUri, "/v1/weapons/enhance/requests/" + request.requestId));
+        string body = await response.Content.ReadAsStringAsync().AsUniTask(); EnsureSuccess(response, body);
+        return ReadEnhancementReply(body, request);
+    }
+
+    static CloudWeaponEnhanceReply ReadEnhancementReply(string body, CloudWeaponEnhanceRequest request)
+    {
         var reply = JsonConvert.DeserializeObject<CloudWeaponEnhanceReply>(body);
         var operation = reply?.operation;
         if (operation == null || reply.state == null || operation.requestId != request.requestId ||

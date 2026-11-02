@@ -74,7 +74,7 @@ public partial class EquipDetailViewModel: IDisposable
         
         bottomVM.onEnhanceClick.Subscribe(_ =>
         {
-            if (!bottomVM.canEnhance.Value) return;
+            if (!bottomVM.canEnhance.Value || refineBusy.Value) return;
             if (IsCloudEnhancement) { SubmitCloudEnhancementAsync().Forget(); return; }
             
             if (enhanceVM.previewExp.Value <= 0 || currentWeaponVM.Value.Model.Level >= currentWeaponVM.Value.Model.GetCurrentMaxLevel())
@@ -90,7 +90,9 @@ public partial class EquipDetailViewModel: IDisposable
                 int oldLevel = weapon.level.Value;
                 float oldProgress = GetExpProgress(weapon);
                 int levelUpCount = enhanceVM.enhanceLevelPreviewVm.levelUpCount.Value;
-                weapon.AddExp(enhanceVM.previewExp.Value);
+                var result = enhanceVM.enhancementPreview.Value.Level;
+                weapon.Model.ApplyEnhancementState(result.finalLevel, result.finalExp);
+                weapon.SyncFromModel();
                 foreach (var material in materials) repo.RemoveItem(material);
                 int newLevel = weapon.level.Value;
                 float newProgress = GetExpProgress(weapon);
@@ -116,13 +118,16 @@ public partial class EquipDetailViewModel: IDisposable
         
         bottomVM.onBreakoutClick.Subscribe(_ =>
         {
+            if (IsCloudEnhancement) { promotion.SubmitAsync().Forget(); return; }
+            if (refineBusy.Value || (CloudGameSaveSession.Current?.HasPendingRefine ?? false)) return;
             if (enhanceBusy.Value || (CloudGameSaveSession.Current?.HasPendingEnhance ?? false)) return;
             var weapon = currentWeaponVM.Value;
             int oldRank = weapon.rank.Value;
             int oldMaxLevel = weapon.Model.GetCurrentMaxLevel();
             int currentLevel = weapon.level.Value;
 
-            weapon.Breakout();
+            if (!ClientProgressionService.TryPromote(PromotionParticipant.For(weapon.Model))) return;
+            weapon.SyncFromModel();
 
             int newRank = weapon.rank.Value;
             if (newRank == oldRank)
@@ -136,7 +141,9 @@ public partial class EquipDetailViewModel: IDisposable
 
         bottomVM.onRefineClick.Subscribe(_ =>
         {
+            if (refineBusy.Value) return;
             if (enhanceBusy.Value || (CloudGameSaveSession.Current?.HasPendingEnhance ?? false)) return;
+            if (IsCloudEnhancement) { SubmitCloudRefinementAsync().Forget(); return; }
             if (!refineVM.CanApplyRefine())
                 return;
 
@@ -162,6 +169,8 @@ public partial class EquipDetailViewModel: IDisposable
             .Subscribe(requestOpenItemSelectPanel.OnNext)
             .AddTo(disposables);
         InitializeEnhancement();
+        InitializeRefinement();
+        InitializePromotion();
     }
     
     public void SetWeapon(EquipItemViewModel viewModel)
@@ -183,6 +192,8 @@ public partial class EquipDetailViewModel: IDisposable
     
     public void Dispose()
     {
+        DisposePromotion();
+        DisposeRefinement();
         DisposeEnhancement();
         disposables.Dispose();
         MiddleVM.Dispose();

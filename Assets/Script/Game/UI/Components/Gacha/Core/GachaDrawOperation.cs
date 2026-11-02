@@ -27,7 +27,7 @@ internal static class GachaDrawOperation
         int maxPrimogemCost = 0)
     {
         var context = GameContext.Instance;
-        if (!CloudGameSaveSession.IsCloudSource(context.ActiveSaveDirectory))
+        if (!CloudGameSaveSession.IsCloudSource(context.ActiveSaveDirectory) || !CloudGameSaveSession.UsesServerSettlement)
         {
             var cost = context.GachaService.GetCost(key);
             var economy = GameEconomy.Instance;

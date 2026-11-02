@@ -69,6 +69,7 @@ public class EnhanceRightBottomView : MonoBehaviour
         filterDropdown.ClearOptions();
         List<string> options = new List<string>();
         filterDropdown.AddOptions(vm.availabelLevels.ConvertAll(level => $"{level}星及以下素材"));
+        filterDropdown.SetValueWithoutNotify(vm.availabelLevels.IndexOf(vm.FilterStarLimit));
         filterDropdown.onValueChanged
             .AsObservable()
             .Subscribe(index =>

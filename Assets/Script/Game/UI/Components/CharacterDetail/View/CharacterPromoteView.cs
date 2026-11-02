@@ -45,6 +45,7 @@ namespace Game.UI.Components.CharacterDetail
 
 
         readonly CompositeDisposable disposable = new CompositeDisposable();
+        int materialVersion;
 
         public override void Bind(CharacterPromoteViewmodel viewmodel)
         {
@@ -59,7 +60,7 @@ namespace Game.UI.Components.CharacterDetail
             {
                 var characterModel = Vm.model as CharacterModel;
                 var title = characterModel != null ? characterModel.Name.Value : string.Empty;
-                topBar.Bind(title, new ReactiveProperty<int>(10000), Vm.onBack);
+                topBar.Bind(title, GameEconomy.Instance.gold, Vm.onBack);
             }
 
             Vm.rank.Subscribe(value =>
@@ -113,6 +114,7 @@ namespace Game.UI.Components.CharacterDetail
 
         public async UniTask HidePanel(bool instant)
         {
+            ++materialVersion;
             await UniTask.WhenAll(
                 topPanel.Hide(instant),
                 infoPanel.Hide(instant)
@@ -142,6 +144,7 @@ namespace Game.UI.Components.CharacterDetail
 
         async UniTask CreateMaterialViews()
         {
+            int version = ++materialVersion;
             // 清空旧UI
             foreach (Transform child in materialParent)
             {
@@ -156,6 +159,9 @@ namespace Game.UI.Components.CharacterDetail
                 var go =await ResourceManager.Instance.InstantiateItemAsync(
                     "ui/prefab/item_slot_material",materialParent,true);
 
+                if (this == null || version != materialVersion)
+                { if (go != null) Destroy(go); return; }
+
                 var itemSlotView = go.GetComponent<ItemSlotView>();
                 if (itemSlotView == null)
                     itemSlotView = go.AddComponent<ItemSlotView>();
@@ -168,9 +174,16 @@ namespace Game.UI.Components.CharacterDetail
         {
             Vm.Promote();
         }
+
+        internal void RefreshMaterials()
+        {
+            Vm.RefreshMaterialVMs();
+            if (gameObject.activeInHierarchy) CreateMaterialViews().Forget();
+        }
         
         void OnDestroy()
         {
+            ++materialVersion;
             disposable.Dispose();
         }
     }

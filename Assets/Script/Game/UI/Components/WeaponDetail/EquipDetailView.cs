@@ -328,6 +328,9 @@ public partial class EquipDetailView : UIView
 
                 Action onNewStateShown = () =>
                 {
+                    if (equipDetailVm.promotion.HoldTargetView)
+                    { enhancePanelView.ShowPromoteProcessing(); bottomView.ShowPromoteBottomProcessing(); return; }
+                    if (equipDetailVm.currentWeaponVM.Value.Model.Rank != result.newRank) return;
                     enhancePanelView.ShowPromoteResultText("突破成功");
                     bottomView.ShowPromoteBottomResult();
                 };
@@ -337,12 +340,13 @@ public partial class EquipDetailView : UIView
                 await enhancePanelView.PlayPromoteResult(result, onNewStateShown);
             }
 
-            await SwitchContent();
+            if (!equipDetailVm.promotion.HoldTargetView) await SwitchContent();
         }
         finally
         {
             isPlayingResultFlow = false;
             UnlockInput();
+            SyncEnhancementDisplay();
         }
     }
 
@@ -382,6 +386,7 @@ public partial class EquipDetailView : UIView
         {
             isPlayingResultFlow = false;
             UnlockInput();
+            if (enhanceSyncRequested) SyncEnhancementDisplay();
         }
     }
 
@@ -422,10 +427,10 @@ public partial class EquipDetailView : UIView
     void SetInputBlocked(bool blocked)
     {
         if (inputBlocker != null)
-            inputBlocker.SetActive(blocked);
+            inputBlocker.SetActive(blocked || (equipDetailVm != null && (equipDetailVm.refineBusy.Value || equipDetailVm.promotion.Busy.Value)));
 
         // Keep material edits and submit blocked while settlement is pending, including keyboard submit.
-        bool enhanceBlocked = blocked || (equipDetailVm != null && equipDetailVm.enhanceBusy.Value);
+        bool enhanceBlocked = blocked || (equipDetailVm != null && (equipDetailVm.enhanceBusy.Value || equipDetailVm.refineBusy.Value || equipDetailVm.promotion.Busy.Value));
         for (int i = 0; i < enhanceInputGroups.Length; i++)
             enhanceInputGroups[i].interactable = !enhanceBlocked;
     }
@@ -474,6 +479,7 @@ public partial class EquipDetailView : UIView
 
     public override void OnCancel()
     {
+        if ((equipDetailVm?.promotion?.Busy.Value ?? false) || isPlayingResultFlow) return;
         if (isClosing)
             return;
 

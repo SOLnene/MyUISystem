@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using UniRx;
 namespace Game.Domain.Character
 {
-    public class CharacterModel: IEnhanceable, IPromotable
+    public partial class CharacterModel: IEnhanceable, IPromotable
     {
         //静态数据
         public CharacterDefinition Definition { get; }
@@ -126,6 +126,11 @@ namespace Game.Domain.Character
         public List<StatPreviewData> GetStatPreview(int addedExp,bool promoting = false)
         {
             var preview = LevelSystem.GetPreviewWithExp(addedExp, GetCurrentMaxLevel());
+            return BuildStatPreview(preview, promoting);
+        }
+
+        internal List<StatPreviewData> BuildStatPreview(LevelPreview preview, bool promoting = false)
+        {
             int previewLevel = preview.finalLevel;
             int rank = promoting?RankSystem.CurrentRank+1: RankSystem.CurrentRank;
             var data = new List<StatPreviewData>
@@ -190,7 +195,7 @@ namespace Game.Domain.Character
         /// <returns></returns>
         public int GetPromoteGoldCost()
         {
-            return GrowthCostFormula.GetPromoteGoldCost(RankSystem.CurrentRank, Definition.rarity);
+            return PromotionParticipant.For(this).GoldCost;
         }
 
         public void ChangeEquip(EquipItem equipItem)

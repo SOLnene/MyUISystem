@@ -1,13 +1,15 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using Game.Domain.Character;
+using Game.Domain.Enhance;
 using UniRx;
 using UnityEngine;
 using UnityEngine.TextCore.Text;
 namespace Game.UI.Components.CharacterDetail
 //todo:做成通用
 {
-    public class CharacterEnhanceViewmodel : IDisposable
+    public partial class CharacterEnhanceViewmodel : IDisposable
     {
         public IEnhanceable model;
         public IPromotable promoteModel;
@@ -32,6 +34,7 @@ namespace Game.UI.Components.CharacterDetail
         public string modelName;
         
         CompositeDisposable disposable = new CompositeDisposable();
+        readonly ReadOnlyReactiveProperty<EnhancementPreviewData> enhancementPreview;
         //目前这两个接口没什么用，现在还是角色专用vm
         public CharacterEnhanceViewmodel(IEnhanceable model, IMaterialInput materialInput, Action onBack)
         {
@@ -42,10 +45,12 @@ namespace Game.UI.Components.CharacterDetail
             this.onBack = onBack;
             
             this.materialInput = materialInput;
-            previewVm = new EnhanceLevelPreviewViewModel(model, materialInput.TotalExpRp);
+            enhancementPreview = EnhancementPreviewCalculator.Observe(model, materialInput.TotalExpRp, materialInput.GetTotalGold)
+                .ToReadOnlyReactiveProperty().AddTo(disposable);
+            previewVm = new EnhanceLevelPreviewViewModel(enhancementPreview);
 
             var statItemList = new List<StatItemViewModel>();
-            var previews = model.GetStatPreview(0);
+            var previews = enhancementPreview.Value.Stats;
             foreach (var preview in previews)
             {
                 var statItem = new StatItemViewModel(
@@ -60,17 +65,23 @@ namespace Game.UI.Components.CharacterDetail
             CreateItemViewmodel("expbook_medium");
             CreateItemViewmodel("expbook_large");
 
-            materialInput.TotalExpRp.Subscribe(
+            enhancementPreview.Subscribe(
                 value =>
                 {
                     UpdatePreview(value);
                 }).AddTo(disposable);
 
+            InitializeCloudEnhancement();
         }
 
         public void UpdatePreview(int exp)
         {
-            var previews = model.GetStatPreview(exp);
+            UpdatePreview(EnhancementPreviewCalculator.ForTarget(model, exp, materialInput.GetTotalGold()));
+        }
+
+        void UpdatePreview(EnhancementPreviewData data)
+        {
+            var previews = data.Stats;
 
             for (int i = 0; i < previews.Count; i++)
             {
@@ -116,12 +127,14 @@ namespace Game.UI.Components.CharacterDetail
 
         public void AddBook(ExpBookType type, int count = 1)
         {
+            if (IsEnhancementInputLocked) return;
             if (type != ExpBookType.None)
                 materialInput.Add(ChangeToKey(type), count);
         }
 
         public void RemoveBook(ExpBookType type, int count = 1)
         {
+            if (IsEnhancementInputLocked) return;
             if (type != ExpBookType.None)
                 materialInput.Remove(ChangeToKey(type), count);
         }
@@ -135,6 +148,8 @@ namespace Game.UI.Components.CharacterDetail
 
         public void ConfirmEnhance()
         {
+            if (IsCloudEnhancement) { SubmitCloudEnhancementAsync().Forget(); return; }
+            if (IsEnhancementInputLocked) return;
             int exp = materialInput.GetTotalExp();
             if (exp <= 0)
             {
@@ -144,7 +159,7 @@ namespace Game.UI.Components.CharacterDetail
             int oldLevel = model.LevelRP.Value;
             float oldProgress = GetExpProgress();
             int levelUpCount = previewVm.levelUpCount.Value;
-            model.AddExp(exp);
+            if (!ClientProgressionService.TryEnhanceCharacter((CharacterModel)model, materialInput)) return;
             int newLevel = model.LevelRP.Value;
             float newProgress = GetExpProgress();
             bool needSwitchContent = newLevel >= model.GetCurrentMaxLevel();
@@ -163,7 +178,7 @@ namespace Game.UI.Components.CharacterDetail
 
         float GetExpProgress()
         {
-            int max = model.LevelSystem.GetExpRequired(model.LevelSystem.Level);
+            int max = ((CharacterModel)model).EnhanceExpRequired(model.LevelRP.Value);
             if (max <= 0)
                 return 0f;
 
@@ -215,6 +230,7 @@ namespace Game.UI.Components.CharacterDetail
         /// </summary>
         public void QuickFill()
         {
+            if (IsEnhancementInputLocked) return;
             int currentLevel = model.LevelRP.Value;
             int currentExp = model.ExpRP.Value;
             int maxLevel = model.GetCurrentMaxLevel();
@@ -224,7 +240,7 @@ namespace Game.UI.Components.CharacterDetail
             // 计算到当前阶级满级所需经验
             for (int lv = currentLevel; lv < maxLevel; lv++)
             {
-                int levelExp = model.LevelSystem.GetExpRequired(lv);
+                int levelExp = ((CharacterModel)model).EnhanceExpRequired(lv);
 
                 if (lv == currentLevel)
                     needExp += levelExp - currentExp;
@@ -234,25 +250,27 @@ namespace Game.UI.Components.CharacterDetail
 
             materialInput.Clear();
 
-            int[] expValue = { 100, 500, 2500 };
-            string[] keys = { "expbook_small", "expbook_medium", "expbook_large" };
+            var keys = ExpBookRules.Keys;
 
             int remainExp = needExp;
 
             // 先用大的经验书
-            for (int i = expValue.Length - 1; i >= 0; i--)
+            for (int i = keys.Count - 1; i >= 0; i--)
             {
-                int count = remainExp / expValue[i];
+                int bookExp = ExpBookRules.Experience(keys[i]);
+                int count = Math.Min(remainExp / bookExp, AvailableBookCount(keys[i]));
 
                 if (count >= 1)
                 {
                     materialInput.Add(keys[i], count);
-                    remainExp -= count * expValue[i];
+                    remainExp -= count * bookExp;
                 }
             }
             if (remainExp > 0)
             {
-                materialInput.Add("expbook_small", 1);
+                foreach (var key in keys)
+                    if (materialInput.Counts[key].Value < AvailableBookCount(key))
+                    { materialInput.Add(key, 1); break; }
             }
 
             int totalExp = materialInput.GetTotalExp();
@@ -271,6 +289,7 @@ namespace Game.UI.Components.CharacterDetail
         
         public void Dispose()
         {
+            DisposeCloudEnhancement();
             disposable.Dispose();
             previewVm.Dispose();
             foreach (var itemSlotVm in itemViewModels)

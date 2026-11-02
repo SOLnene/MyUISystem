@@ -16,6 +16,7 @@ internal sealed class CloudStoreSnapshot
     public string periodKey;
     public List<CloudStoreListing> items;
     internal double SecondsUntilRefresh;
+    internal long ReceivedTimestamp;
 
     internal void Validate()
     {
@@ -29,6 +30,7 @@ internal sealed class CloudStoreSnapshot
                 new StoreConfigData { items = items.Select(i => i.offer).ToList() }, GameDatabase.ItemDatabase)))
             throw new InvalidDataException("商店配置无效，请稍后重试。");
         SecondsUntilRefresh = (next - now).TotalSeconds;
+        ReceivedTimestamp = Stopwatch.GetTimestamp();
     }
 }
 [Serializable]
@@ -42,11 +44,15 @@ partial class StorePurchaseService
 {
     CloudStoreSnapshot remoteStore;
     readonly Stopwatch remoteClock = new();
+    double snapshotAge, nextRefreshSeconds;
+    DateTime firstPeriod;
+    double StoreElapsed => snapshotAge + remoteClock.Elapsed.TotalSeconds;
+    int PeriodOffset => remoteStore == null ? 0 : Math.Max(0, (int)Math.Floor((StoreElapsed - remoteStore.SecondsUntilRefresh) / 86400) + 1);
     readonly Dictionary<int, int> remainingLimits = new();
     internal bool UsesCloud => CloudGameSaveSession.IsCloudSource(GameContext.Instance.ActiveSaveDirectory);
     internal string ConfigurationToken => remoteStore?.configVersion;
-    internal string CurrentPeriod => remoteStore?.periodKey;
-    internal double RefreshDelay => remoteStore == null ? 0 : Math.Max(0, remoteStore.SecondsUntilRefresh - remoteClock.Elapsed.TotalSeconds);
+    internal string CurrentPeriod => remoteStore == null ? null : firstPeriod.AddDays(PeriodOffset).ToString("yyyy-MM-dd", CultureInfo.InvariantCulture);
+    internal double RefreshDelay => remoteStore == null ? 0 : Math.Max(0, nextRefreshSeconds - StoreElapsed);
 
     StorePurchasePreview CreateCloudPreview(StoreConfigItemData offer)
     {
@@ -64,11 +70,21 @@ partial class StorePurchaseService
             await GameSaveCoordinator.Instance.PurchaseStoreAsync(this, request.storeItemId, request.count,
                 request.configVersion, cancellationToken);
         }
-        var snapshot = await session.LoadStoreAsync(cancellationToken);
+        var snapshot = await GameStartupData.ForCloud(session).Store.GetAsync(cancellationToken);
         await UniTask.SwitchToMainThread(cancellationToken);
         if (!ReferenceEquals(this, GameContext.Instance.StorePurchaseService))
             throw new OperationCanceledException(cancellationToken);
-        remoteStore = snapshot; remoteClock.Restart(); remainingLimits.Clear();
+        if (!ReferenceEquals(remoteStore, snapshot))
+        {
+            remoteStore = snapshot;
+            snapshotAge = Math.Max(0, (Stopwatch.GetTimestamp() - snapshot.ReceivedTimestamp) / (double)Stopwatch.Frequency);
+            firstPeriod = DateTime.ParseExact(snapshot.periodKey, "yyyy-MM-dd", CultureInfo.InvariantCulture);
+            remoteClock.Restart();
+        }
+        // Advance the downloaded daily schedule locally; reopening the store never restarts its deadline.
+        nextRefreshSeconds = snapshot.SecondsUntilRefresh + PeriodOffset * 86400d;
+        purchaseRepository.BindPeriod(() => CurrentPeriod);
+        remainingLimits.Clear();
         foreach (var listing in snapshot.items) remainingLimits.Add(listing.offer.StoreItemId, listing.remainingLimit);
         return new StoreConfigDatabase(snapshot.items.Select(i => i.offer).ToList());
     }

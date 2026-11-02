@@ -31,7 +31,7 @@ namespace Game.UI.Components.CharacterDetail
         public override void Bind(CharacterEnhanceViewmodel viewmodel)
         {
             base.Bind(viewmodel);
-            topBar.Bind(Vm.modelName, new ReactiveProperty<int>(10000), Vm.onBack);
+            topBar.Bind(Vm.modelName, GameEconomy.Instance.gold, Vm.onBack);
             upgradePanel.Bind(Vm.previewVm);
             for (int i = 0; i < statItems.Length; i++)
             {
@@ -63,6 +63,8 @@ namespace Game.UI.Components.CharacterDetail
         {
             return upgradePanel.PlayExpProgress(result);
         }
+
+        internal void RefreshEnhancement() => upgradePanel.Refresh();
 
         public UniTask PlayEnhanceLevelResult(EnhanceResultData result, Action onNewLevelShown = null)
         {

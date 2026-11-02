@@ -28,7 +28,7 @@ partial class StorePurchaseService
 
     public StorePurchasePreview CreatePreview(StoreConfigItemData storeItem)
     {
-        if (UsesCloud) return CreateCloudPreview(storeItem);
+        if (UsesCloud && CloudGameSaveSession.UsesServerSettlement) return CreateCloudPreview(storeItem);
         int remainingLimit = purchaseRepository.GetRemainingCount(
             storeItem.StoreItemId,
             storeItem.DailyPurchaseLimit);
@@ -42,7 +42,7 @@ partial class StorePurchaseService
 
     public bool TryPurchase(StoreConfigItemData storeItem, ItemDefinition itemDefinition, int purchaseCount)
     {
-        if (UsesCloud) return false;
+        if (UsesCloud && CloudGameSaveSession.UsesServerSettlement) return false;
         if (purchaseCount <= 0)
         {
             return false;

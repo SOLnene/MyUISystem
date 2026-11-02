@@ -10,22 +10,65 @@ using UnityEngine;
 public sealed partial class GameSaveCoordinator
 {
     internal readonly ReactiveProperty<bool> EnhanceSending = new(false);
-    EnhancePrediction pendingEnhancePrediction;
-
-    sealed class EnhancePrediction
+    sealed class EnhanceProgression : ProgressionOperation
     {
         internal EquipItem Weapon;
         internal EquipItem[] Materials;
         internal int OldLevel, OldExp, OldGold, Cost;
         internal WeaponEnhancePrediction Result;
-        internal uint DirtyRevision;
-        internal bool Applied;
+        readonly long[] materialIds;
+        Action<int, int> predicted;
+        CloudWeaponEnhanceReply reply;
 
-        internal bool MatchesLocal() => Applied && Weapon.Level == Result.Level && Weapon.CurrentExp == Result.Exp &&
+        internal EnhanceProgression(EquipItem weapon, long[] materialIds, Action<int, int> predicted, ReactiveProperty<bool> busy)
+            : base(ProgressionKind.WeaponEnhance, weapon.InstanceId.ToString(), busy,
+                "请恢复原武器的强化结果，或重新登录同步。", "强化待确认期间本地进度发生变化，请重新登录同步。")
+        { Weapon = weapon; this.materialIds = (long[])materialIds?.Clone(); this.predicted = predicted; }
+
+        internal override async UniTask PrepareAsync(CloudGameSaveSession session, CancellationToken token)
+        {
+            if (session.EnhanceConfig == null) await session.LoadEnhanceConfigAsync(token);
+            if (CloudGameSaveSession.RequireSession(GameContext.Instance.ActiveSaveDirectory) != session)
+                throw new InvalidOperationException("强化会话已经改变。");
+            var rules = session.EnhanceConfig.rules;
+            if (materialIds == null || materialIds.Length == 0 || materialIds.Length > rules.MaxMaterials ||
+                materialIds.Distinct().Count() != materialIds.Length)
+                throw new InvalidOperationException("请选择有效的强化材料。");
+            var inventory = GameContext.Instance.InventoryRepository;
+            if (!inventory.TryGetEquip(Weapon.InstanceId, out var owned) || !ReferenceEquals(owned, Weapon))
+                throw new InvalidOperationException("强化武器已不在当前背包中。");
+            Materials = materialIds.Select(id => inventory.TryGetEquip(id, out var item) && CanConsumeForEnhancement(item, Weapon)
+                ? item : throw new InvalidOperationException("不能消耗强化目标或已装备的武器。")).ToArray();
+            int exp = 0;
+            foreach (var material in Materials) exp = checked(exp + rules.MaterialExp(material.Id, material.Level, material.CurrentExp, material.Rank));
+            Result = rules.Preview(Weapon.Id, Weapon.Level, Weapon.CurrentExp, Weapon.Rank, exp);
+            if (Result.GainedExp <= 0) throw new InvalidOperationException("武器已达到当前等级上限。");
+            Cost = checked(Result.GainedExp * rules.GoldPerExp); OldGold = GameEconomy.Instance.GetCurrency(rules.GoldItemId);
+            if (OldGold < Cost) throw new InvalidOperationException("金币不足，无法提交强化。");
+            OldLevel = Weapon.Level; OldExp = Weapon.CurrentExp;
+            session.BeginEnhancement(Weapon.InstanceId, materialIds);
+        }
+
+        internal override void ApplyPrediction()
+        { Weapon.ApplyEnhancementState(Result.Level, Result.Exp); ApplyGold(OldGold - Cost); }
+
+        internal override void NotifyPrediction()
+        {
+            // Retrying needs only model state; do not retain a closed ViewModel through its animation callback.
+            var notify = predicted; predicted = null; notify(OldLevel, OldExp);
+        }
+
+        internal override async UniTask ResolveAsync(CloudGameSaveSession session, CancellationToken token)
+        { reply = await session.ResolveEnhancementAsync(token); }
+
+        internal override void Confirm(CloudGameSaveSession session)
+        { ApplyEnhanceReply(reply, this); session.AcceptEnhancement(reply); }
+
+        internal override bool MatchesLocal() => Applied && Weapon.Level == Result.Level && Weapon.CurrentExp == Result.Exp &&
             GameEconomy.Instance.GetCurrency(202) == OldGold - Cost &&
             Materials.All(m => GameContext.Instance.InventoryRepository.TryGetEquip(m.InstanceId, out var current) && ReferenceEquals(m, current));
 
-        internal void Restore()
+        internal override void Restore()
         {
             Weapon.ApplyEnhancementState(OldLevel, OldExp);
             ApplyGold(OldGold);
@@ -39,94 +82,17 @@ public sealed partial class GameSaveCoordinator
     internal async UniTask EnhanceWeaponAsync(EquipItem weapon, long[] materialIds, Action<int, int> predicted,
         CancellationToken token = default)
     {
-        if (EnhanceSending.Value) throw new InvalidOperationException("强化正在处理中。");
-        EnhanceSending.Value = true;
-        CloudGameSaveSession session = null;
-        string source = GameContext.Instance.ActiveSaveDirectory;
-        bool ownsFlush = false;
-        try
-        {
-            while (isFlushing) { token.ThrowIfCancellationRequested(); await UniTask.Yield(); }
-            session = CloudGameSaveSession.RequireSession(source);
-            session.RequireNoPendingStore();
-            if (!session.IsReady || session.HasConflict || session.HasPendingGacha)
-                throw new InvalidOperationException("云端强化尚未就绪，请先确认上一次操作。");
-            if (!session.HasPendingEnhance)
-            {
-                while (dirty || session.HasPendingSave)
-                    if (!await FlushCloudAsync(token) && LastCloudError != null) throw LastCloudError;
-                isFlushing = true; ownsFlush = true;
-                if (session.EnhanceConfig == null) await session.LoadEnhanceConfigAsync(token);
-                if (CloudGameSaveSession.RequireSession(source) != session) throw new InvalidOperationException("强化会话已经改变。");
-                var rules = session.EnhanceConfig.rules;
-                if (materialIds == null || materialIds.Length == 0 || materialIds.Length > rules.MaxMaterials ||
-                    materialIds.Distinct().Count() != materialIds.Length)
-                    throw new InvalidOperationException("请选择有效的强化材料。");
-                var inventory = GameContext.Instance.InventoryRepository;
-                if (!inventory.TryGetEquip(weapon.InstanceId, out var owned) || !ReferenceEquals(owned, weapon))
-                    throw new InvalidOperationException("强化武器已不在当前背包中。");
-                var materials = materialIds.Select(id => inventory.TryGetEquip(id, out var item) && CanConsumeForEnhancement(item, weapon)
-                    ? item : throw new InvalidOperationException("不能消耗强化目标或已装备的武器。")).ToArray();
-                int exp = 0;
-                foreach (var material in materials) exp = checked(exp + rules.MaterialExp(material.Id, material.Level, material.CurrentExp, material.Rank));
-                var result = rules.Preview(weapon.Id, weapon.Level, weapon.CurrentExp, weapon.Rank, exp);
-                if (result.GainedExp <= 0) throw new InvalidOperationException("武器已达到当前等级上限。");
-                int cost = checked(result.GainedExp * rules.GoldPerExp), gold = GameEconomy.Instance.GetCurrency(rules.GoldItemId);
-                if (gold < cost) throw new InvalidOperationException("金币不足，无法提交强化。");
-                pendingEnhancePrediction = new EnhancePrediction { Weapon = weapon, Materials = materials,
-                    OldLevel = weapon.Level, OldExp = weapon.CurrentExp, OldGold = gold, Cost = cost, Result = result };
-                session.BeginEnhancement(weapon.InstanceId, materialIds);
-                weapon.ApplyEnhancementState(result.Level, result.Exp);
-                ApplyGold(gold - cost); pendingEnhancePrediction.Applied = true;
-                predicted(pendingEnhancePrediction.OldLevel, pendingEnhancePrediction.OldExp);
-                // UI observers may mark the prediction dirty. It is covered by the journal, never by a normal save.
-                dirty = false; pendingEnhancePrediction.DirtyRevision = dirtyRevision;
-            }
-            else if (session.PendingEnhance.weaponInstanceId != weapon.InstanceId || pendingEnhancePrediction == null)
-                throw new InvalidOperationException("请恢复原武器的强化结果，或重新登录同步。");
-
-            isFlushing = true; ownsFlush = true;
-            var reply = await session.ResolveEnhancementAsync(token);
-            await UniTask.SwitchToMainThread(token);
-            var prediction = pendingEnhancePrediction;
-            if (CloudGameSaveSession.RequireSession(source) != session || prediction.DirtyRevision != dirtyRevision || !prediction.MatchesLocal())
-            {
-                session.RejectGachaApplication();
-                throw new InvalidOperationException("强化待确认期间本地进度发生变化，请重新登录同步。");
-            }
-            try
-            {
-                ApplyEnhanceReply(reply, prediction);
-                session.AcceptEnhancement(reply); pendingEnhancePrediction = null;
-                dirty = false; LastCloudError = null;
-            }
-            catch { session.RejectGachaApplication(); throw; }
-        }
-        catch (Exception error)
-        {
-            await UniTask.SwitchToMainThread();
-            if (session != null && !session.HasPendingEnhance && pendingEnhancePrediction != null)
-            {
-                // Only a definitive rejection rolls back our own still-isolated prediction.
-                var prediction = pendingEnhancePrediction;
-                if (CloudGameSaveSession.Current == session && prediction.DirtyRevision == dirtyRevision && prediction.MatchesLocal())
-                { prediction.Restore(); dirty = false; }
-                else if (prediction.Applied) session.RejectGachaApplication();
-                pendingEnhancePrediction = null;
-            }
-            LastCloudError = error; throw;
-        }
-        finally
-        {
-            if (ownsFlush) isFlushing = false;
-            saveAt = Time.realtimeSinceStartup + SaveDelay; EnhanceSending.Value = false;
-        }
+        if (IsProgressionRunning) throw new InvalidOperationException("强化正在处理中。");
+        var session = CloudGameSaveSession.RequireSession(GameContext.Instance.ActiveSaveDirectory);
+        if (!session.IsReady || session.HasConflict || session.HasPendingGacha || session.HasPendingRefine)
+            throw new InvalidOperationException("云端强化尚未就绪，请先确认上一次操作。");
+        await RunProgressionAsync(new EnhanceProgression(weapon, materialIds, predicted, EnhanceSending), token);
     }
 
     static void ApplyGold(int amount) => GameEconomy.Instance.ApplyStoreBalances(new CurrencySaveData
         { items = { new CurrencyAmountSaveData(202, amount) } });
 
-    static void ApplyEnhanceReply(CloudWeaponEnhanceReply reply, EnhancePrediction prediction)
+    static void ApplyEnhanceReply(CloudWeaponEnhanceReply reply, EnhanceProgression prediction)
     {
         if (reply.state.revision != reply.operation.committedRevision)
             throw new InvalidDataException("强化后云端已有新进度，请重新登录读取完整存档。");
