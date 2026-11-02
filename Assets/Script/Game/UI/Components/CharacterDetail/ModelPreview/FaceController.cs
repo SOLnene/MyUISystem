@@ -51,6 +51,7 @@ public class FaceController : MonoBehaviour
     double curveStartedAt;
     double faceBlendStartedAt;
     float faceBlendDuration;
+    float presentationPlaybackSpeed = 1f;
     readonly Dictionary<string, float> activeWeights = new();
     FaceBlendSource blendSource;
     bool presentationFacePlaybackEnabled = true;
@@ -64,9 +65,9 @@ public class FaceController : MonoBehaviour
         internal float Duration;
         internal float Intensity;
 
-        internal void Sample(double now)
+        internal void Sample(double now, float speed)
         {
-            float time = Mathf.Clamp((float)(now - StartedAt), 0f, Duration);
+            float time = Mathf.Clamp((float)(now - StartedAt) * speed, 0f, Duration);
             foreach (var curve in Curves)
                 Weights[curve.blendShapeName] = EvaluateFaceCurve(curve, time) * Intensity;
         }
@@ -397,7 +398,7 @@ public class FaceController : MonoBehaviour
 
         curveIntensity = intensity;
         curveElapsedTime = Mathf.Clamp(startTime, 0f, curveDuration);
-        curveStartedAt = Time.timeAsDouble - curveElapsedTime;
+        curveStartedAt = Time.timeAsDouble - curveElapsedTime / presentationPlaybackSpeed;
         isPlayingCurvePreset = true;
         ApplyCurveFrame(curveElapsedTime);
 
@@ -424,10 +425,23 @@ public class FaceController : MonoBehaviour
         ApplyCurvePresets(firstPreset, secondPreset, 1f, startTime, blendDuration);
     }
 
+    internal void SetPresentationPlaybackSpeed(float speed)
+    {
+        if (speed == presentationPlaybackSpeed) return;
+        // Rebase every active source to preserve curve and blend progress when the Loop resumes at 1x.
+        double now = Time.timeAsDouble;
+        double ratio = presentationPlaybackSpeed / speed;
+        curveStartedAt = now - (now - curveStartedAt) * ratio;
+        faceBlendStartedAt = now - (now - faceBlendStartedAt) * ratio;
+        if (blendSource != null)
+            blendSource.StartedAt = now - (now - blendSource.StartedAt) * ratio;
+        presentationPlaybackSpeed = speed;
+    }
+
     void BeginFaceTransition(float duration)
     {
         // 身体的交接回调可能早于本组件 Update；先结算已结束的混合，再保留来源曲线。
-        if (blendSource != null && Time.timeAsDouble - faceBlendStartedAt >= faceBlendDuration)
+        if (blendSource != null && (Time.timeAsDouble - faceBlendStartedAt) * presentationPlaybackSpeed >= faceBlendDuration)
             UpdateCurvePreset();
 
         FaceBlendSource source = null;
@@ -575,7 +589,7 @@ public class FaceController : MonoBehaviour
 
     void UpdateCurvePreset()
     {
-        curveElapsedTime = Mathf.Clamp((float)(Time.timeAsDouble - curveStartedAt), 0f, curveDuration);
+        curveElapsedTime = Mathf.Clamp((float)(Time.timeAsDouble - curveStartedAt) * presentationPlaybackSpeed, 0f, curveDuration);
         ApplyCurveFrame(curveElapsedTime);
 
         if (curveElapsedTime >= curveDuration && blendSource == null)
@@ -594,8 +608,8 @@ public class FaceController : MonoBehaviour
 
         double now = Time.timeAsDouble;
         float progress = blendSource == null ? 1f
-            : Mathf.Clamp01((float)(now - faceBlendStartedAt) / faceBlendDuration);
-        blendSource?.Sample(now);
+            : Mathf.Clamp01((float)(now - faceBlendStartedAt) * presentationPlaybackSpeed / faceBlendDuration);
+        blendSource?.Sample(now, presentationPlaybackSpeed);
         // 缺失通道的目标为零；只在合成完成后写入，切换中不先清空整张脸。
         foreach (var pair in activeWeights)
         {

@@ -20,14 +20,15 @@ public sealed class TabSelectionFeedback : MonoBehaviour
     RectTransform tabRect;
     MaterialPropertyBlock properties;
     float previousWidth = -1f;
-    bool initialized;
+    [NonSerialized] bool initialized;
     bool selected;
 
     void Awake() => InitializeFeedback();
 
     void InitializeFeedback()
     {
-        if (initialized)
+        // A reload can retain serializable fields while losing the native property-block cache.
+        if (initialized && properties != null)
             return;
 
         systems = new[] { glow, streak, sparkles, driftingMotes, flowingStreaks };

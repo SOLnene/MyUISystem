@@ -10,12 +10,10 @@ public sealed class CharacterWeaponAttachment : MonoBehaviour
     static readonly int WeaponPatternColorId = Shader.PropertyToID("_WeaponPatternColor");
 
     [SerializeField] Transform weaponSocket;
-    [SerializeField, Min(0f)] float revealDelay = 0.2f;
-    [SerializeField, Min(0f)] float revealDuration = 0.35f;
-    [SerializeField, Min(0f)] float concealDuration = 0.18f;
     [SerializeField] Color dissolvePatternColor = new Color(0.4f, 0.28f, 0.04f, 0f);
 
     CharacterPresentationController presentation;
+    ModelViewer.WeaponVisibilitySettings visibilitySettings;
     ModelPreviewDefinition requestedDefinition;
     ModelPreviewDefinition displayedDefinition;
     CancellationTokenSource loadCancellation;
@@ -33,7 +31,8 @@ public sealed class CharacterWeaponAttachment : MonoBehaviour
 
     internal void ShowWeapon(
         ModelPreviewDefinition definition,
-        CharacterPresentationController characterPresentation)
+        CharacterPresentationController characterPresentation,
+        ModelViewer.WeaponVisibilitySettings visibilitySettings)
     {
         if (isQuitting)
         {
@@ -41,6 +40,8 @@ public sealed class CharacterWeaponAttachment : MonoBehaviour
         }
 
         presentation = characterPresentation;
+        // Keep the shared settings reference so Inspector edits apply to every bound character.
+        this.visibilitySettings = visibilitySettings;
         if (requestedDefinition == definition
             && (loadCancellation != null
                 || (weaponObject != null && displayedDefinition == definition)))
@@ -153,7 +154,7 @@ public sealed class CharacterWeaponAttachment : MonoBehaviour
                && presentation.PlayingState == CharacterPresentationState.WeaponShow
                && (presentation.CurrentPhase == PresentationPhase.Loop
                    || (presentation.CurrentPhase == PresentationPhase.Enter
-                       && presentation.PhaseTime >= revealDelay));
+                        && presentation.PhaseTime >= visibilitySettings.revealDelay));
     }
 
     void Update()
@@ -163,13 +164,13 @@ public sealed class CharacterWeaponAttachment : MonoBehaviour
             return;
         }
 
-        UpdateWeaponVisibility(Time.deltaTime);
+        UpdateWeaponVisibility(Time.deltaTime * (HasPresentationOwner ? presentation.PlaybackSpeed : 1f));
     }
 
     void UpdateWeaponVisibility(float deltaTime)
     {
         bool reveal = ShouldRevealWeapon();
-        float duration = reveal ? revealDuration : concealDuration;
+        float duration = reveal ? visibilitySettings.revealDuration : visibilitySettings.concealDuration;
         float progress = HasPresentationOwner
             ? Mathf.MoveTowards(dissolveProgress, reveal ? 1f : 0f,
                 duration > 0f ? deltaTime / duration : 1f)

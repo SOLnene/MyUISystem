@@ -127,6 +127,8 @@ public sealed class CharacterPresentationTestWindow : EditorWindow
     SerializedProperty timedBlendEnter;
     SerializedProperty timedBlendLoop;
     SerializedProperty timedBlendAsToBs;
+    SerializedProperty asToLoopPlay;
+    SerializedProperty bsToLoopPlay;
     float timedBlendTotalDuration => timedBlendTotal.floatValue;
     float timedBlendEnterDuration => timedBlendEnter.floatValue;
     float timedBlendLoopDuration => timedBlendLoop.floatValue;
@@ -181,6 +183,8 @@ public sealed class CharacterPresentationTestWindow : EditorWindow
         timedBlendEnter = serializedObject.FindProperty("timedBlendEnterDuration");
         timedBlendLoop = serializedObject.FindProperty("timedBlendLoopDuration");
         timedBlendAsToBs = serializedObject.FindProperty("timedBlendAsToBsDuration");
+        asToLoopPlay = serializedObject.FindProperty("asToLoopPlayDuration");
+        bsToLoopPlay = serializedObject.FindProperty("bsToLoopPlayDuration");
         if (Application.isPlaying && controller.Actor != null)
         {
             SynchronizeCurrentBinding(controller);
@@ -239,13 +243,19 @@ public sealed class CharacterPresentationTestWindow : EditorWindow
                             && (testState == CharacterPresentationState.Default
                                 || targetController.CurrentState == CharacterPresentationState.Default);
         bool authoredOnlyRoute = teamRoute || defaultRoute;
+        float phasePlayTime = testState == CharacterPresentationState.Default
+            ? asToLoopPlay.floatValue : bsToLoopPlay.floatValue;
+        bool customDefaultTiming = !teamRoute && defaultRoute && phasePlayTime >= 0f;
         if (teamRoute)
         {
             EditorGUILayout.LabelField("切换方式", "Authored（TeamSwitch 固定）");
         }
         else if (defaultRoute)
         {
-            EditorGUILayout.LabelField("切换方式", "AuthoredTimedBlend（Default 自然时长＋两端混合）");
+            if (customDefaultTiming)
+                EditorGUILayout.LabelField("切换方式", "AuthoredTimedBlend（Default 自定义播放时间＋两端混合）");
+            else
+                EditorGUILayout.LabelField("切换方式", "AuthoredTimedBlend（Default 自然时长＋两端混合）");
         }
         else
         {
@@ -256,7 +266,10 @@ public sealed class CharacterPresentationTestWindow : EditorWindow
         if (!teamRoute && (defaultRoute || testTransitionMode == PresentationTransitionMode.AuthoredTimedBlend))
         {
             EditorGUILayout.LabelField("切换参数", $"{timedBlendTotalDuration:0.###} / {timedBlendEnterDuration:0.###} / {timedBlendLoopDuration:0.###} 秒");
-            EditorGUILayout.LabelField("时间规则", defaultRoute || timedBlendTotalDuration == 0f ? "自然时长" : "定时切换");
+            if (customDefaultTiming)
+                EditorGUILayout.LabelField("混合前播放时间", $"{phasePlayTime:0.###} 秒（包含入口混合）");
+            else
+                EditorGUILayout.LabelField("时间规则", defaultRoute || timedBlendTotalDuration == 0f ? "自然时长" : "定时切换");
             if (!defaultRoute)
                 EditorGUILayout.LabelField("AS→BS 混合时长", $"{timedBlendAsToBs.floatValue:0.###} 秒");
             EditorGUILayout.HelpBox("时长读取目标控制器的正式配置，请在该组件的 Inspector 中调整。", MessageType.Info);
@@ -371,6 +384,7 @@ public sealed class CharacterPresentationTestWindow : EditorWindow
                                          || !(timedBlendLoopDuration >= 0f) || float.IsInfinity(timedBlendLoopDuration)
                                          || !(timedBlendAsToBs.floatValue >= 0f)
                                          || float.IsInfinity(timedBlendAsToBs.floatValue)
+                                         || (defaultRoute && (float.IsNaN(phasePlayTime) || float.IsInfinity(phasePlayTime)))
                                          || (timedBlendTotalDuration > 0f
                                              && timedBlendEnterDuration + timedBlendLoopDuration > timedBlendTotalDuration));
             using (new EditorGUI.DisabledScope(invalidTimedBlend))

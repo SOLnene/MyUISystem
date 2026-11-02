@@ -40,6 +40,7 @@ public class CharacterPreviewAnimator : MonoBehaviour
       private float blendTime;
       private float blendTimer;
       private bool isBlending;
+      private float presentationPlaybackSpeed = 1f;
       private Action playableBlendCompleted;
       readonly HashSet<AnimationClipPlayable> transitionPlayables = new();
 
@@ -133,7 +134,7 @@ public class CharacterPreviewAnimator : MonoBehaviour
         foreach (AnimationClipPlayable playable in transitionPlayables)
         {
             double endTime = Math.Max(0d, playable.GetAnimationClip().length - 0.000001d);
-            if (playable.GetTime() + Time.deltaTime >= endTime)
+            if (playable.GetTime() + Time.deltaTime * presentationPlaybackSpeed * playable.GetSpeed() >= endTime)
             {
                 // 在图本帧求值前停在末帧，避免带 Loop 标记的过渡资源回绕到开头。
                 playable.SetTime(endTime);
@@ -146,7 +147,7 @@ public class CharacterPreviewAnimator : MonoBehaviour
             return;
         }
 
-        blendTimer += Time.deltaTime;
+        blendTimer += Time.deltaTime * presentationPlaybackSpeed;
         float progress = blendTime <= 0f
             ? 1f
             : Mathf.Clamp01(blendTimer / blendTime);
@@ -167,12 +168,20 @@ public class CharacterPreviewAnimator : MonoBehaviour
         }
     }
 
+    internal void SetPresentationPlaybackSpeed(float speed)
+    {
+        presentationPlaybackSpeed = speed;
+        // Scale the graph root, preserving clips already held at their last frame with speed zero.
+        if (layerMixer.IsValid()) layerMixer.SetSpeed(speed);
+    }
+
     void InitializePlayableGraph()
     {
         DestroyPlayableGraph();
         graph = PlayableGraph.Create($"{name}.CharacterPreview");
         graph.SetTimeUpdateMode(DirectorUpdateMode.GameTime);
         layerMixer = AnimationLayerMixerPlayable.Create(graph, 2);
+        layerMixer.SetSpeed(presentationPlaybackSpeed);
         bodyMixer = AnimationMixerPlayable.Create(graph, 2);
         auxiliaryMixer = AnimationMixerPlayable.Create(graph, 2);
         graph.Connect(bodyMixer, 0, layerMixer, 0);

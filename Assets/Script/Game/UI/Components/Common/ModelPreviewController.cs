@@ -96,8 +96,10 @@ public sealed class ModelPreviewController : MonoBehaviour
 
     static readonly int ModelFadeId = Shader.PropertyToID("_ModelFade");
     CancellationTokenSource characterSwitchCancellation;
+    int presentationRequestVersion;
     Renderer[] fadingCharacterRenderers;
     MaterialPropertyBlock characterFadePropertyBlock;
+    readonly ModelViewer.WeaponVisibilitySettings standaloneWeaponVisibility = new();
 
     public bool IsCharacterPreviewActive =>
         activePreviewState != ActivePreviewState.Equip
@@ -138,7 +140,10 @@ public sealed class ModelPreviewController : MonoBehaviour
             }
         }
 
-        attachment.ShowWeapon(weaponDefinition, characterPresentation);
+        // Standalone animation previews may omit ModelViewer; use the same default settings there.
+        var viewer = GetComponent<ModelViewer>();
+        attachment.ShowWeapon(weaponDefinition, characterPresentation,
+            viewer != null ? viewer.WeaponVisibility : standaloneWeaponVisibility);
     }
 
     internal bool CanShowCharacter(string targetKey)
@@ -516,6 +521,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         bool immediate,
         Action onCompleted)
     {
+        int version = ++presentationRequestVersion;
         if (!IsCharacterPreviewActive)
         {
             onCompleted?.Invoke();
@@ -525,7 +531,7 @@ public sealed class ModelPreviewController : MonoBehaviour
         if (characterPresentation.Profile != null
             && TryGetPresentationState(preset, out CharacterPresentationState state))
         {
-            ApplyPresentationStateAsync(state, immediate, onCompleted)
+            ApplyPresentationStateAsync(state, immediate, onCompleted, version)
                 .Forget(Debug.LogException);
             return;
         }
@@ -547,11 +553,12 @@ public sealed class ModelPreviewController : MonoBehaviour
     async UniTask ApplyPresentationStateAsync(
         CharacterPresentationState state,
         bool immediate,
-        Action onCompleted)
+        Action onCompleted,
+        int version)
     {
         try
         {
-            await characterPresentation.SwitchAsync(
+            await characterPresentation.SwitchForInteractionAsync(
                 state,
                 immediate
                     ? PresentationTransitionMode.Immediate
@@ -559,7 +566,9 @@ public sealed class ModelPreviewController : MonoBehaviour
         }
         finally
         {
-            onCompleted?.Invoke();
+            // A cancelled request may finish after a new preset has taken ownership of the viewer.
+            if (version == presentationRequestVersion)
+                onCompleted?.Invoke();
         }
     }
 

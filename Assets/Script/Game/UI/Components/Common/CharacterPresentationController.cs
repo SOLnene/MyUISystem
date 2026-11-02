@@ -64,6 +64,9 @@ public sealed class CharacterPresentationController : MonoBehaviour
     [SerializeField]
     FaceController faceController;
 
+    [SerializeField, HideInInspector, Min(0.1f)]
+    float transitionSpeed = 1f;
+
     [SerializeField, HideInInspector]
     float timedBlendTotalDuration = 1.3f;
 
@@ -76,6 +79,12 @@ public sealed class CharacterPresentationController : MonoBehaviour
     [SerializeField, HideInInspector]
     float timedBlendAsToBsDuration = 0.25f;
 
+    [SerializeField, HideInInspector]
+    float asToLoopPlayDuration = -1f;
+
+    [SerializeField, HideInInspector]
+    float bsToLoopPlayDuration = -1f;
+
     CharacterPreviewActor actor;
     CharacterPresentationProfile profile;
     CharacterPresentationData currentPresentation;
@@ -87,8 +96,10 @@ public sealed class CharacterPresentationController : MonoBehaviour
     bool hasPlayingPresentation;
     CancellationTokenSource playbackCancellation;
     TransitionStage transitionStage;
+    bool canInterruptPlayback;
     double phaseStartedAt;
     float phaseClipStartTime;
+    float playbackSpeed = 1f;
 
     public CharacterPreviewActor Actor => actor;
     public CharacterPresentationProfile Profile => profile;
@@ -100,8 +111,11 @@ public sealed class CharacterPresentationController : MonoBehaviour
     public bool HasTargetPresentation => hasTargetPresentation;
     public bool HasPlayingPresentation => hasPlayingPresentation;
     internal float PhaseTime => hasPlayingPresentation
-        ? phaseClipStartTime + (float)(Time.timeAsDouble - phaseStartedAt)
+        ? phaseClipStartTime + (float)(Time.timeAsDouble - phaseStartedAt) * playbackSpeed
         : 0f;
+    internal float TransitionSpeed => transitionSpeed > 0f && !float.IsInfinity(transitionSpeed)
+        ? Mathf.Max(0.1f, transitionSpeed) : 1f;
+    internal float PlaybackSpeed => playbackSpeed;
 
     public void Bind(
         CharacterPreviewActor targetActor,
@@ -177,11 +191,27 @@ public sealed class CharacterPresentationController : MonoBehaviour
         return SwitchInternalAsync(targetState, transitionMode, crossFadeDurationOverride, cancellationToken);
     }
 
+    internal UniTask SwitchForInteractionAsync(
+        CharacterPresentationState targetState,
+        PresentationTransitionMode transitionMode)
+    {
+        // The authored tail keeps playing after readiness; replacing it cancels only its remaining plan.
+        var ready = new UniTaskCompletionSource();
+        SwitchInternalAsync(targetState, transitionMode, null, default, ready)
+            .ContinueWith(() => { ready.TrySetResult(); })
+            .Forget(exception =>
+            {
+                if (!ready.TrySetException(exception)) Debug.LogException(exception);
+            });
+        return ready.Task;
+    }
+
     async UniTask SwitchInternalAsync(
         CharacterPresentationState targetState,
         PresentationTransitionMode transitionMode,
         float? crossFadeDurationOverride,
-        CancellationToken cancellationToken)
+        CancellationToken cancellationToken,
+        UniTaskCompletionSource interactionReady = null)
     {
         if (profile == null)
         {
@@ -190,18 +220,31 @@ public sealed class CharacterPresentationController : MonoBehaviour
         }
 
         // UI 负责阻塞切换点击；重复请求仅忽略，不保存目标或创建第二条播放路线。
-        if (transitionStage != TransitionStage.Idle) return;
-        if (currentPresentation != null && currentState == targetState
-            && hasPlayingPresentation && currentPhase == PresentationPhase.Loop) return;
+        if (transitionStage != TransitionStage.Idle && !canInterruptPlayback) return;
+        if (hasPlayingPresentation && playingState == targetState
+            && currentPhase == PresentationPhase.Loop) return;
 
-        TransitionStep[] plan = BuildTransitionPlan(targetState, transitionMode, crossFadeDurationOverride);
-        if (plan.Length == 0) return;
         var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
             cancellationToken, this.GetCancellationTokenOnDestroy());
+        CancellationTokenSource previous = playbackCancellation;
         playbackCancellation = cancellation;
+        canInterruptPlayback = false;
+        transitionStage = TransitionStage.PreparingTransition;
+        // Transfer ownership before cancellation so the old finally cannot clear the new request.
+        previous?.Cancel();
         SetTargetState(targetState);
         try
         {
+            if (previous != null && transitionMode != PresentationTransitionMode.Immediate)
+            {
+                // A Loop blend may have started since input was released; finish that short blend without snapping.
+                await animationController.WaitForLayeredBlendCompleteAsync(cancellation.Token);
+            }
+            SetPlaybackSpeed(transitionMode == PresentationTransitionMode.Immediate ? 1f : TransitionSpeed);
+            TransitionStep[] plan = BuildTransitionPlan(
+                targetState, transitionMode, crossFadeDurationOverride);
+            if (plan.Length == 0) return;
+
             if (transitionMode != PresentationTransitionMode.Immediate
                 && hasPlayingPresentation
                 && playingState == CharacterPresentationState.WeaponShow
@@ -215,7 +258,7 @@ public sealed class CharacterPresentationController : MonoBehaviour
                 await UniTask.WaitUntil(() => weapon == null || weapon.IsConcealed,
                     cancellationToken: cancellation.Token);
             }
-            await ExecuteTransitionPlanAsync(plan, cancellation.Token);
+            await ExecuteTransitionPlanAsync(plan, cancellation.Token, interactionReady);
             cancellation.Token.ThrowIfCancellationRequested();
             // 只有目标 Loop 真正建立后，后续切换才允许使用它的退出动画。
             currentPresentation = profile.Get(targetState);
@@ -235,8 +278,10 @@ public sealed class CharacterPresentationController : MonoBehaviour
         {
             if (ReferenceEquals(playbackCancellation, cancellation))
             {
+                SetPlaybackSpeed(1f);
                 playbackCancellation = null;
                 transitionStage = TransitionStage.Idle;
+                canInterruptPlayback = false;
             }
             // Stop 只发出取消；本次调用统一释放，避免旧请求清理新请求的状态。
             cancellation.Dispose();
@@ -254,10 +299,12 @@ public sealed class CharacterPresentationController : MonoBehaviour
         {
             return new[] { new TransitionStep(target, PresentationPhase.Loop, 0f) };
         }
-        bool hasSource = currentPresentation != null;
+        CharacterPresentationState sourceState = hasPlayingPresentation ? playingState : currentState;
+        CharacterPresentationData source = hasPlayingPresentation ? profile.Get(sourceState) : currentPresentation;
+        bool hasSource = source != null;
         bool teamRoute = target == CharacterPresentationState.TeamSwitch
-                         || (hasSource && currentState == CharacterPresentationState.TeamSwitch);
-        bool defaultRoute = hasSource && (currentState == CharacterPresentationState.Default
+                         || (hasSource && sourceState == CharacterPresentationState.TeamSwitch);
+        bool defaultRoute = hasSource && (sourceState == CharacterPresentationState.Default
                                          || target == CharacterPresentationState.Default);
         if (teamRoute) mode = PresentationTransitionMode.Authored;
         else if (defaultRoute) mode = PresentationTransitionMode.AuthoredTimedBlend;
@@ -270,7 +317,7 @@ public sealed class CharacterPresentationController : MonoBehaviour
                     ? ResolveCrossFadeDuration(destination, crossFadeDurationOverride) : 0f) };
         }
 
-        float exitLength = hasSource ? GetPhaseDuration(currentPresentation, PresentationPhase.Exit) : 0f;
+        float exitLength = hasSource ? GetPhaseDuration(source, PresentationPhase.Exit) : 0f;
         float enterLength = GetPhaseDuration(destination, PresentationPhase.Enter);
         var steps = new List<TransitionStep>(3);
         if (mode == PresentationTransitionMode.Authored)
@@ -290,7 +337,7 @@ public sealed class CharacterPresentationController : MonoBehaviour
             else
             {
                 if (exitLength > 0f)
-                    steps.Add(new TransitionStep(currentState, PresentationPhase.Exit, 0f));
+                    steps.Add(new TransitionStep(sourceState, PresentationPhase.Exit, 0f));
                 if (enterLength > 0f)
                     steps.Add(new TransitionStep(target, PresentationPhase.Enter, exitLength));
                 steps.Add(new TransitionStep(target, PresentationPhase.Loop, exitLength + enterLength));
@@ -298,7 +345,8 @@ public sealed class CharacterPresentationController : MonoBehaviour
             return steps.ToArray();
         }
 
-        bool useExit = hasSource && currentState != CharacterPresentationState.Default;
+        // Early UI input changes when the route starts, not its authored Exit/Enter sequence.
+        bool useExit = hasSource && sourceState != CharacterPresentationState.Default;
         bool useEnter = target != CharacterPresentationState.Default;
         bool bothPhases = useExit && useEnter;
         // Default 的辅助节点局部变换可能与目标首帧不同，不能硬切；单段 AS/BS 保留两端混合并按自身时长播放。
@@ -313,7 +361,7 @@ public sealed class CharacterPresentationController : MonoBehaviour
         bool naturalTiming = settings.TotalDuration == 0f;
         if ((useExit && exitLength <= 0f) || (useEnter && enterLength <= 0f))
         {
-            Debug.LogWarning($"Missing AS/BS for {currentState} -> {target}; blending directly to Loop.");
+            Debug.LogWarning($"Missing AS/BS for {sourceState} -> {target}; blending directly to Loop.");
             return new[] { new TransitionStep(target, PresentationPhase.Loop, 0f,
                 naturalTiming ? settings.LoopDuration : settings.TotalDuration) };
         }
@@ -335,9 +383,21 @@ public sealed class CharacterPresentationController : MonoBehaviour
         float bsTime = bothPhases ? entryBlend : 0f;
         float total = naturalTiming ? bsTime + (useEnter ? enterLength : exitLength) : settings.TotalDuration;
         float loopTime = Mathf.Max(0f, total - loopBlend);
+        if (defaultRoute)
+        {
+            float playDuration = useEnter ? bsToLoopPlayDuration : asToLoopPlayDuration;
+            if (float.IsNaN(playDuration) || float.IsInfinity(playDuration))
+            {
+                Debug.LogWarning("Invalid AS/BS playback time before Loop.");
+                return Array.Empty<TransitionStep>();
+            }
+            // Measure from the clip start; keep entry and Loop blends from overlapping or overrunning the clip.
+            if (playDuration >= 0f)
+                loopTime = Mathf.Clamp(playDuration, entryBlend, loopTime);
+        }
         float bsOffset = naturalTiming ? 0f : Mathf.Max(0f, enterLength - (total - bsTime));
         if (useExit)
-            steps.Add(new TransitionStep(currentState, PresentationPhase.Exit, 0f, entryBlend));
+            steps.Add(new TransitionStep(sourceState, PresentationPhase.Exit, 0f, entryBlend));
         if (useEnter)
             steps.Add(new TransitionStep(target, PresentationPhase.Enter, bsTime,
                 bothPhases ? Mathf.Min(middleBlend, Mathf.Max(0f, loopTime - bsTime)) : entryBlend, bsOffset));
@@ -345,18 +405,24 @@ public sealed class CharacterPresentationController : MonoBehaviour
         return steps.ToArray();
     }
 
-    async UniTask ExecuteTransitionPlanAsync(TransitionStep[] plan, CancellationToken cancellationToken)
+    async UniTask ExecuteTransitionPlanAsync(
+        TransitionStep[] plan,
+        CancellationToken cancellationToken,
+        UniTaskCompletionSource interactionReady)
     {
         double startedAt = Time.timeAsDouble;
+        // Keep authored values and clip offsets in clip seconds; accelerate the local transition clock.
+        float speed = playbackSpeed;
+        double Elapsed() => (Time.timeAsDouble - startedAt) * speed;
         for (int i = 0; i < plan.Length; i++)
         {
             TransitionStep step = plan[i];
-            if (Time.timeAsDouble - startedAt < step.StartAt)
+            if (Elapsed() < step.StartAt)
             {
 #if UNITY_EDITOR
-                Debug.Log($"[TabSync] ActorWait state={step.State} from={currentPhase} next={step.Phase} until={step.StartAt:F4} elapsed={Time.timeAsDouble - startedAt:F4} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+                Debug.Log($"[TabSync] ActorWait state={step.State} from={currentPhase} next={step.Phase} until={step.StartAt:F4} elapsed={Elapsed():F4} speed={speed:F2} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
 #endif
-                await UniTask.WaitUntil(() => Time.timeAsDouble - startedAt >= step.StartAt,
+                await UniTask.WaitUntil(() => Elapsed() >= step.StartAt,
                     cancellationToken: cancellationToken);
             }
             cancellationToken.ThrowIfCancellationRequested();
@@ -367,9 +433,9 @@ public sealed class CharacterPresentationController : MonoBehaviour
             var clips = GetPhaseClips(profile.Get(step.State), step.Phase);
             // 以计划的绝对时间交接，帧误差不逐段累加；片段起点独立于混合权重。
             float blend = Mathf.Min(step.BlendDuration,
-                Mathf.Max(0f, step.StartAt + step.BlendDuration - (float)(Time.timeAsDouble - startedAt)));
+                Mathf.Max(0f, step.StartAt + step.BlendDuration - (float)Elapsed()));
 #if UNITY_EDITOR
-            Debug.Log($"[TabSync] ActorPlay state={step.State} phase={step.Phase} body={clips.body?.name} length={clips.body?.length:F4} start={step.ClipStartTime:F4} blend={blend:F4} elapsed={Time.timeAsDouble - startedAt:F4} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+            Debug.Log($"[TabSync] ActorPlay state={step.State} phase={step.Phase} body={clips.body?.name} length={clips.body?.length:F4} start={step.ClipStartTime:F4} blend={blend:F4} elapsed={Elapsed():F4} speed={speed:F2} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
 #endif
             PlayPhase(clips.body, clips.auxiliary, clips.faceA, clips.faceB, clips.faceSource,
                 blend > 0f, blend, step.ClipStartTime, step.ClipStartTime,
@@ -378,16 +444,25 @@ public sealed class CharacterPresentationController : MonoBehaviour
             {
                 await animationController.WaitForLayeredBlendCompleteAsync(cancellationToken);
 #if UNITY_EDITOR
-                Debug.Log($"[TabSync] ActorBlendDone phase={step.Phase} elapsed={Time.timeAsDouble - startedAt:F4} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+                Debug.Log($"[TabSync] ActorBlendDone phase={step.Phase} elapsed={Elapsed():F4} speed={speed:F2} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
 #endif
                 // 只有表情资源时也必须等待其混合完成，不能依赖身体播放器的状态。
-                if (Time.timeAsDouble - startedAt < step.StartAt + step.BlendDuration)
-                    await UniTask.WaitUntil(() => Time.timeAsDouble - startedAt >= step.StartAt + step.BlendDuration,
+                if (Elapsed() < step.StartAt + step.BlendDuration)
+                    await UniTask.WaitUntil(() => Elapsed() >= step.StartAt + step.BlendDuration,
                         cancellationToken: cancellationToken);
             }
             cancellationToken.ThrowIfCancellationRequested();
             transitionStage = step.Phase == PresentationPhase.Loop
                 ? TransitionStage.Idle : TransitionStage.PlayingTransition;
+            if (interactionReady != null && step.Phase == PresentationPhase.Enter && i == plan.Length - 2)
+            {
+                // Only BS may release input early; AS keeps ownership until the next BS or Loop is established.
+                canInterruptPlayback = true;
+#if UNITY_EDITOR
+                Debug.Log($"[TabSync] ActorInputReady state={step.State} phase={step.Phase} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+#endif
+                interactionReady.TrySetResult();
+            }
         }
     }
 
@@ -503,13 +578,25 @@ public sealed class CharacterPresentationController : MonoBehaviour
         hasPlayingPresentation = true;
     }
 
+    void SetPlaybackSpeed(float speed)
+    {
+        // Rebase before changing speed so an in-flight phase never jumps backwards or forwards.
+        phaseClipStartTime = PhaseTime;
+        phaseStartedAt = Time.timeAsDouble;
+        playbackSpeed = speed;
+        animationController.SetPresentationPlaybackSpeed(speed);
+        faceController.SetPresentationPlaybackSpeed(speed);
+    }
+
     public void Stop()
     {
+        SetPlaybackSpeed(1f);
         currentPresentation = null;
         currentPhase = PresentationPhase.None;
         hasTargetPresentation = false;
         hasPlayingPresentation = false;
         transitionStage = TransitionStage.Idle;
+        canInterruptPlayback = false;
         CancellationTokenSource cancellation = playbackCancellation;
         playbackCancellation = null;
         if (cancellation == null)

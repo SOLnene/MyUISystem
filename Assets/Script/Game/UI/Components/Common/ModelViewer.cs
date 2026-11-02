@@ -6,6 +6,17 @@ using UnityEngine.Serialization;
 
 public class ModelViewer : SingletonMono<ModelViewer>
 {
+    [Serializable]
+    internal sealed class WeaponVisibilitySettings
+    {
+        [SerializeField, Min(0f), Tooltip("武器开始渐显前的等待时间，单位：秒；随角色切换倍速换算。")]
+        internal float revealDelay = 0.2f;
+        [SerializeField, Min(0f), Tooltip("武器从隐藏到完全显示的时间，单位：秒；随角色切换倍速换算。")]
+        internal float revealDuration = 0.12f;
+        [SerializeField, Min(0f), Tooltip("武器从显示到完全隐藏的时间，单位：秒；随角色切换倍速换算。")]
+        internal float concealDuration = 0.10f;
+    }
+
     enum CameraTransitionMotion
     {
         Linear,
@@ -94,6 +105,9 @@ public class ModelViewer : SingletonMono<ModelViewer>
     [SerializeField] CharacterReturnAnimationMode characterReturnAnimationMode =
         CharacterReturnAnimationMode.ReplayEquipTransition;
 
+    [Header("武器显隐")]
+    [SerializeField] WeaponVisibilitySettings weaponVisibility = new();
+
     [Header("Background Effects")]
     [SerializeField] ParticleSystem starSphere;
     
@@ -146,6 +160,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
         || activeCameraTransition != null
         || cameraPushOperation != null;
     internal bool IsCharacterPreviewActive => previewController.IsCharacterPreviewActive;
+    internal WeaponVisibilitySettings WeaponVisibility => weaponVisibility;
     internal bool CanShowCharacter(string targetKey) => previewController.CanShowCharacter(targetKey);
     public event Action OnPreviewTransitionCompleted;
     void Start()
@@ -636,14 +651,14 @@ public class ModelViewer : SingletonMono<ModelViewer>
     {
         animationTransitionPending = false;
 #if UNITY_EDITOR
-        Debug.Log($"[TabSync] AnimationDone preset={currentPresetIndex} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
+        Debug.Log($"[TabSync] AnimationReady preset={currentPresetIndex} frame={Time.frameCount} t={Time.realtimeSinceStartupAsDouble:F4}", this);
 #endif
         TryCompleteTransition();
     }
 
     void TryCompleteTransition()
     {
-        // Presentation profiles own facial phases; the viewer waits for the camera and presentation task.
+        // Input waits for the camera and entry blend; the authored presentation can continue in the background.
         if (cameraTransitionPending || animationTransitionPending)
         {
             return;
