@@ -3,7 +3,7 @@ using UniRx;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class FriendView : UIView
+public partial class FriendView : UIView
 {
     enum FriendPage
     {
@@ -44,14 +44,15 @@ public class FriendView : UIView
         ClearViewState();
 
         viewModel = (FriendViewModel)data;
+        BeginSocialOpen();
         closeButton.onClick.AddListener(OnCancel);
         tabGroup.Bind(TabOptions, viewModel.SelectedTabIndex);
         viewModel.SelectedTabIndex
-            .Subscribe(RefreshSelectedPage)
+            .Subscribe(SwitchSocialPage)
             .AddTo(viewBindings);
 
         friendCountText.text = $"我的好友 {viewModel.Friends.Count}/{FriendViewModel.MaxFriendCount}";
-        friendListView.Bind(viewModel.Friends, viewModel.RequestChat);
+        InitializeSocial();
     }
 
     public override void OnClose()
@@ -85,6 +86,7 @@ public class FriendView : UIView
 
     void ClearViewState()
     {
+        ReleaseSocial();
         closeButton.onClick.RemoveListener(OnCancel);
         viewBindings.Clear();
         friendListView.Clear();

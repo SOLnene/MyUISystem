@@ -1,5 +1,6 @@
 public class FriendInfo
 {
+    internal bool IsRequest { get; set; }
     public PlayerSummaryInfo Player { get; }
     public int Level { get; }
     public string PresenceText { get; }

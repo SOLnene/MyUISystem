@@ -2,11 +2,11 @@ using System;
 using System.Collections.Generic;
 using UniRx;
 
-public class FriendViewModel : IDisposable
+public partial class FriendViewModel : IDisposable
 {
     public const int MaxFriendCount = 200;
 
-    public IReadOnlyList<FriendInfo> Friends { get; }
+    public IReadOnlyList<FriendInfo> Friends { get; private set; }
     public ReactiveProperty<int> SelectedTabIndex { get; } = new(0);
 
     readonly Action<string> onChatRequested;
@@ -22,10 +22,12 @@ public class FriendViewModel : IDisposable
     public void RequestChat(string playerId)
     {
         onChatRequested?.Invoke(playerId);
+        ChatRequested.OnNext(playerId);
     }
 
     public void Dispose()
     {
+        DisposeRemote();
         SelectedTabIndex.Dispose();
     }
 }
