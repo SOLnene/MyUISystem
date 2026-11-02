@@ -1,5 +1,8 @@
 using UnityEngine;
 using UnityEngine.SceneManagement;
+#if UNITY_EDITOR
+using UnityEditor.SceneManagement;
+#endif
 
 [ExecuteAlways]
 [DisallowMultipleComponent]
@@ -15,12 +18,19 @@ internal sealed class GenshinEnvironmentLighting : MonoBehaviour
     private void OnEnable()
     {
         SceneManager.activeSceneChanged += OnActiveSceneChanged;
+#if UNITY_EDITOR
+        // Runtime scene events do not report active-scene changes in Edit mode.
+        EditorSceneManager.activeSceneChangedInEditMode += OnActiveSceneChanged;
+#endif
         BindForActiveScene();
     }
 
     private void OnDisable()
     {
         SceneManager.activeSceneChanged -= OnActiveSceneChanged;
+#if UNITY_EDITOR
+        EditorSceneManager.activeSceneChangedInEditMode -= OnActiveSceneChanged;
+#endif
         ReleaseEnvironment();
     }
 

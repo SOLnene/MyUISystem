@@ -82,6 +82,8 @@ Shader "Game/Terrain/Genshin Recovered Terrain"
             UNITY_DECLARE_TEX2D_NOSAMPLER(_Texture_7_Normal);
             float4 _SourceOrigin;
             float _TintEnhanceFactor, _Terrain_Smoothness;
+            float _GenshinGroundCaptureMode;
+            float4x4 _GenshinGroundCaptureView, _GenshinGroundCaptureVP;
             float _Texture_1_Tiling, _Texture_2_Tiling, _Texture_3_Tiling, _Texture_4_Tiling;
             float _Texture_5_Tiling, _Texture_6_Tiling, _Texture_7_Tiling;
             float _Texture_1_Normal_Power, _Texture_2_Normal_Power, _Texture_3_Normal_Power;
@@ -101,8 +103,10 @@ Shader "Game/Terrain/Genshin Recovered Terrain"
                 float2 uv : TEXCOORD0;
                 float3 worldPos : TEXCOORD1;
                 float3 worldNormal : TEXCOORD2;
-                SHADOW_COORDS(3)
-                UNITY_FOG_COORDS(4)
+                float3 worldTangent : TEXCOORD3;
+                float3 worldBitangent : TEXCOORD4;
+                SHADOW_COORDS(5)
+                UNITY_FOG_COORDS(6)
             };
             v2f vert(appdata v)
             {
@@ -110,7 +114,13 @@ Shader "Game/Terrain/Genshin Recovered Terrain"
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.uv = v.uv;
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
+                // Offscreen material data uses the owning camera's explicit projection.
+                if (_GenshinGroundCaptureMode > 0.5)
+                    o.pos = mul(_GenshinGroundCaptureVP, float4(o.worldPos, 1));
                 o.worldNormal = UnityObjectToWorldNormal(v.normal);
+                // Preserve the native XZ terrain frame, including its slope-dependent lengths.
+                o.worldTangent = float3(o.worldNormal.y, -o.worldNormal.x, 0);
+                o.worldBitangent = cross(o.worldTangent, o.worldNormal);
                 TRANSFER_SHADOW(o);
                 UNITY_TRANSFER_FOG(o, o.pos);
                 return o;
@@ -174,10 +184,14 @@ Shader "Game/Terrain/Genshin Recovered Terrain"
                 diffuse /= colorSum;
                 detailNormal /= normalSum;
                 smoothness = saturate(smoothness / normalSum * _Terrain_Smoothness);
-                float3 normal = normalize(i.worldNormal);
-                float3 tangent = normalize(float3(1, 0, 0) - normal * normal.x);
-                float3 bitangent = normalize(cross(tangent, normal));
-                normal = normalize(detailNormal.x * tangent + detailNormal.y * bitangent + detailNormal.z * normal);
+                float3 normal = normalize(detailNormal.x * i.worldTangent +
+                    detailNormal.y * i.worldBitangent + detailNormal.z * i.worldNormal);
+                if (_GenshinGroundCaptureMode > 0.5)
+                {
+                    if (_GenshinGroundCaptureMode > 1.5)
+                        return float4(diffuse, -mul(_GenshinGroundCaptureView, float4(i.worldPos, 1)).z);
+                    return float4(normal, smoothness);
+                }
                 UNITY_LIGHT_ATTENUATION(attenuation, i, i.worldPos);
                 float3 lighting = GenshinSourceLighting(diffuse, float3(0.04, 0.04, 0.04),
                     smoothness, normal, i.worldPos, attenuation);

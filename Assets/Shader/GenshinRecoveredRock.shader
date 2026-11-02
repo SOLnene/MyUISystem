@@ -31,6 +31,8 @@ Shader "Game/Scene/Genshin Recovered Rock"
         _DiffuseBlendMethod ("Diffuse Blend Method", Float) = 0
         _MaskBlendIntensity ("Mask Blend Intensity", Float) = 1
         _MaskBlendMethod ("Mask Blend Method", Float) = 0
+        [Enum(Off,0,On,1)] _EnableDepthBlend ("Terrain Depth Blend", Float) = 0
+        _DepthBiasScaled ("Depth Blend Inverse Distance", Range(0,500)) = 2
         _VertRForMedium ("Vertex R For Detail", Float) = 0
         _EnableFixedTiling ("Fixed Tiling", Float) = 0
         _UseGrassSecondaryUV ("Grass Secondary UV", Float) = 0
@@ -64,6 +66,8 @@ Shader "Game/Scene/Genshin Recovered Rock"
             float _NearDetailDiffuseFade, _NearDetailNormalScale, _NearDarkenIntensity, _GrassNormalMix, _UseTintGrassDiffuse;
             float _DiffuseBlendIntensity, _DiffuseBlendMethod, _MaskBlendIntensity, _MaskBlendMethod;
             float _VertRForMedium, _EnableFixedTiling, _UseGrassSecondaryUV, _UseMediumDetailSecondaryUV, _UseNearDetailSecondaryUV;
+            float _EnableDepthBlend, _DepthBiasScaled, _GenshinGroundCaptureEnabled;
+            sampler2D _GenshinGroundNormals, _GenshinGroundAlbedoDepth;
 
             struct appdata
             {
@@ -82,10 +86,12 @@ Shader "Game/Scene/Genshin Recovered Rock"
                 float4 detailUV : TEXCOORD1;
                 float3 worldPos : TEXCOORD2;
                 float3 normal : TEXCOORD3;
-                float4 tangent : TEXCOORD4;
+                float3 tangent : TEXCOORD4;
+                float3 bitangent : TEXCOORD5;
+                float4 screenPos : TEXCOORD8;
                 float4 color : COLOR0;
-                SHADOW_COORDS(5)
-                UNITY_FOG_COORDS(6)
+                SHADOW_COORDS(6)
+                UNITY_FOG_COORDS(7)
             };
             v2f vert(appdata v)
             {
@@ -93,8 +99,11 @@ Shader "Game/Scene/Genshin Recovered Rock"
                 v2f o;
                 o.pos = UnityObjectToClipPos(v.vertex);
                 o.worldPos = mul(unity_ObjectToWorld, v.vertex).xyz;
+                o.screenPos = ComputeScreenPos(o.pos);
                 o.normal = UnityObjectToWorldNormal(v.normal);
-                o.tangent = float4(UnityObjectToWorldDir(v.tangent.xyz), v.tangent.w * unity_WorldTransformParams.w);
+                o.tangent = UnityObjectToWorldDir(v.tangent.xyz);
+                // Interpolate the native vertex frame; rebuilding B per pixel changes curved surfaces.
+                o.bitangent = cross(o.normal, o.tangent) * (v.tangent.w * unity_WorldTransformParams.w);
                 float scale = _EnableFixedTiling > 0.5 ? 1 : 0.33 *
                     (length(unity_ObjectToWorld._m00_m01_m02) + length(unity_ObjectToWorld._m10_m11_m12) + length(unity_ObjectToWorld._m20_m21_m22));
                 o.uv.xy = lerp(v.uv, v.uv1, _UseGrassSecondaryUV) * scale * _GrassDiffuse_ST.xy + _GrassDiffuse_ST.zw;
@@ -159,12 +168,26 @@ Shader "Game/Scene/Genshin Recovered Rock"
                 mask = GenshinLayerBlend(mask, grassMask, grassWeight * _MaskBlendIntensity, _MaskBlendMethod);
                 normalTS.xy *= 1 + grassWeight * _GrassNormalMix;
                 normalTS.z = sqrt(1 - saturate(dot(normalTS.xy, normalTS.xy)));
-                float3 normal = normalize(i.normal);
-                float3 tangent = normalize(i.tangent.xyz);
-                float3 bitangent = cross(normal, tangent) * i.tangent.w;
-                normal = normalize(tangent * normalTS.x + bitangent * normalTS.y + normal * normalTS.z);
+                float3 normal = normalize(i.tangent * normalTS.x +
+                    i.bitangent * normalTS.y + i.normal * normalTS.z);
                 UNITY_LIGHT_ATTENUATION(attenuation, i, i.worldPos);
                 float smoothness = clamp(mask.r, 0.001, 0.999);
+                if (_EnableDepthBlend > 0.5 && _GenshinGroundCaptureEnabled > 0.5)
+                {
+                    float2 screenUV = i.screenPos.xy / i.screenPos.w;
+                    float4 ground = tex2D(_GenshinGroundAlbedoDepth, screenUV);
+                    // Zero depth marks pixels outside the captured heightfield.
+                    if (ground.a > 0)
+                    {
+                        float4 groundNormal = tex2D(_GenshinGroundNormals, screenUV);
+                        float eyeDepth = -UnityWorldToViewPos(i.worldPos).z;
+                        // Native programs blend material data before lighting using this square-root ramp.
+                        float weight = sqrt(saturate(abs(ground.a - eyeDepth) * _DepthBiasScaled));
+                        albedo = lerp(ground.rgb, albedo, weight);
+                        normal = normalize(lerp(groundNormal.xyz, normal, weight));
+                        smoothness = lerp(groundNormal.a, smoothness, weight);
+                    }
+                }
                 float3 lighting = GenshinSourceLighting(albedo, float3(0.04,0.04,0.04), smoothness, normal, i.worldPos, attenuation);
                 lighting += GenshinEnvironmentSpecular(float3(0.04,0.04,0.04), smoothness, normal, i.worldPos, attenuation);
                 float4 color = float4(lighting, 1);
