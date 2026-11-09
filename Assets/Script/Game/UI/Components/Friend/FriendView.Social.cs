@@ -35,6 +35,7 @@ public partial class FriendView
     {
         ++presentationVersion;
         closing = switching = panelsShown = false; renderedFriends = renderedRequests = null;
+        renderTextureBackground.texture = UIBackdropCaptureService.Instance.GameBackdrop;
         // An unassigned RT must reveal the prefab fallback instead of drawing a white RawImage.
         renderTextureBackground.enabled = renderTextureBackground.texture != null;
         if (renderTextureBackground.enabled)
@@ -57,6 +58,9 @@ public partial class FriendView
         ++presentationVersion; panelsShown = false;
         chatPanel.HideImmediate(); requestListView.Clear();
         topPanel.HideImmediate(); footerPanel.HideImmediate(); backgroundPanel.HideImmediate(); contentPanel.HideImmediate();
+        // The page borrows A; closing this page must not invalidate it for another page or reward B.
+        renderTextureBackground.texture = null;
+        renderTextureBackground.enabled = false;
         searchButton.onClick.RemoveListener(Search); applyButton.onClick.RemoveListener(Apply); refreshButton.onClick.RemoveListener(Refresh);
     }
     void Search() => viewModel.SearchAsync(uidInput.text.Trim()).Forget();

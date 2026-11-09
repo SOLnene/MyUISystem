@@ -1,6 +1,8 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Threading;
+using Cysharp.Threading.Tasks;
 using SkierFramework;
 using UnityEngine;
 using UnityEngine.UI;
@@ -19,7 +21,9 @@ public partial class HubRoot : UIView
     private TextAsset characterEnhanceTutorialConfig;
     private TutorialScheduler tutorialScheduler;
     [SerializeField] private RightHub rightHub;
+    [SerializeField] private Material gameBackdropBlurMaterial;
     private HubTeamViewModel teamViewModel;
+    private CancellationTokenSource mainMenuCaptureCancellation;
     
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -95,6 +99,40 @@ public partial class HubRoot : UIView
         }
 
         mainMenuOpen = true;
+        OpenMainMenuAfterCaptureAsync().Forget(Debug.LogException);
+    }
+
+    private async UniTask OpenMainMenuAfterCaptureAsync()
+    {
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(this.GetCancellationTokenOnDestroy());
+        mainMenuCaptureCancellation = cancellation;
+        try
+        {
+            // Capture the world before any page can hide its camera or cover it with UI.
+            var world = FindObjectOfType<WorldSceneContext>();
+            var camera = world != null ? world.WorldCamera : Camera.main;
+            await UIBackdropCaptureService.Instance.CaptureGameAsync(
+                camera, gameBackdropBlurMaterial, cancellation.Token);
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested)
+        {
+            mainMenuOpen = false;
+            return;
+        }
+        catch (Exception error)
+        {
+            // A missing capture must keep the menu usable; pages retain their prefab fallback.
+            Debug.LogException(error, this);
+        }
+        finally
+        {
+            if (mainMenuCaptureCancellation == cancellation) mainMenuCaptureCancellation = null;
+        }
+        if (this == null || !isActiveAndEnabled || !FlowManager.Instance.IsInWorld || cancellation.IsCancellationRequested)
+        {
+            mainMenuOpen = false;
+            return;
+        }
         PlayerSummaryInfo playerSummary;
         var cloud = CloudGameSaveSession.Current;
         if (cloud != null && GameContext.Instance.ActiveSaveDirectory == cloud.Source)
@@ -117,6 +155,11 @@ public partial class HubRoot : UIView
 
     private void CloseMainMenu(Action callback = null)
     {
+        if (mainMenuCaptureCancellation != null)
+        {
+            mainMenuCaptureCancellation.Cancel();
+            return;
+        }
         UIManager.Instance.Close(UIType.MainMenuView, () =>
         {
             mainMenuOpen = false;
@@ -157,6 +200,7 @@ public partial class HubRoot : UIView
 
     public override void OnClose()
     {
+        mainMenuCaptureCancellation?.Cancel();
         mainMenuOpen = false;
         ReleaseTeamDisplay();
         base.OnClose();
@@ -164,6 +208,7 @@ public partial class HubRoot : UIView
 
     public override void OnRelease()
     {
+        mainMenuCaptureCancellation?.Cancel();
         ReleaseTeamDisplay();
         tutorialScheduler?.Dispose();
         tutorialScheduler = null;

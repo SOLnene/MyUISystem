@@ -2,6 +2,9 @@ using UnityEngine;
 
 public readonly struct UIBackdropCaptureProfile
 {
+    internal static UIBackdropCaptureProfile GameScreen =>
+        new(0.5f, 2.25f, 0.8f, 0.8f, Color.white, 0f);
+
     // Reward popups use a half-resolution target to reduce blur cost while retaining the backdrop
     // impression behind the foreground reward content.
     public static UIBackdropCaptureProfile RewardPopup =>

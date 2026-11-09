@@ -11,6 +11,7 @@ public sealed class UIBackdropCaptureService :
     static readonly int BlurTemporaryId =
         Shader.PropertyToID("_UIBackdropBlurTemporary");
     static readonly int BlurRadiusId = Shader.PropertyToID("_BlurRadius");
+    static readonly int TextureSourceId = Shader.PropertyToID("_UIBackdropTextureSource");
     static readonly int SaturationId = Shader.PropertyToID("_Saturation");
     static readonly int BrightnessId = Shader.PropertyToID("_Brightness");
     static readonly int TintId = Shader.PropertyToID("_Tint");
@@ -25,6 +26,15 @@ public sealed class UIBackdropCaptureService :
     bool isCapturing;
     bool capturePending;
     bool captureCompleted;
+    CommandBuffer gameCaptureCommandBuffer;
+    Camera gameCamera;
+    RenderTexture gameOutputTexture;
+    Material gameBlurMaterial;
+    Material gameBlurTemplate;
+    bool isGameCapturing, hasGameSnapshot;
+
+    // This cache belongs to a UI browsing session; individual pages only borrow its texture.
+    public RenderTexture GameBackdrop => hasGameSnapshot ? gameOutputTexture : null;
 
     internal void Configure(Camera camera)
     {
@@ -56,6 +66,7 @@ public sealed class UIBackdropCaptureService :
         capturePending = false;
         // Discard recorded commands when the service is disabled so a later request starts cleanly.
         captureCommandBuffer?.Clear();
+        gameCaptureCommandBuffer?.Clear();
     }
 
     // Records one capture request, waits until the configured camera has rendered it, and returns
@@ -100,7 +111,9 @@ public sealed class UIBackdropCaptureService :
                 Mathf.RoundToInt(Screen.height * profile.ResolutionScale));
 
             EnsureOutput(outputWidth, outputHeight);
-            PrepareCapture(outputTexture, blurMaterial, profile);
+            PrepareCapture(captureCommandBuffer, outputTexture, blurMaterial, profile);
+            captureCompleted = false;
+            capturePending = true;
 
             // CommandBuffer execution happens during the camera render, so polling must yield to
             // the frame loop until Camera.onPostRender confirms that pass has completed.
@@ -124,13 +137,99 @@ public sealed class UIBackdropCaptureService :
     }
 
     
+    public async UniTask<RenderTexture> CaptureGameAsync(
+        Camera source,
+        Material blurTemplate,
+        CancellationToken cancellationToken = default)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+        // Navigation inside an existing UI session keeps its original world frame.
+        if (hasGameSnapshot && gameCamera == source && uiCamera != null)
+        {
+            foreach (var view in uiCamera.transform.parent.GetComponentsInChildren<UIView>())
+                if (view.Handle != null && view.Handle.uiType != UIType.HubRoot)
+                    return gameOutputTexture;
+        }
+        if (source == null || !source.isActiveAndEnabled)
+            throw new InvalidOperationException("Game backdrop requires a rendering world camera.");
+        if (blurTemplate == null || blurTemplate.passCount < 2)
+            throw new ArgumentException("Game backdrop requires a two-pass blur material.", nameof(blurTemplate));
+
+        using var cancellation = CancellationTokenSource.CreateLinkedTokenSource(
+            cancellationToken, this.GetCancellationTokenOnDestroy());
+        await UniTask.WaitWhile(() => isGameCapturing, cancellationToken: cancellation.Token);
+        isGameCapturing = true;
+        hasGameSnapshot = false;
+        RenderTexture frame = null;
+        RenderTexture previousTarget = source.targetTexture;
+        try
+        {
+            if (gameCaptureCommandBuffer == null)
+                gameCaptureCommandBuffer = new CommandBuffer { name = "Game Backdrop Capture" };
+            if (gameCamera != source)
+            {
+                gameCamera = source;
+            }
+            // Reward capture may run in the same frame with different styling, so keep uniforms separate.
+            if (gameBlurTemplate != blurTemplate || gameBlurMaterial == null)
+            {
+                if (gameBlurMaterial != null) Destroy(gameBlurMaterial);
+                gameBlurTemplate = blurTemplate;
+                gameBlurMaterial = new Material(blurTemplate) { name = "Game Backdrop Blur" };
+            }
+            var profile = UIBackdropCaptureProfile.GameScreen;
+            int width = Mathf.Max(1, Mathf.RoundToInt(source.pixelWidth * profile.ResolutionScale));
+            int height = Mathf.Max(1, Mathf.RoundToInt(source.pixelHeight * profile.ResolutionScale));
+            if (gameOutputTexture == null || gameOutputTexture.width != width ||
+                gameOutputTexture.height != height || !gameOutputTexture.IsCreated())
+            {
+                DestroyOutput(gameOutputTexture);
+                gameOutputTexture = CreateOutput(width, height, $"GameBackdrop_{width}x{height}");
+            }
+            // Capture after movement/animation/camera LateUpdate, before opening the first page.
+            await UniTask.Yield(PlayerLoopTiming.LastPostLateUpdate, cancellation.Token);
+            if (!isActiveAndEnabled || source == null || !source.isActiveAndEnabled)
+                throw new InvalidOperationException("Game backdrop camera stopped before capture completed.");
+            frame = RenderTexture.GetTemporary(source.pixelWidth, source.pixelHeight, 24,
+                RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+            // An explicit target includes this camera's image effects and avoids sampling a backbuffer.
+            source.targetTexture = frame;
+            source.Render();
+            source.targetTexture = previousTarget;
+            PrepareCapture(gameCaptureCommandBuffer, gameOutputTexture, gameBlurMaterial, profile, frame, true);
+            Graphics.ExecuteCommandBuffer(gameCaptureCommandBuffer);
+            cancellation.Token.ThrowIfCancellationRequested();
+            hasGameSnapshot = true;
+            return gameOutputTexture;
+        }
+        finally
+        {
+            if (source != null) source.targetTexture = previousTarget;
+            if (frame != null) RenderTexture.ReleaseTemporary(frame);
+            gameCaptureCommandBuffer?.Clear();
+            isGameCapturing = false;
+        }
+    }
+
+    void LateUpdate()
+    {
+        if (gameCamera != null || gameOutputTexture == null || isGameCapturing) return;
+        // The world scene has gone away. Do not expose its cached frame to the next session.
+        hasGameSnapshot = false;
+        DestroyOutput(gameOutputTexture);
+        gameOutputTexture = null;
+    }
+
     void PrepareCapture(
+        CommandBuffer commands,
         RenderTexture output,
         Material material,
-        UIBackdropCaptureProfile profile)
+        UIBackdropCaptureProfile profile,
+        RenderTargetIdentifier? input = null,
+        bool textureSource = false)
     {
         // Material properties are configured immediately; their values are consumed when the
-        // command buffer is executed later in the UI camera's AfterEverything stage.
+        // command buffer is executed later in the source camera's AfterEverything stage.
         material.SetFloat(BlurRadiusId, profile.BlurRadius);
         material.SetFloat(SaturationId, profile.Saturation);
         material.SetFloat(BrightnessId, profile.Brightness);
@@ -146,8 +245,8 @@ public sealed class UIBackdropCaptureService :
 
         // A command buffer stores commands between frames, so remove the previous request before
         // recording the next one.
-        captureCommandBuffer.Clear();
-        captureCommandBuffer.GetTemporaryRT(
+        commands.Clear();
+        commands.GetTemporaryRT(
             BlurTemporaryId,
             output.width,
             output.height,
@@ -156,28 +255,37 @@ public sealed class UIBackdropCaptureService :
             RenderTextureFormat.ARGB32,
             RenderTextureReadWrite.Default);
         
-        captureCommandBuffer.BeginSample("UI Backdrop Capture");
+        commands.BeginSample("UI Backdrop Capture");
+        RenderTargetIdentifier source = input ?? BuiltinRenderTextureType.CameraTarget;
+        bool normalizeTexture = textureSource && SystemInfo.graphicsUVStartsAtTop;
+        if (normalizeTexture)
+        {
+            // The existing shader normalizes CameraTarget UVs; match that convention for an RT input.
+            commands.GetTemporaryRT(TextureSourceId, output.width, output.height, 0, FilterMode.Bilinear,
+                RenderTextureFormat.ARGB32, RenderTextureReadWrite.Default);
+            commands.Blit(source, TextureSourceId, new Vector2(1f, -1f), new Vector2(0f, 1f));
+            source = TextureSourceId;
+        }
         // Pass 0 samples the final UI camera color and performs the horizontal blur. CameraTarget
         // is normalized in this pass because its UV orientation differs from a RenderTexture.
-        captureCommandBuffer.Blit(
-            BuiltinRenderTextureType.CameraTarget,
+        commands.Blit(
+            source,
             BlurTemporaryId,
             material,
             0);
         // Pass 1 performs the vertical blur and the final saturation/brightness/tint adjustment.
-        captureCommandBuffer.Blit(
+        commands.Blit(
             BlurTemporaryId,
             output,
             material,
             1);
         
         
-        captureCommandBuffer.EndSample("UI Backdrop Capture");
+        commands.EndSample("UI Backdrop Capture");
         // ReleaseTemporaryRT is itself recorded; the temporary target is released after the GPU
         // has consumed it, while output remains persistent.
-        captureCommandBuffer.ReleaseTemporaryRT(BlurTemporaryId);
-        captureCompleted = false;
-        capturePending = true;
+        commands.ReleaseTemporaryRT(BlurTemporaryId);
+        if (normalizeTexture) commands.ReleaseTemporaryRT(TextureSourceId);
     }
 
     void HandleCameraPostRender(Camera renderedCamera)
@@ -233,20 +341,26 @@ public sealed class UIBackdropCaptureService :
         // Reuse the persistent RT while the resolution is unchanged; recreate it only when the
         // screen/profile size changes.
         DestroyOutput(outputTexture);
-        outputTexture = new RenderTexture(
+        outputTexture = CreateOutput(width, height, $"UIBackdrop_{width}x{height}");
+    }
+
+    static RenderTexture CreateOutput(int width, int height, string textureName)
+    {
+        var output = new RenderTexture(
             width,
             height,
             0,
             RenderTextureFormat.ARGB32,
             RenderTextureReadWrite.Default)
         {
-            name = $"UIBackdrop_{width}x{height}",
+            name = textureName,
             filterMode = FilterMode.Bilinear,
             wrapMode = TextureWrapMode.Clamp,
             useMipMap = false,
             autoGenerateMips = false
         };
-        outputTexture.Create();
+        output.Create();
+        return output;
     }
 
     static void DestroyOutput(RenderTexture output)
@@ -267,5 +381,8 @@ public sealed class UIBackdropCaptureService :
         DetachCommandBuffer();
         captureCommandBuffer?.Release();
         DestroyOutput(outputTexture);
+        gameCaptureCommandBuffer?.Release();
+        DestroyOutput(gameOutputTexture);
+        if (gameBlurMaterial != null) Destroy(gameBlurMaterial);
     }
 }
