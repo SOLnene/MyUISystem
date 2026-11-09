@@ -5,7 +5,6 @@ using SkierFramework;
 using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
-using Random = UnityEngine.Random;
 
 
 public partial class HubRoot : UIView
@@ -19,6 +18,8 @@ public partial class HubRoot : UIView
     [SerializeField]
     private TextAsset characterEnhanceTutorialConfig;
     private TutorialScheduler tutorialScheduler;
+    [SerializeField] private RightHub rightHub;
+    private HubTeamViewModel teamViewModel;
     
     public override void OnInit(UIControlData uiControlData,UIViewHandle handle)
     {
@@ -36,6 +37,12 @@ public partial class HubRoot : UIView
         mainMenuRedDotProvider.Bind(
             MainMenuRedDotKey.Backpack,
             GameContext.Instance.InventoryRepository.HasUnseenItems);
+        ReleaseTeamDisplay();
+        teamViewModel = new HubTeamViewModel(
+            GameContext.Instance.TeamRepository, GameContext.Instance.CharacterRepository, FlowManager.Instance.WorldParty);
+        rightHub.BindModel(teamViewModel);
+        BottomHub.BindModel(teamViewModel);
+        (data as StartupViewRequest)?.Complete(this);
     }
 
     /// <summary>
@@ -44,7 +51,8 @@ public partial class HubRoot : UIView
     /// <exception cref="NotImplementedException"></exception>
     void Update()
     {
-        if (Input.GetKeyDown(KeyCode.R))
+        if (!FlowManager.Instance.IsInWorld) return;
+        if (FlowManager.Instance.IsPreview && Input.GetKeyDown(KeyCode.R))
         {
             UpdatePlayerStats();
         }
@@ -123,16 +131,16 @@ public partial class HubRoot : UIView
 
     public void UpdatePlayerStats()
     {
-        int maxHp = Random.Range(0, 10000);
-        PlayerStateEvent playerStateEvent = new PlayerStateEvent
-        {
-            characterId = Random.Range(0,4),
-            maxHp = maxHp,
-            hp = Random.Range(0,maxHp),
-            level = Random.Range(1,100),
-            charge = Random.Range(0,1)
-        };
-        EventBus<PlayerStateEvent>.Raise(playerStateEvent);
+        teamViewModel?.Refresh();
+    }
+
+    private void ReleaseTeamDisplay()
+    {
+        if (teamViewModel == null) return;
+        rightHub.BindModel(null);
+        BottomHub.BindModel(null);
+        teamViewModel.Dispose();
+        teamViewModel = null;
     }
     
     public override void OnAddListener()
@@ -149,11 +157,14 @@ public partial class HubRoot : UIView
 
     public override void OnClose()
     {
+        mainMenuOpen = false;
+        ReleaseTeamDisplay();
         base.OnClose();
     }
 
     public override void OnRelease()
     {
+        ReleaseTeamDisplay();
         tutorialScheduler?.Dispose();
         tutorialScheduler = null;
         mainMenuRedDotProvider?.Dispose();

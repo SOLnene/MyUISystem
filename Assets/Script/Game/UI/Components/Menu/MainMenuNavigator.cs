@@ -40,30 +40,7 @@ internal class MainMenuNavigator
     {
         var characterRepository = GameContext.Instance.CharacterRepository;
 
-        if (characterRepository.Characters.Count == 0)
-        {
-            string[] testCharacterKeys = { "citlali", "columbina", "furina", "lumine" };
-            bool addedCharacter = false;
-            for (int i = 0; i < testCharacterKeys.Length; i++)
-            {
-                var testCharacterDefinition = GameDatabase.CharacterDatabase.Get(testCharacterKeys[i]);
-                if (testCharacterDefinition != null)
-                {
-                    characterRepository.Add(testCharacterDefinition);
-                    addedCharacter = true;
-                }
-            }
-
-            if (addedCharacter)
-            {
-                GameSaveCoordinator.Instance.MarkDirty();
-            }
-        }
-
-        var characterDefinition = GameDatabase.CharacterDatabase.Get("citlali");
-        var characterModel = characterDefinition != null
-            ? characterRepository.GetByKey(characterDefinition.key)
-            : null;
+        var characterModel = FlowManager.Instance.WorldCharacter;
 
         if (characterModel == null || !ModelViewer.Instance.CanShowCharacter(characterModel.Definition.key))
         {

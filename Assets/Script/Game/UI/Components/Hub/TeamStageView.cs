@@ -6,8 +6,6 @@ using UnityEngine;
 
 public sealed class TeamStageView : MonoBehaviour
 {
-    private static readonly int ModelFadeId = Shader.PropertyToID("_ModelFade");
-
     [SerializeField] private Camera displayCamera;
     [SerializeField] private Transform[] memberInfoAnchors;
     [SerializeField] private Transform[] memberModelRoots;
@@ -29,12 +27,12 @@ public sealed class TeamStageView : MonoBehaviour
     private float[] memberSwitchFades;
     private CancellationTokenSource[] memberLoadCancellations;
     private int[] memberLoadVersions;
-    private MaterialPropertyBlock memberFadePropertyBlock;
     private Tween memberFadeTween;
     private int focusedMemberIndex = -1;
     private bool isReleased;
 
     public Camera DisplayCamera => displayCamera;
+    internal bool HasPendingLoads => Array.Exists(memberLoadCancellations, source => source != null);
     public int MemberCount => Mathf.Min(
         memberInfoAnchors.Length,
         Mathf.Min(memberModelRoots.Length, memberCharacterKeys.Length));
@@ -53,7 +51,6 @@ public sealed class TeamStageView : MonoBehaviour
         }
         memberLoadCancellations = new CancellationTokenSource[MemberCount];
         memberLoadVersions = new int[MemberCount];
-        memberFadePropertyBlock = new MaterialPropertyBlock();
     }
 
     public Vector3 GetMemberInfoPosition(int index)
@@ -151,8 +148,27 @@ public sealed class TeamStageView : MonoBehaviour
             return;
         }
 
+        string previousMemberKey = memberCharacterKeys[index];
         memberCharacterKeys[index] = characterKey;
-        await LoadMemberModelAsync(index, characterKey, definition);
+        await LoadMemberModelAsync(index, characterKey, definition, true, previousMemberKey);
+    }
+
+    internal async UniTask PreviewMemberAsync(int index, string characterKey)
+    {
+        if (isReleased) return;
+        if (string.IsNullOrEmpty(characterKey))
+        {
+            ClearMemberModel(index);
+            return;
+        }
+        if (activeMemberModels[index] != null && activeMemberCharacterKeys[index] == characterKey)
+        {
+            CancelMemberLoad(index);
+            return;
+        }
+        var definition = modelPreviewDatabase.Get(ModelPreviewType.Character, characterKey);
+        if (definition != null)
+            await LoadMemberModelAsync(index, characterKey, definition, false, null);
     }
 
     public void ClearMember(int index)
@@ -179,7 +195,9 @@ public sealed class TeamStageView : MonoBehaviour
     private async UniTask LoadMemberModelAsync(
         int index,
         string characterKey,
-        ModelPreviewDefinition definition)
+        ModelPreviewDefinition definition,
+        bool updateMembership,
+        string previousMemberKey)
     {
         CancelMemberLoad(index);
         int requestVersion = memberLoadVersions[index];
@@ -268,7 +286,10 @@ public sealed class TeamStageView : MonoBehaviour
 
             if (memberLoadCancellations[index] == cancellation)
             {
-                memberCharacterKeys[index] = activeMemberCharacterKeys[index];
+                // Preview models never own formation data; failed commits retain the original member.
+                if (updateMembership)
+                    memberCharacterKeys[index] = activeMemberCharacterKeys[index] == characterKey
+                        ? characterKey : previousMemberKey;
                 memberSwitchFades[index] = 1f;
                 SetMemberFade(index, memberVisibility[index]);
                 memberLoadCancellations[index] = null;
@@ -388,6 +409,8 @@ public sealed class TeamStageView : MonoBehaviour
         for (int index = 0; index < MemberCount; index++)
         {
             CancelMemberLoad(index);
+            if (activeMemberCharacterKeys[index] != memberCharacterKeys[index])
+                RecycleMemberModel(index);
             SetMemberFade(index, 1f);
             memberPresentations[index].Unbind();
         }
@@ -429,24 +452,7 @@ public sealed class TeamStageView : MonoBehaviour
     {
         // 聚焦可见度与换人显隐相乘，两个流程不会覆盖彼此。
         memberVisibility[index] = fade;
-        Renderer[] renderers = memberRenderers[index];
-        if (renderers == null)
-        {
-            return;
-        }
-
-        foreach (Renderer memberRenderer in renderers)
-        {
-            if (memberRenderer == null)
-            {
-                continue;
-            }
-
-            memberFadePropertyBlock.Clear();
-            memberRenderer.GetPropertyBlock(memberFadePropertyBlock);
-            memberFadePropertyBlock.SetFloat(ModelFadeId, fade * memberSwitchFades[index]);
-            memberRenderer.SetPropertyBlock(memberFadePropertyBlock);
-        }
+        CharacterSwitchEffect.SetFade(memberRenderers[index], fade * memberSwitchFades[index]);
     }
 
     private static void SetLayerRecursively(GameObject root, int layer)

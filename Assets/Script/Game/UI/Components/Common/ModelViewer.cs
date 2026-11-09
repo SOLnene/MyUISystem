@@ -152,6 +152,30 @@ public class ModelViewer : SingletonMono<ModelViewer>
     [SerializeField]public  CameraPreset[] presets;
     
     int starFieldUserCount;
+    Camera[] previewCameras;
+    Light[] previewLights;
+    bool previewRendering;
+
+    internal void SetPreviewRendering(bool visible)
+    {
+        previewRendering = visible;
+        previewCameras ??= GetComponentsInChildren<Camera>(true);
+        previewLights ??= GetComponentsInChildren<Light>(true);
+        foreach (var camera in previewCameras) camera.enabled = visible;
+        int previewMask = LayerMask.GetMask("UI", "ModelDisplay", "Reflection", "Plane", "UIBackgroud");
+        foreach (var light in previewLights)
+        {
+            // Preview lights must never illuminate the map, even while a character page is open.
+            light.cullingMask &= previewMask;
+            light.enabled = visible;
+        }
+        SetPlaneReflection(visible && previewController.IsCharacterPreviewActive);
+        if (!visible)
+        {
+            starFieldUserCount = 0;
+            starSphere.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        }
+    }
 
     const string PlaneReflectionKeyword = "_PLANE_REFLECTION";
 
@@ -181,12 +205,13 @@ public class ModelViewer : SingletonMono<ModelViewer>
             SetRenderedCameraPose(initialPose);
         }
 
-        SetPlaneReflection(previewController.IsCharacterPreviewActive);
+        SetPreviewRendering(starFieldUserCount > 0);
     }
 
     // 每一帧平滑处理
     void Update()
     {
+        if (!previewRendering) return;
     
         // 1. 平滑插值 (Lerp)
         targetCameraPose.Pitch = ClampPitchAbovePlane(
@@ -967,7 +992,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
             planeRenderer.sharedMaterial.DisableKeyword(PlaneReflectionKeyword);
         }
 
-        reflectionManager.enabled = enabled;
+        reflectionManager.enabled = enabled && previewRendering;
     }
     
     public void ResetView()
@@ -986,6 +1011,7 @@ public class ModelViewer : SingletonMono<ModelViewer>
             return;
         }
 
+        SetPreviewRendering(true);
         starSphere.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
         starSphere.Play(false);
     }
@@ -998,6 +1024,6 @@ public class ModelViewer : SingletonMono<ModelViewer>
             return;
         }
 
-        starSphere.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+        SetPreviewRendering(false);
     }
 }

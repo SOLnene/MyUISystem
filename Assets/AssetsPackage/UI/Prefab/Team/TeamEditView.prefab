@@ -185,6 +185,8 @@ GameObject:
   m_Component:
   - component: {fileID: 8560851888013595775}
   - component: {fileID: 6111604788002863683}
+  - component: {fileID: 7880982726641427129}
+  - component: {fileID: 2705737595238943979}
   m_Layer: 0
   m_Name: PageRoot
   m_TagString: Untagged
@@ -226,6 +228,44 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &7880982726641427129
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 626693299407930617}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82e8af1c72efe834bb395144422b2b42, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  motionGroup: {fileID: 6111604788002863683}
+  motionRoot: {fileID: 8560851888013595775}
+  mode: 1
+  preset: {fileID: 11400000, guid: a513d2b4a7d7438f927f4a08611785ae, type: 2}
+  targetMove: {x: 0, y: 0}
+  originMove: {x: 0, y: 0}
+  moveDuration: 0.18
+  fadeDuration: 0.12
+  moveEase: 9
+  fadeEase: 1
+--- !u!114 &2705737595238943979
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 626693299407930617}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5d20f43324ef5240b901dd4dd7c8ae3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  panelRoot: {fileID: 626693299407930617}
+  motion: {fileID: 7880982726641427129}
+  inputGroup: {fileID: 6111604788002863683}
+  inputControlMode: 0
 --- !u!1 &663008998143510037
 GameObject:
   m_ObjectHideFlags: 0
@@ -515,6 +555,8 @@ GameObject:
   m_Component:
   - component: {fileID: 6382424424659162797}
   - component: {fileID: 5337249098198604847}
+  - component: {fileID: 4712991957536927176}
+  - component: {fileID: 4809403768480851927}
   m_Layer: 0
   m_Name: PageRoot
   m_TagString: Untagged
@@ -554,6 +596,44 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &4712991957536927176
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1045735010929694891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82e8af1c72efe834bb395144422b2b42, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  motionGroup: {fileID: 5337249098198604847}
+  motionRoot: {fileID: 6382424424659162797}
+  mode: 1
+  preset: {fileID: 11400000, guid: 81bdf67e20bf3dd4f9a43fc72848a35d, type: 2}
+  targetMove: {x: 0, y: 0}
+  originMove: {x: 0, y: 0}
+  moveDuration: 0.18
+  fadeDuration: 0.12
+  moveEase: 9
+  fadeEase: 1
+--- !u!114 &4809403768480851927
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1045735010929694891}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5d20f43324ef5240b901dd4dd7c8ae3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  panelRoot: {fileID: 1045735010929694891}
+  motion: {fileID: 4712991957536927176}
+  inputGroup: {fileID: 5337249098198604847}
+  inputControlMode: 0
 --- !u!1 &1760558529594603034
 GameObject:
   m_ObjectHideFlags: 0
@@ -1090,6 +1170,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3827080764349450011}
   - component: {fileID: 424836541513599950}
+  - component: {fileID: 2349581569295703972}
   m_Layer: 5
   m_Name: TeamEditView
   m_TagString: Untagged
@@ -1144,6 +1225,24 @@ MonoBehaviour:
   - {fileID: 324735890577581534}
   characterSelectPanel: {fileID: 6550947764614677405}
   memberLabelsView: {fileID: 2308935289112993637}
+  pageTransition: {fileID: 2349581569295703972}
+  formationFooter: {fileID: 6568020586057930752}
+--- !u!114 &2349581569295703972
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4709968048524085024}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2849f58e368e41445bb989f051279f00, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  panels:
+  - {fileID: 2705737595238943979}
+  - {fileID: 4809403768480851927}
+  - {fileID: 6568020586057930752}
 --- !u!1 &6015166127594179632
 GameObject:
   m_ObjectHideFlags: 0
@@ -1609,6 +1708,8 @@ GameObject:
   m_Component:
   - component: {fileID: 2584321747689479184}
   - component: {fileID: 8861667527021363284}
+  - component: {fileID: 9217065815475492382}
+  - component: {fileID: 6568020586057930752}
   m_Layer: 0
   m_Name: PageRoot
   m_TagString: Untagged
@@ -1649,6 +1750,44 @@ CanvasGroup:
   m_Interactable: 1
   m_BlocksRaycasts: 1
   m_IgnoreParentGroups: 0
+--- !u!114 &9217065815475492382
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6930709364862267609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82e8af1c72efe834bb395144422b2b42, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  motionGroup: {fileID: 8861667527021363284}
+  motionRoot: {fileID: 2584321747689479184}
+  mode: 1
+  preset: {fileID: 11400000, guid: 5bb5a3fd01554eb4ab58140c86e4d20e, type: 2}
+  targetMove: {x: 0, y: 0}
+  originMove: {x: 0, y: 0}
+  moveDuration: 0.18
+  fadeDuration: 0.12
+  moveEase: 9
+  fadeEase: 1
+--- !u!114 &6568020586057930752
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6930709364862267609}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f5d20f43324ef5240b901dd4dd7c8ae3, type: 3}
+  m_Name:
+  m_EditorClassIdentifier:
+  panelRoot: {fileID: 6930709364862267609}
+  motion: {fileID: 9217065815475492382}
+  inputGroup: {fileID: 8861667527021363284}
+  inputControlMode: 0
 --- !u!1 &7282436584370665631
 GameObject:
   m_ObjectHideFlags: 0

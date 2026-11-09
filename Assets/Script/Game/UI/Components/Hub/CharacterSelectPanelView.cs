@@ -1,21 +1,52 @@
 using System;
 using System.Collections.Generic;
+using Cysharp.Threading.Tasks;
 using Game.Domain.Character;
+using TMPro;
 using UniRx;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class CharacterSelectPanelView : SelectionPanelView
 {
     [SerializeField]
     CharacterSlotView characterSlotPrefab;
+    [SerializeField]
+    AnimatedPanelGroup slotAnimations;
+    [SerializeField] Button selectionActionButton;
+    [SerializeField] TMP_Text selectionActionLabel;
 
     readonly List<CharacterSlotView> activeSlots = new();
+    readonly List<AnimatedPanel> slotPanels = new();
     readonly Dictionary<CharacterModel, CharacterSlotView> slotsByCharacter = new();
     CharacterSelectionRequest selectionRequest;
+    Action selectionAction;
+
+    void Awake()
+    {
+        selectionActionButton.onClick.AddListener(() => selectionAction?.Invoke());
+    }
+
+    internal void ConfigureSelectionAction(string label, Action action, bool busy = false)
+    {
+        selectionAction = action;
+        selectionActionButton.gameObject.SetActive(action != null);
+        selectionActionButton.interactable = !busy;
+        if (clickHandler != null) clickHandler.interactable = !busy;
+        if (action != null) selectionActionLabel.text = label;
+    }
+
+    internal void SetFocusedCharacter(CharacterModel character)
+    {
+        selectionRequest.FocusedCharacter = character;
+        foreach (var slot in slotsByCharacter)
+            slot.Value.SetSelected(slot.Key == character);
+    }
 
     protected override void OnShow(object data)
     {
         ClearSlots();
+        ConfigureSelectionAction(null, null);
         selectionRequest = data as CharacterSelectionRequest;
         if (selectionRequest == null)
         {
@@ -23,16 +54,39 @@ public class CharacterSelectPanelView : SelectionPanelView
             return;
         }
 
-        foreach (CharacterModel character in selectionRequest.AvailableCharacters)
+        BuildSlotsAsync(selectionRequest, slotCreateVersion).Forget(Debug.LogException);
+    }
+
+    async UniTask BuildSlotsAsync(CharacterSelectionRequest request, int version)
+    {
+        var token = this.GetCancellationTokenOnDestroy();
+        var iconLoads = new List<UniTask<Sprite>>(request.AvailableCharacters.Count);
+        foreach (var character in request.AvailableCharacters)
+        {
+            iconLoads.Add(ResourceManager.Instance.LoadAssetAsync<Sprite>(
+                CharacterVisualAddressResolver.ResolveAvatarIcon(character.Definition.key), token));
+        }
+        try
+        {
+            await UniTask.WhenAll(iconLoads);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+        // Bind from the warmed cache so cards enter with portraits, never empty Image quads.
+        if (this == null || version != slotCreateVersion || !gameObject.activeInHierarchy) return;
+
+        foreach (CharacterModel character in request.AvailableCharacters)
         {
             CharacterSlotView slot = Instantiate(characterSlotPrefab, content);
             bool isChecked = selectionRequest.MultiSelectionSet?.Contains(character) ?? false;
-            bool isSelected = !selectionRequest.IsMultipleSelection
-                && character == selectionRequest.InitialSingleSelectedCharacter;
+            bool isSelected = character == request.FocusedCharacter;
             bool isSelectable = selectionRequest.CanSelectCharacter?.Invoke(character) ?? true;
             slot.Bind(character, isChecked, isSelectable, OnCharacterPicked);
             slot.SetSelected(isSelected);
             activeSlots.Add(slot);
+            slotPanels.Add(slot.GetComponentInChildren<AnimatedPanel>(true));
             slotsByCharacter.Add(character, slot);
         }
 
@@ -46,13 +100,25 @@ public class CharacterSelectPanelView : SelectionPanelView
                 }
             }).AddTo(disposable);
         }
+
+        slotAnimations.Show(slotPanels).Forget(Debug.LogException);
+    }
+
+    protected override void OnBeforeHide()
+    {
+        // Stop delayed entries while the parent panel fades out, preserving visible cards.
+        slotAnimations.ReleasePanels(slotPanels);
+        selectionAction = null;
     }
 
     protected override void OnHidden()
     {
+        var onClosed = selectionRequest?.OnClosed;
         disposable.Clear();
         ClearSlots();
         selectionRequest = null;
+        ConfigureSelectionAction(null, null);
+        onClosed?.Invoke();
     }
 
     protected override void OnCancelRequested()
@@ -84,6 +150,8 @@ public class CharacterSelectPanelView : SelectionPanelView
 
     void ClearSlots()
     {
+        slotAnimations.ReleasePanels(slotPanels);
+        slotPanels.Clear();
         foreach (CharacterSlotView slot in activeSlots)
         {
             Destroy(slot.gameObject);
@@ -105,6 +173,8 @@ public sealed class CharacterSelectionRequest
     public readonly Action OnMultiSelectionLimitReached;
 
     internal Action<CharacterModel> OnMultiCharacterPicked { get; set; }
+    internal Action OnClosed { get; set; }
+    internal CharacterModel FocusedCharacter { get; set; }
 
     public bool IsMultipleSelection => MultiSelectionSet != null;
 
@@ -119,6 +189,7 @@ public sealed class CharacterSelectionRequest
     {
         AvailableCharacters = availableCharacters;
         InitialSingleSelectedCharacter = initialSingleSelectedCharacter;
+        FocusedCharacter = initialSingleSelectedCharacter;
         MultiSelectionSet = multiSelectionSet;
         CanSelectCharacter = canSelectCharacter;
         OnSingleCharacterPicked = onSingleCharacterPicked;

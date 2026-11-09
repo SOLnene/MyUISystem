@@ -79,6 +79,16 @@ public class AnimatedPanelGroup : MonoBehaviour
         }
     }
 
+    internal void ReleasePanels(IReadOnlyList<AnimatedPanel> panels)
+    {
+        // Dynamic list owners release references before destroying their old views.
+        foreach (var panel in panels)
+        {
+            CancelScheduledShow(panel);
+            trackedPanels.Remove(panel);
+        }
+    }
+
     async UniTask ShowAfterDelayAsync(AnimatedPanel panel, int displayOrder)
     {
         var currentCts = CancellationTokenSource.CreateLinkedTokenSource(

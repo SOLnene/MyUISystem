@@ -1,4 +1,5 @@
 using System;
+using Cysharp.Threading.Tasks;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.UI;
@@ -50,6 +51,7 @@ public class MainMenuView : UIView
     [SerializeField] private List<MainMenuButtonData> defaultButtons = new List<MainMenuButtonData>();
     [SerializeField] private Button backButton;
     [SerializeField] private Button settingsButton;
+    [SerializeField] private Button returnToLoginButton;
 
     private MainMenuViewModel viewModel;
 
@@ -64,20 +66,26 @@ public class MainMenuView : UIView
 
         playerInfoView.Bind(viewModel.PlayerSummary);
         actionPanel.Bind(defaultButtons, viewModel.RedDotProvider, viewModel.RequestAction);
+        returnToLoginButton.gameObject.SetActive(!FlowManager.Instance.IsPreview);
         // Reopening may reuse the same view instance; each sidebar action must remain bound once.
         backButton.onClick.RemoveListener(OnCancel);
         backButton.onClick.AddListener(OnCancel);
         settingsButton.onClick.RemoveListener(OpenSettings);
         settingsButton.onClick.AddListener(OpenSettings);
+        returnToLoginButton.onClick.RemoveListener(ReturnToLogin);
+        returnToLoginButton.onClick.AddListener(ReturnToLogin);
     }
 
     public override void OnClose()
     {
+        returnToLoginButton.onClick.RemoveListener(ReturnToLogin);
         backButton.onClick.RemoveListener(OnCancel);
         settingsButton.onClick.RemoveListener(OpenSettings);
         actionPanel.Clear();
         base.OnClose();
     }
+
+    void ReturnToLogin() => FlowManager.Instance.ReturnToLoginAsync().Forget(Debug.LogException);
 
     void OpenSettings()
     {

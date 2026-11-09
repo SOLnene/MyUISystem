@@ -94,11 +94,9 @@ public sealed class ModelPreviewController : MonoBehaviour
     [SerializeField, Min(0f)]
     float characterSwitchEffectLeadTime = 0.2f;
 
-    static readonly int ModelFadeId = Shader.PropertyToID("_ModelFade");
     CancellationTokenSource characterSwitchCancellation;
     int presentationRequestVersion;
     Renderer[] fadingCharacterRenderers;
-    MaterialPropertyBlock characterFadePropertyBlock;
     readonly ModelViewer.WeaponVisibilitySettings standaloneWeaponVisibility = new();
 
     public bool IsCharacterPreviewActive =>
@@ -221,7 +219,7 @@ public sealed class ModelPreviewController : MonoBehaviour
             if (replacingCharacter)
             {
                 fadingCharacterRenderers = activePreviewObject.GetComponentsInChildren<Renderer>(true);
-                await FadeCharacterModelAsync(
+                await CharacterSwitchEffect.FadeAsync(
                     fadingCharacterRenderers, 1f, 0f, characterSwitchFadeOutDuration, cancellation.Token);
             }
 
@@ -236,9 +234,9 @@ public sealed class ModelPreviewController : MonoBehaviour
             }
 
             Renderer[] preparedRenderers = preparation.PreviewObject.GetComponentsInChildren<Renderer>(true);
-            SetCharacterModelFade(preparedRenderers, 0f);
+            CharacterSwitchEffect.SetFade(preparedRenderers, 0f);
             // 旧模型在同一帧内隐藏并回收，先恢复池对象的材质状态。
-            SetCharacterModelFade(fadingCharacterRenderers, 1f);
+            CharacterSwitchEffect.SetFade(fadingCharacterRenderers, 1f);
             fadingCharacterRenderers = preparedRenderers;
             if (!TryActivatePreloaded(ModelPreviewType.Character, targetKey, out _))
             {
@@ -250,7 +248,7 @@ public sealed class ModelPreviewController : MonoBehaviour
             onActivated(definition);
             cancellation.Token.ThrowIfCancellationRequested();
             // 粒子属于展示容器，旧模型回收后仍可播完尾段。
-            await FadeCharacterModelAsync(
+            await CharacterSwitchEffect.FadeAsync(
                 preparedRenderers, 0f, 1f, characterSwitchFadeDuration, cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
             return definition;
@@ -264,7 +262,7 @@ public sealed class ModelPreviewController : MonoBehaviour
             // 过期任务不得恢复或清理后续切换正在使用的模型。
             if (ReferenceEquals(characterSwitchCancellation, cancellation))
             {
-                SetCharacterModelFade(fadingCharacterRenderers, 1f);
+                CharacterSwitchEffect.SetFade(fadingCharacterRenderers, 1f);
                 fadingCharacterRenderers = null;
                 characterSwitchCancellation = null;
             }
@@ -278,49 +276,8 @@ public sealed class ModelPreviewController : MonoBehaviour
         CancellationTokenSource cancellation = characterSwitchCancellation;
         characterSwitchCancellation = null;
         cancellation?.Cancel();
-        SetCharacterModelFade(fadingCharacterRenderers, 1f);
+        CharacterSwitchEffect.SetFade(fadingCharacterRenderers, 1f);
         fadingCharacterRenderers = null;
-    }
-
-    async UniTask FadeCharacterModelAsync(
-        Renderer[] renderers,
-        float from,
-        float to,
-        float duration,
-        CancellationToken cancellationToken)
-    {
-        cancellationToken.ThrowIfCancellationRequested();
-        SetCharacterModelFade(renderers, from);
-        float elapsed = 0f;
-        while (elapsed < duration)
-        {
-            await UniTask.Yield(PlayerLoopTiming.Update, cancellationToken);
-            elapsed += Time.deltaTime;
-            SetCharacterModelFade(renderers, Mathf.Lerp(from, to, elapsed / duration));
-        }
-        cancellationToken.ThrowIfCancellationRequested();
-        SetCharacterModelFade(renderers, to);
-    }
-
-    void SetCharacterModelFade(Renderer[] renderers, float fade)
-    {
-        if (renderers == null)
-        {
-            return;
-        }
-
-        characterFadePropertyBlock ??= new MaterialPropertyBlock();
-        foreach (Renderer renderer in renderers)
-        {
-            if (renderer == null)
-            {
-                continue;
-            }
-            characterFadePropertyBlock.Clear();
-            renderer.GetPropertyBlock(characterFadePropertyBlock);
-            characterFadePropertyBlock.SetFloat(ModelFadeId, fade);
-            renderer.SetPropertyBlock(characterFadePropertyBlock);
-        }
     }
 
     internal void Preload(

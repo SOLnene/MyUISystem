@@ -11,37 +11,15 @@ public sealed class UICreateBootstrap : MonoBehaviour
     {
         designCanvas.SetActive(false);
 
-        ResourceManager.Instance.Init();
-        await ResourceManager.Instance.InitAsync();
-        await UIManager.Instance.InitUIConfig();
-        await GameDatabase.Init();
-
-        bool opensHubDirectly = SaveProfileManager.Instance.ActiveProfile != null;
-        if (SaveProfileManager.Instance.ActiveProfile == null)
+        // Preview progress has its own profile selection and never changes the login entry preferences.
+        var preferences = new LoginPreferences("MyUISystem.UIPreview.");
+        var profiles = SaveProfileManager.Instance;
+        if (!profiles.TryGetProfile(preferences.LocalProfileId, out var profile, out _))
         {
-            UIManager.Instance.Open(UIType.LoginView);
-            if (await UniTask.WaitUntil(
-                () => GameContext.Instance.CanSave &&
-                    (!CloudGameSaveSession.IsCloudSource(GameContext.Instance.ActiveSaveDirectory) ||
-                        (CloudGameSaveSession.Current?.IsReady ?? false)),
-                cancellationToken: this.GetCancellationTokenOnDestroy()).SuppressCancellationThrow())
-                return;
+            profile = profiles.CreateLocalProfile();
+            preferences.RecordLocalProfile(profile.profileId);
         }
-        else
-        {
-            await GameContext.Instance.Init();
-        }
-
-        // 新账号仅发放一次初始测试物品，读取已有云存档时不重复赠送。
-        if (GameContext.Instance.TryRequestInitialTestItems())
-            foreach (InventoryItem item in ItemFactory.CreateTestItems())
-            {
-                GameContext.Instance.BackpackVM.AddItem(item);
-            }
-
-        if (opensHubDirectly)
-        {
-            UIManager.Instance.Open(UIType.HubRoot);
-        }
+        await FlowManager.Instance.BootPreviewAsync(Camera.main, profile.profileId,
+            this.GetCancellationTokenOnDestroy());
     }
 }

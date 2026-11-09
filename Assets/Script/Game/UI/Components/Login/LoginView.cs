@@ -143,7 +143,10 @@ public partial class LoginView : UIView
         if (!string.IsNullOrEmpty(viewModel.RememberedUsername))
             usernameInput.SetTextWithoutNotify(viewModel.RememberedUsername);
         RestoreLoginOptions();
-        if (viewModel.TryBeginAutomaticLogin())
+        var startupRequest = data as StartupViewRequest;
+        startupRequest?.Complete(this);
+        // Explicit return/cancel must leave the player at login even when automatic sign-in is enabled.
+        if ((startupRequest == null || startupRequest.AllowAutomaticLogin) && viewModel.TryBeginAutomaticLogin())
             AuthenticateAccountAsync(false, true).Forget();
     }
 
@@ -322,13 +325,14 @@ public partial class LoginView : UIView
 #endif
     }
 
-    void CancelEntry()
+    internal void CancelEntry()
     {
         if (entryCancellation == null || entryCancellation.IsCancellationRequested)
             return;
         // 先作废界面请求，再通知异步链；迟到的结果不能接管新入口。
         formRevision++;
         entryCancellation.Cancel();
+        FlowManager.Instance.CancelEntry();
         isEnteringProfile = false;
         requestFeedback.HideProcessing();
         ShowFormFeedback(false, "已取消本次进入，可选择本地游玩或稍后重新登录。", LoginViewModel.CredentialField.None);
@@ -434,7 +438,7 @@ public partial class LoginView : UIView
         var destroyCancellation = this.GetCancellationTokenOnDestroy();
         using var request = CancellationTokenSource.CreateLinkedTokenSource(destroyCancellation);
         entryCancellation = request;
-        using var timeout = automatic ? request.CancelAfterSlim(TimeSpan.FromSeconds(30), DelayType.Realtime) : null;
+        var timeout = automatic ? request.CancelAfterSlim(TimeSpan.FromSeconds(30), DelayType.Realtime) : null;
         var cancellationToken = request.Token;
         requestFeedback.ShowProcessing($"正在{operation}…", () => !request.IsCancellationRequested,
             register ? null : CancelEntry);
@@ -450,6 +454,9 @@ public partial class LoginView : UIView
                 : viewModel.AuthenticateAsync(username, password, register, confirmationPassword, cancellationToken);
             await authentication
                 .AttachExternalCancellation(cancellationToken);
+            // Automatic sign-in times out authentication only, not large-world loading.
+            timeout?.Dispose();
+            timeout = null;
             // 页面重开后，旧请求的结果不能覆盖新表单。
             if (revision != formRevision)
                 return;
@@ -509,6 +516,7 @@ public partial class LoginView : UIView
         }
         finally
         {
+            timeout?.Dispose();
             if (ReferenceEquals(entryCancellation, request))
                 entryCancellation = null;
             if (!destroyCancellation.IsCancellationRequested && revision == formRevision)

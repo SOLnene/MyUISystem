@@ -40,6 +40,11 @@ namespace Game.Domain.Character
         //属性系统
         public CharacterStats Stats { get; }
 
+        readonly ReactiveProperty<float> currentHp = new();
+
+        internal IReadOnlyReactiveProperty<float> CurrentHpRP => currentHp;
+        internal bool IsAlive => currentHp.Value > 0f;
+
         public  IObservable<Unit> ChangeRP { get; }
         
         public ReactiveProperty<EquipItem> CurrentEquipRP { get; private set; }
@@ -67,6 +72,44 @@ namespace Game.Domain.Character
             CurrentEquipRP = new ReactiveProperty<EquipItem>();
             // 初始同步一次属性
             RefreshBaseStats();
+            InitializeHealth();
+        }
+
+        void InitializeHealth()
+        {
+            currentHp.Value = Math.Max(0f, Stats.FinalHP.Value);
+            // Health belongs to the model, so rebinding UI or changing the selected teammate never heals it.
+            Stats.FinalHP.Subscribe(maximum =>
+                currentHp.Value = Math.Min(currentHp.Value, Math.Max(0f, maximum)));
+        }
+
+        internal float ApplyDamage(float amount)
+        {
+            ValidateHealthAmount(amount);
+            float previous = currentHp.Value;
+            currentHp.Value = Math.Max(0f, previous - amount);
+            return previous - currentHp.Value;
+        }
+
+        internal float Heal(float amount)
+        {
+            ValidateHealthAmount(amount);
+            // Reviving is explicit; ordinary healing must not revive a defeated character.
+            if (!IsAlive) return 0f;
+            float previous = currentHp.Value;
+            currentHp.Value = Math.Min(Math.Max(0f, Stats.FinalHP.Value), previous + amount);
+            return currentHp.Value - previous;
+        }
+
+        internal void RestoreFullHealth()
+        {
+            currentHp.Value = Math.Max(0f, Stats.FinalHP.Value);
+        }
+
+        static void ValidateHealthAmount(float amount)
+        {
+            if (amount < 0f || float.IsNaN(amount) || float.IsInfinity(amount))
+                throw new ArgumentOutOfRangeException(nameof(amount));
         }
 
         public void SetTalentLevel(int talentLevel)

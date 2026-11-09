@@ -8,6 +8,7 @@ public sealed class TeamRepository
 
     readonly string[][] presetMemberKeys = CreatePresetMemberKeys();
     readonly bool[] presetInitialized = new bool[PresetCount];
+    internal event Action Changed;
 
     public IReadOnlyList<string> MemberKeys => presetMemberKeys[ActivePresetIndex];
     public int ActivePresetIndex { get; private set; }
@@ -54,10 +55,55 @@ public sealed class TeamRepository
         return (string[])presetMemberKeys[presetIndex].Clone();
     }
 
+    // HUD and shortcuts use occupied slots in order while the formation keeps its saved layout.
+    internal bool TryGetGameMemberKey(int orderIndex, out string characterKey)
+    {
+        if (orderIndex >= 0 && orderIndex < MemberCapacity)
+        {
+            foreach (var key in presetMemberKeys[ActivePresetIndex])
+            {
+                if (string.IsNullOrEmpty(key)) continue;
+                if (orderIndex == 0)
+                {
+                    characterKey = key;
+                    return true;
+                }
+                orderIndex--;
+            }
+        }
+
+        characterKey = null;
+        return false;
+    }
+
     public bool IsPresetInitialized(int presetIndex)
     {
         ValidatePresetIndex(presetIndex);
         return presetInitialized[presetIndex];
+    }
+
+    internal bool EnsureNonEmptyPresets(string defaultCharacterKey)
+    {
+        if (string.IsNullOrEmpty(defaultCharacterKey))
+        {
+            throw new ArgumentException("A default character is required.", nameof(defaultCharacterKey));
+        }
+
+        bool changed = false;
+        for (int presetIndex = 0; presetIndex < PresetCount; presetIndex++)
+        {
+            if (Array.Exists(presetMemberKeys[presetIndex], key => !string.IsNullOrEmpty(key)))
+            {
+                continue;
+            }
+
+            presetMemberKeys[presetIndex][0] = defaultCharacterKey;
+            presetInitialized[presetIndex] = true;
+            changed = true;
+        }
+
+        if (changed) Changed?.Invoke();
+        return changed;
     }
 
     public void ReplaceMembers(IReadOnlyList<string> newMemberKeys)
@@ -71,6 +117,7 @@ public sealed class TeamRepository
         string[] nextMemberKeys = CreateValidatedMembers(newMemberKeys);
         Array.Copy(nextMemberKeys, presetMemberKeys[presetIndex], MemberCapacity);
         presetInitialized[presetIndex] = true;
+        Changed?.Invoke();
     }
 
     public void ReplaceAllPresets(IReadOnlyList<string[]> newPresets, int activePresetIndex)
@@ -104,12 +151,14 @@ public sealed class TeamRepository
         }
 
         ActivePresetIndex = activePresetIndex;
+        Changed?.Invoke();
     }
 
     public void SetActivePreset(int presetIndex)
     {
         ValidatePresetIndex(presetIndex);
         ActivePresetIndex = presetIndex;
+        Changed?.Invoke();
     }
 
     static string[] CreateValidatedMembers(IReadOnlyList<string> newMemberKeys)
@@ -144,6 +193,12 @@ public sealed class TeamRepository
             }
 
             nextMemberKeys[index] = characterKey;
+        }
+
+        // Imported empty presets are initialized separately; editing must never commit an empty team.
+        if (uniqueKeys.Count == 0)
+        {
+            throw new ArgumentException("A team must contain at least one character.", nameof(newMemberKeys));
         }
 
         return nextMemberKeys;
@@ -182,6 +237,7 @@ public sealed class TeamRepository
         ClearAllPresets();
         if (saveData == null)
         {
+            Changed?.Invoke();
             return;
         }
 
@@ -208,11 +264,13 @@ public sealed class TeamRepository
                 && saveData.activePresetIndex < PresetCount
                 ? saveData.activePresetIndex
                 : 0;
+            Changed?.Invoke();
             return;
         }
 
         presetInitialized[0] = saveData.isInitialized;
         ImportMembers(0, saveData.members);
+        Changed?.Invoke();
     }
 
     void ImportMembers(int presetIndex, IReadOnlyList<TeamMemberSaveData> members)
