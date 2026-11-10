@@ -78,14 +78,14 @@ public class TeamEditView : UIView
         characterSelectPanel.gameObject.SetActive(false);
         RefreshMemberLabels();
         Canvas.ForceUpdateCanvases();
-        UpdateMemberLabelPositions();
+        UpdateSlotPresentation();
         pageTransition.Show().Forget(Debug.LogException);
         memberLabelsView.ShowLabels().Forget(Debug.LogException);
     }
 
     private void LateUpdate()
     {
-        UpdateMemberLabelPositions();
+        UpdateSlotPresentation();
     }
 
     public override void OnAddListener()
@@ -611,11 +611,19 @@ public class TeamEditView : UIView
         memberLabelsView.Refresh(teamStageInstance);
     }
 
-    private void UpdateMemberLabelPositions()
+    private void UpdateSlotPresentation()
     {
         if (teamStageInstance == null)
         {
             return;
+        }
+
+        bool showEmptySlots = !isClosing && !returningToOverview && !characterSelectPanel.gameObject.activeSelf;
+        for (int index = 0; index < characterButtons.Length; index++)
+        {
+            // The button's transparent hit area stays active for both occupied and empty slots.
+            characterButtons[index].targetGraphic.enabled = showEmptySlots && index < teamStageInstance.MemberCount
+                && !teamStageInstance.TryGetMemberCharacterKey(index, out _);
         }
 
         Camera eventCamera = uiCanvas.renderMode == RenderMode.ScreenSpaceOverlay
