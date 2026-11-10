@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Text;
 using UnityEditor;
 using UnityEngine;
@@ -11,6 +12,7 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
     const string OutputDirectoryPrefsKey = "MyUISystem.AnimationBindingConverter.OutputDirectory";
     const string PelvisTwistSourcePath = "ModelRoot/Bip001/+PelvisTwist CF A01";
     const string PelvisTwistTargetPath = "ModelRoot/Bip001/Bip001 Pelvis/+PelvisTwist CF A01";
+    const string BoneCurvePrefix = ModelRootStandardizerPostprocessor.RootName + "/Bip001/Bip001 Pelvis/";
     readonly List<AnimationClip> clips = new List<AnimationClip>();
     GameObject validationModel;
     DefaultAsset outputDirectoryAsset;
@@ -19,6 +21,7 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
     bool includeComponentCurves;
     bool excludeUpperArmTwistCurves;
     bool excludePelvisTwistCurves = true;
+    bool reduceConstantsOnConvert;
     string report = "请选择 AnimationClip，然后预览转换。";
     Vector2 scroll;
 
@@ -33,6 +36,21 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
         internal bool excludesUpperArmTwist;
         internal int removedBindings;
         internal int errors;
+    }
+
+    sealed class ConstantCurveReduction
+    {
+        internal readonly List<EditorCurveBinding> bindings = new();
+        internal readonly List<AnimationCurve> curves = new();
+        internal int removedKeys;
+
+        internal void ApplyTo(AnimationClip clip)
+        {
+            if (bindings.Count == 0) return;
+            var settings = AnimationUtility.GetAnimationClipSettings(clip);
+            AnimationUtility.SetEditorCurves(clip, bindings.ToArray(), curves.ToArray());
+            AnimationUtility.SetAnimationClipSettings(clip, settings);
+        }
     }
 
     [MenuItem("Tools/MyUISystem/角色展示/动画/动画绑定路径转换", false, 340)]
@@ -85,11 +103,19 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
         includeComponentCurves = EditorGUILayout.Toggle("同时转换模型内其他组件曲线", includeComponentCurves);
         excludeUpperArmTwistCurves = EditorGUILayout.Toggle("排除 UpperArmTwist 曲线（诊断）", excludeUpperArmTwistCurves);
         excludePelvisTwistCurves = EditorGUILayout.Toggle("排除 PelvisTwist CF 曲线（建议）", excludePelvisTwistCurves);
+        reduceConstantsOnConvert = EditorGUILayout.Toggle("转换时精简恒定曲线", reduceConstantsOnConvert);
         using (new EditorGUI.DisabledScope(clips.Count == 0 || EditorApplication.isCompiling ||
             EditorApplication.isPlayingOrWillChangePlaymode))
         {
             if (GUILayout.Button("预览路径变化与冲突")) Process(false);
             if (GUILayout.Button("生成 / 更新转换副本", GUILayout.Height(30))) Process(true);
+            EditorGUILayout.Space();
+            EditorGUILayout.LabelField("已有 .anim 的恒定位置与缩放曲线", EditorStyles.boldLabel);
+            using (new EditorGUILayout.HorizontalScope())
+            {
+                if (GUILayout.Button("分析所选动画")) ProcessConstantCurves(false);
+                if (GUILayout.Button("精简并原位保存")) ProcessConstantCurves(true);
+            }
         }
         scroll = EditorGUILayout.BeginScrollView(scroll);
         float height = Mathf.Max(220, EditorStyles.wordWrappedLabel.CalcHeight(
@@ -158,7 +184,7 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
                 {
                     if (plan.errors > 0) text.AppendLine("存在阻断问题，未生成此动画。");
                     else if (plan.from.Count == 0) text.AppendLine("没有需要转换的绑定，未生成副本。");
-                    else text.AppendLine("已保存：" + SaveConvertedClip(source, plan, outputDirectory));
+                    else text.AppendLine("已保存：" + SaveConvertedClip(source, plan, outputDirectory, reduceConstantsOnConvert));
                 }
             }
             catch (Exception exception)
@@ -169,6 +195,94 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
         }
         report = text.ToString();
         if (generate) Debug.Log("[动画绑定路径转换]\n" + report);
+    }
+
+    void ProcessConstantCurves(bool apply)
+    {
+        var text = new StringBuilder();
+        foreach (AnimationClip clip in clips)
+        {
+            if (clip == null) continue;
+            string path = AssetDatabase.GetAssetPath(clip);
+            text.AppendLine($"【{clip.name}】");
+            if (!path.StartsWith("Assets/", StringComparison.Ordinal) ||
+                !path.EndsWith(".anim", StringComparison.OrdinalIgnoreCase) || !AssetDatabase.IsMainAsset(clip))
+            {
+                text.AppendLine("请选择项目内可独立保存的 .anim 文件。");
+                continue;
+            }
+
+            try
+            {
+                var reduction = AnalyzeConstantBoneCurves(clip);
+                text.AppendLine($"可精简 {reduction.bindings.Count} 条轴曲线，省去 {reduction.removedKeys} 个编辑关键帧。");
+                if (!apply || reduction.removedKeys == 0) continue;
+                if (EditorUtility.IsDirty(clip) || !AssetDatabase.IsOpenForEdit(clip))
+                {
+                    text.AppendLine("请先保存未提交到磁盘的编辑，并确认资源可写。");
+                    continue;
+                }
+
+                long before = new FileInfo(path).Length;
+                Undo.RegisterCompleteObjectUndo(clip, "精简动画恒定曲线");
+                reduction.ApplyTo(clip);
+                EditorUtility.SetDirty(clip);
+                AssetDatabase.SaveAssetIfDirty(clip);
+                long after = new FileInfo(path).Length;
+                text.AppendLine($"已保存 {before / 1048576d:F2} MiB → {after / 1048576d:F2} MiB。");
+            }
+            catch (Exception exception)
+            {
+                text.AppendLine("精简失败：" + exception.Message);
+            }
+        }
+        report = text.ToString();
+    }
+
+    static ConstantCurveReduction AnalyzeConstantBoneCurves(AnimationClip clip)
+    {
+        var reduction = new ConstantCurveReduction();
+        var groups = AnimationUtility.GetCurveBindings(clip)
+            .Where(binding => binding.type == typeof(Transform) &&
+                binding.path.StartsWith(BoneCurvePrefix, StringComparison.Ordinal) &&
+                (binding.propertyName.StartsWith("m_LocalPosition.", StringComparison.Ordinal) ||
+                 binding.propertyName.StartsWith("m_LocalScale.", StringComparison.Ordinal)))
+            .GroupBy(binding => (binding.path, binding.propertyName.Substring(0, binding.propertyName.Length - 1)));
+
+        foreach (var group in groups)
+        {
+            var bindings = group.ToArray();
+            if (bindings.Length != 3) continue;
+            var curves = bindings.Select(binding => AnimationUtility.GetEditorCurve(clip, binding)).ToArray();
+            if (curves.Any(curve => curve == null)) continue;
+            var keysByAxis = curves.Select(curve => curve.keys).ToArray();
+            // Unity combines transform channels, so shorten a position or scale vector only as a whole.
+            if (keysByAxis.Any(keys => !IsConstantCurve(keys))) continue;
+
+            for (int axis = 0; axis < bindings.Length; axis++)
+            {
+                var keys = keysByAxis[axis];
+                if (keys.Length <= 2) continue;
+                reduction.bindings.Add(bindings[axis]);
+                reduction.curves.Add(new AnimationCurve(keys[0], keys[keys.Length - 1])
+                {
+                    preWrapMode = curves[axis].preWrapMode,
+                    postWrapMode = curves[axis].postWrapMode
+                });
+                reduction.removedKeys += keys.Length - 2;
+            }
+        }
+        return reduction;
+    }
+
+    static bool IsConstantCurve(Keyframe[] keys)
+    {
+        if (keys.Length == 0) return false;
+        float value = keys[0].value;
+        if (float.IsNaN(value) || float.IsInfinity(value)) return false;
+        // Equal key values can still interpolate into a different pose when tangents are nonzero.
+        return Array.TrueForAll(keys, key => key.value == value && key.inTangent == 0f && key.outTangent == 0f &&
+            key.weightedMode == WeightedMode.None);
     }
 
     static Plan BuildPlan(AnimationClip source, string prefix, bool includeComponents,
@@ -323,7 +437,8 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
         return SaveConvertedClip(source, plan, outputDirectory);
     }
 
-    static string SaveConvertedClip(AnimationClip source, Plan plan, string selectedOutputDirectory)
+    static string SaveConvertedClip(AnimationClip source, Plan plan, string selectedOutputDirectory,
+        bool reduceConstants = false)
     {
         string sourcePath = AssetDatabase.GetAssetPath(source);
         if (!sourcePath.StartsWith("Assets/", StringComparison.Ordinal))
@@ -376,6 +491,7 @@ internal sealed class AnimationBindingConverterWindow : EditorWindow
             }
             // Unity 编辑曲线时会重算 stopTime；恢复源剪辑边界，避免转换改变播放时序。
             AnimationUtility.SetAnimationClipSettings(copy, AnimationUtility.GetAnimationClipSettings(source));
+            if (reduceConstants) AnalyzeConstantBoneCurves(copy).ApplyTo(copy);
             AnimationClip existing = AssetDatabase.LoadAssetAtPath<AnimationClip>(output);
             if (existing != null)
             {
