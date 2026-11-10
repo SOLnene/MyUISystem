@@ -177,7 +177,7 @@ public partial class FlowManager
                     {
                         SetState(StartupState.PreparingSession);
                         loadingView.ShowProgress();
-                        ReportProgress(.05f, "正在准备游戏数据…");
+                        ReportProgress(.05f, "正在读取存档与队伍…");
                         await prepare(token);
                         prepared = true;
                     }
@@ -230,14 +230,20 @@ public partial class FlowManager
                 throw new InvalidOperationException("World scene is not registered in Build Settings: " + worldScenePath);
             if (SceneManager.GetSceneByPath(worldScenePath).isLoaded)
                 throw new InvalidOperationException("World scene is already loaded outside the startup flow.");
+            const float mapStart = 1f / 7f;
+            const float mapReady = 3f / 7f;
+            const string mapDescription = "正在加载地图…";
+            ReportProgress(mapStart, mapDescription);
+            // Let the loading view draw the new stage before starting a potentially blocking load.
+            await UniTask.NextFrame(token);
             var operation = SceneManager.LoadSceneAsync(worldScenePath, LoadSceneMode.Additive);
-            float reported = -1f;
+            float reported = mapStart;
             while (!operation.isDone)
             {
                 // Native scene loading cannot be cancelled. Finish it before cleanup/retry can own another scene.
                 this.GetCancellationTokenOnDestroy().ThrowIfCancellationRequested();
-                float progress = .25f + Mathf.Clamp01(operation.progress / .9f) * .6f;
-                if (progress - reported > .02f) { ReportProgress(progress, "加载场景中..."); reported = progress; }
+                float progress = Mathf.Lerp(mapStart, mapReady, operation.progress / .9f);
+                if (progress - reported > .02f) { ReportProgress(progress, mapDescription); reported = progress; }
                 await UniTask.Yield();
             }
             worldScene = SceneManager.GetSceneByPath(worldScenePath);
@@ -250,6 +256,8 @@ public partial class FlowManager
             startupCamera.enabled = false;
             if (startupLight != null) startupLight.enabled = false;
             if (startupListener != null) startupListener.enabled = false;
+            ReportProgress(4f / 7f, "正在准备出战角色…");
+            await UniTask.NextFrame(token);
             worldContext.BindCharacter(PrepareWorldCharacter(worldContext.CharacterKey));
             worldContext.Activate();
             await worldContext.Party.InitializeAsync(
@@ -257,8 +265,11 @@ public partial class FlowManager
             Debug.Log("新场景加载完成: " + worldScene.name);
         }
         SetState(StartupState.EnteringWorld);
+        ReportProgress(5f / 7f, "正在加载角色展示资源…");
+        await UniTask.NextFrame(token);
         await PrepareModelViewerAsync(token);
-        ReportProgress(.9f, "正在准备界面…");
+        ReportProgress(6f / 7f, "正在准备游戏界面…");
+        await UniTask.NextFrame(token);
         UIManager.Instance.Close(UIType.LoginView);
         await OpenStartupViewAsync<HubRoot>(UIType.HubRoot, token);
         await UniTask.WaitForEndOfFrame(this, token);

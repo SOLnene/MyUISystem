@@ -1,5 +1,6 @@
 using UnityEngine;
 using Game.Domain.Character;
+using Cysharp.Threading.Tasks;
 
 public sealed class WorldSceneContext : MonoBehaviour
 {
@@ -19,7 +20,9 @@ public sealed class WorldSceneContext : MonoBehaviour
     void Start()
     {
         // A standalone map is a movement test entry; additive loading is activated by FlowManager instead.
-        if (FindObjectOfType<FlowManager>() == null) Activate();
+        if (FindObjectOfType<FlowManager>() != null) return;
+        Activate();
+        party.PrepareInitialModelAsync(characterKey, this.GetCancellationTokenOnDestroy()).Forget(Debug.LogException);
     }
 
     internal void Activate()

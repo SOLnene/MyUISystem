@@ -1,0 +1,62 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45372b3986174d4c895515acb74e185c, type: 3}
+  m_Name: WorldMotion_lumine
+  m_EditorClassIdentifier:
+  characterKey: lumine
+  locomotion:
+  - {fileID: 7400000, guid: daccce6cc30261d4ea50429ed3fcb081, type: 2}
+  - {fileID: 7400000, guid: 5144702cfc562924bb8a9abbd564e6bd, type: 2}
+  - {fileID: 7400000, guid: eb9f0ba19aa6b514387bb074c85fa00b, type: 2}
+  - {fileID: 7400000, guid: 9168a1cc09aea4240a8b93b2b42e5e6f, type: 2}
+  locomotionAuxiliary:
+  - {fileID: 7400000, guid: 92a98b28e5acc4a4f9f8fb09c8d13fdf, type: 2}
+  - {fileID: 7400000, guid: b459170017e5ae84ea9c43c37802c5ca, type: 2}
+  - {fileID: 7400000, guid: 9e06ffec380e21f4badba4576aa0e4a7, type: 2}
+  - {fileID: 7400000, guid: 8708017d92d0eaf4a97e2c6d1727c836, type: 2}
+  attacks:
+  - clip: {fileID: 7400000, guid: f1f57f51946a8e142b79099aedd2f314, type: 2}
+    nextActionTime: 0.37
+    swordTrailWindow: {x: 0.153, y: 0.297}
+  - clip: {fileID: 7400000, guid: cee87b69d8fd8f742b401e62d1edf467, type: 2}
+    nextActionTime: 0.34
+    swordTrailWindow: {x: 0.085, y: 0.253}
+  - clip: {fileID: 7400000, guid: 1329690ba70ac6e4bb1a7d64d1900f55, type: 2}
+    nextActionTime: 0.49
+    swordTrailWindow: {x: 0.222, y: 0.402}
+  - clip: {fileID: 7400000, guid: 14c8849bf3655c84ba93cb35774aad40, type: 2}
+    nextActionTime: 0.5
+    swordTrailWindow: {x: 0.285, y: 0.457}
+  - clip: {fileID: 7400000, guid: 65f386cfdd74e2f44ad3a34aeb0d5532, type: 2}
+    nextActionTime: 0.92
+    swordTrailWindow: {x: 0.15, y: 0.389}
+  special:
+  - {fileID: 7400000, guid: 0a1b95dbd79f8ac479c8a7d651300723, type: 2}
+  - {fileID: 7400000, guid: 2dba3b0dee3b26a4d9d4fb27a5338292, type: 2}
+  - {fileID: 7400000, guid: e3b488a790099c34691524732727afd0, type: 2}
+  - {fileID: 7400000, guid: d66f0b2d29bda3147a97675e3e0d0dd3, type: 2}
+  - {fileID: 7400000, guid: 078bac325e21d6643a0e45d26e1e67d5, type: 2}
+  - {fileID: 7400000, guid: 944c772f3f1e48f4aa27fc22e8c497a0, type: 2}
+  - {fileID: 7400000, guid: 562ca6b30b2413c429201720f8b00620, type: 2}
+  - {fileID: 7400000, guid: 7e305985d50afdf44a593f35a4e76a00, type: 2}
+  - {fileID: 7400000, guid: d33a5e0ce84130c4f9579658f04bfe15, type: 2}
+  - {fileID: 7400000, guid: 38e0009b7afc5354b92725ceb8171a4f, type: 2}
+  - {fileID: 7400000, guid: 6147c13fe8f668f4981b3aa2fe1f6414, type: 2}
+  - {fileID: 7400000, guid: 4369ff40c7d690d498156b70dd1c85fd, type: 2}
+  - {fileID: 7400000, guid: bdefc8b6ae209fa4f935b7a39e24596a, type: 2}
+  - {fileID: 7400000, guid: dc8ed93506d70b24196783f6cf3c70e5, type: 2}
+  - {fileID: 7400000, guid: 87125be5787972740afa13ffa720468b, type: 2}
+  - {fileID: 7400000, guid: 642812810ec8d9c4799d6125a130788b, type: 2}
+  - {fileID: 7400000, guid: 483f0a5f378e06f449e371f77b828a53, type: 2}
+  weaponSocketPath: ModelRoot/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001 Spine2/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/WeaponR
+  attackRootMotion: 1
+  swordTrailMaterial: {fileID: 2100000, guid: 6016bfab87944506b3796af96bdf410c, type: 2}

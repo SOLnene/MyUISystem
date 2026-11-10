@@ -33,11 +33,6 @@ public partial class UILoadingView : UIView
         base.OnOpen(data);
         binding = new EventBinding<LoadingProgressEvent>(SetVisualize);
         EventBus<LoadingProgressEvent>.Register(binding);
-        Silder.onValueChanged.RemoveAllListeners();
-        Silder.onValueChanged.AddListener((value) =>
-        {
-            TextProgress.text = $"{value * 100:F0}%";
-        });
         Reset();
         ShowProgress();
         pagePanel.HideImmediate();
@@ -89,9 +84,17 @@ public partial class UILoadingView : UIView
     public void SetVisualize(LoadingProgressEvent loadingProgressEvent)
     {
         progressTween?.Kill();
-        progressTween = Silder.DOValue(loadingProgressEvent.Progress,0.3f).SetUpdate(true);
+        if (loadingProgressEvent.Progress >= 1f)
+        {
+            // The exit animation may finish before the progress tween would reach the last icon.
+            Silder.SetValueWithoutNotify(1f);
+            progressTween = null;
+        }
+        else
+        {
+            progressTween = Silder.DOValue(loadingProgressEvent.Progress, 0.3f).SetUpdate(true);
+        }
         TextDesc.text = loadingProgressEvent.Description;
-
     }
     
     public void Reset()
@@ -100,7 +103,8 @@ public partial class UILoadingView : UIView
         // Unity also calls Reset when adding this component, before runtime UIControlData binding exists.
         if (!Application.isPlaying) return;
 #endif
-        Silder.value = 0;
+        Silder.SetValueWithoutNotify(0f);
+        TextDesc.text = "正在准备载入…";
     }
     
     public override void OnAddListener()

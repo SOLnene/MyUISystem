@@ -1,8 +1,11 @@
 using System;
+using System.Collections.Generic;
 using System.Threading;
 using Cysharp.Threading.Tasks;
 using Game.Domain.Character;
 using UnityEngine;
+using UnityEngine.AddressableAssets;
+using UnityEngine.ResourceManagement.AsyncOperations;
 
 [DisallowMultipleComponent]
 public sealed class WorldPartyController : MonoBehaviour
@@ -11,7 +14,7 @@ public sealed class WorldPartyController : MonoBehaviour
     [SerializeField] WorldPlayerInput input;
     [SerializeField] WorldPlayerAnimation locomotion;
     [SerializeField] GameObject initialModel;
-    [SerializeField] ModelPreviewDatabase modelDatabase;
+    [SerializeField] WorldCharacterAnimationLibrary characterResources;
     [SerializeField] ParticleSystem switchParticlePrefab;
     [SerializeField] CharacterSwitchElementPalette switchElementPalette;
 
@@ -26,6 +29,8 @@ public sealed class WorldPartyController : MonoBehaviour
     ParticleSystem switchParticles;
     string initialCharacterKey;
     CancellationTokenSource switchCancellation;
+    CancellationTokenSource warmupCancellation;
+    readonly Dictionary<string, AsyncOperationHandle<WorldCharacterMotionSet>> motionHandles = new();
     bool reconcilePending, quitting;
 
     internal event Action ActiveCharacterChanged;
@@ -42,6 +47,17 @@ public sealed class WorldPartyController : MonoBehaviour
         initialCharacterKey = player.Character.Definition.key;
         teams.Changed += OnTeamChanged;
         await ReconcileAsync(token);
+    }
+
+    internal async UniTask PrepareInitialModelAsync(string characterKey, CancellationToken token)
+    {
+        var resource = characterResources.Find(characterKey);
+        var motion = await LoadMotionAsync(resource, token);
+        token.ThrowIfCancellationRequested();
+        if (!isActiveAndEnabled) return;
+        initialCharacterKey = characterKey;
+        activeModel = initialModel;
+        locomotion.BindAnimator(initialModel.GetComponent<Animator>(), motion);
     }
 
     void Update()
@@ -68,7 +84,7 @@ public sealed class WorldPartyController : MonoBehaviour
     {
         if (!teams.TryGetGameMemberKey(slot, out string key)) return null;
         var character = characters.GetByKey(key);
-        return character != null && character.IsAlive && modelDatabase.Get(ModelPreviewType.Character, key) != null
+        return character != null && character.IsAlive && characterResources.Find(key) != null
             ? character : null;
     }
 
@@ -76,14 +92,23 @@ public sealed class WorldPartyController : MonoBehaviour
     {
         // Editing an inactive preset must not change possession. Keep the current member when possible.
         for (int i = 0; i < TeamRepository.MemberCapacity; i++)
-            if (GetAvailableMember(i) == ActiveCharacter && ActiveCharacter != null) return;
+        {
+            var current = GetAvailableMember(i);
+            if (current == null || current != ActiveCharacter) continue;
+            if (locomotion.Animator == null) await SwitchAsync(i, current, false, token);
+            await PrepareTeamResourcesAsync(token);
+            return;
+        }
         for (int i = 0; i < TeamRepository.MemberCapacity; i++)
         {
             var character = GetAvailableMember(i);
             if (character == null) continue;
             await SwitchAsync(i, character, false, token);
+            await PrepareTeamResourcesAsync(token);
             return;
         }
+        if (locomotion.Animator == null) await PrepareInitialModelAsync(initialCharacterKey, token);
+        await PrepareTeamResourcesAsync(token);
     }
 
     async UniTask SwitchAsync(int slot, CharacterModel character, bool requireGameplay, CancellationToken token)
@@ -97,10 +122,16 @@ public sealed class WorldPartyController : MonoBehaviour
         bool effectFinished = false;
         try
         {
-            var definition = modelDatabase.Get(ModelPreviewType.Character, character.Definition.key);
+            var definition = characterResources.Find(character.Definition.key);
             bool useInitial = character.Definition.key == initialCharacterKey;
+            var prefabLoad = useInitial ? UniTask.FromResult(initialModel) :
+                resources.LoadAssetAsync<GameObject>(definition.modelAddress, cancellation.Token);
+            var (prefab, motion) = await UniTask.WhenAll(prefabLoad, LoadMotionAsync(definition, cancellation.Token));
+            cancellation.Token.ThrowIfCancellationRequested();
+            if (prefab == null)
+                throw new InvalidOperationException("Playable model could not be loaded: " + definition.modelAddress);
             loaded = useInitial ? initialModel : await resources.InstantiateItemAsync(
-                definition.ModelAddress, initialModel.transform.parent, false, cancellation.Token);
+                definition.modelAddress, initialModel.transform.parent, false, cancellation.Token);
             cancellation.Token.ThrowIfCancellationRequested();
             if (loaded == null || !isActiveAndEnabled || GetAvailableMember(slot) != character ||
                 (requireGameplay && !input.CanAcceptGameplay)) return;
@@ -111,9 +142,9 @@ public sealed class WorldPartyController : MonoBehaviour
 
             if (!useInitial)
             {
-                loaded.transform.localPosition = definition.LocalPosition;
-                loaded.transform.localRotation = Quaternion.Euler(definition.LocalEulerAngles);
-                loaded.transform.localScale = definition.LocalScale;
+                loaded.transform.localPosition = definition.localPosition;
+                loaded.transform.localRotation = Quaternion.Euler(definition.localEulerAngles);
+                loaded.transform.localScale = definition.localScale;
                 foreach (Transform child in loaded.GetComponentsInChildren<Transform>(true))
                     child.gameObject.layer = gameObject.layer;
             }
@@ -143,13 +174,13 @@ public sealed class WorldPartyController : MonoBehaviour
             }
             // Commit data and visuals together only after loading and validation have both succeeded.
             loaded.SetActive(true);
-            locomotion.BindAnimator(animator);
+            locomotion.BindAnimator(animator, motion);
             player.BindCharacter(character);
             activeModel = loaded;
             loaded = null;
             CharacterSwitchEffect.SetFade(outgoing, 1f);
             outgoing = null;
-            ReleaseModel(previous, false);
+            if (previous != activeModel) ReleaseModel(previous, false);
             ActiveCharacterChanged?.Invoke();
             if (incoming != null)
                 await CharacterSwitchEffect.FadeAsync(incoming, 0f, 1f, SwitchFadeInTime, cancellation.Token);
@@ -158,6 +189,7 @@ public sealed class WorldPartyController : MonoBehaviour
         catch (OperationCanceledException) when (cancellation.IsCancellationRequested) { }
         catch (Exception error)
         {
+            if (!requireGameplay && locomotion.Animator == null) throw;
             Debug.LogException(error, this);
         }
         finally
@@ -175,6 +207,94 @@ public sealed class WorldPartyController : MonoBehaviour
         }
     }
 
+    async UniTask<WorldCharacterMotionSet> LoadMotionAsync(WorldCharacterResource resource, CancellationToken token)
+    {
+        token.ThrowIfCancellationRequested();
+        if (resource == null) throw new InvalidOperationException("Playable character motion is missing from the index.");
+        string address = resource.motionAddress;
+        // Party ownership lets team edits release one motion bundle without clearing shared UI assets.
+        if (!motionHandles.TryGetValue(address, out var handle))
+        {
+            handle = Addressables.LoadAssetAsync<WorldCharacterMotionSet>(address);
+            motionHandles.Add(address, handle);
+        }
+        try
+        {
+            var motion = await handle.Task.AsUniTask().AttachExternalCancellation(token);
+            if (motion == null || motion.characterKey != resource.characterKey ||
+                motion.locomotion.Length != 4 || Array.Exists(motion.locomotion, clip => clip == null) ||
+                (motion.locomotionAuxiliary.Length != 0 && (motion.locomotionAuxiliary.Length != 4 ||
+                    Array.Exists(motion.locomotionAuxiliary, clip => clip == null))) ||
+                Array.Exists(motion.attacks, stage => stage.clip == null) ||
+                (motion.special.Length != 0 && motion.special.Length != (int)WorldMotion.Count))
+                throw new InvalidOperationException("Invalid playable motion asset: " + address);
+            return motion;
+        }
+        catch (OperationCanceledException) when (token.IsCancellationRequested) { throw; }
+        catch
+        {
+            if (motionHandles.TryGetValue(address, out var cached) && cached.Equals(handle))
+            {
+                motionHandles.Remove(address);
+                if (handle.IsValid()) Addressables.Release(handle);
+            }
+            throw;
+        }
+    }
+
+    async UniTask PrepareTeamResourcesAsync(CancellationToken token)
+    {
+        if (!isActiveAndEnabled || quitting) return;
+        warmupCancellation?.Cancel();
+        var members = new List<(WorldCharacterResource resource, string weaponKey)>(TeamRepository.MemberCapacity);
+        var retained = new HashSet<string>();
+        var active = characterResources.Find(ActiveCharacter?.Definition.key);
+        if (active != null)
+        {
+            retained.Add(active.motionAddress);
+            members.Add((active, ActiveCharacter.CurrentEquipRP.Value?.Key));
+        }
+        for (int i = 0; i < TeamRepository.MemberCapacity; i++)
+        {
+            if (!teams.TryGetGameMemberKey(i, out string key)) continue;
+            var character = characters.GetByKey(key);
+            var resource = characterResources.Find(key);
+            if (character != null && resource != null && retained.Add(resource.motionAddress))
+                members.Add((resource, character.CurrentEquipRP.Value?.Key));
+        }
+        foreach (var address in new List<string>(motionHandles.Keys))
+        {
+            if (retained.Contains(address)) continue;
+            Addressables.Release(motionHandles[address]);
+            motionHandles.Remove(address);
+        }
+        if (members.Count == 0) return;
+        var cancellation = CancellationTokenSource.CreateLinkedTokenSource(token, this.GetCancellationTokenOnDestroy());
+        warmupCancellation = cancellation;
+        try
+        {
+            var loadToken = cancellation.Token;
+            // Startup awaits reconciliation before opening the HUD. Team edits reuse the same preparation.
+            foreach (var (resource, weaponKey) in members)
+            {
+                await UniTask.Yield(PlayerLoopTiming.LastPostLateUpdate, loadToken);
+                var modelLoad = resource.characterKey == initialCharacterKey ? UniTask.FromResult(initialModel) :
+                    resources.LoadAssetAsync<GameObject>(resource.modelAddress, loadToken);
+                var weaponLoad = string.IsNullOrEmpty(weaponKey) ? UniTask.FromResult<GameObject>(null) :
+                    resources.LoadAssetAsync<GameObject>(WorldPlayerAnimation.GetWeaponModelAddress(weaponKey), loadToken);
+                var (model, _, _) = await UniTask.WhenAll(modelLoad, LoadMotionAsync(resource, loadToken), weaponLoad);
+                if (model == null)
+                    throw new InvalidOperationException("Playable model could not be loaded: " + resource.modelAddress);
+            }
+        }
+        catch (OperationCanceledException) when (cancellation.IsCancellationRequested && !token.IsCancellationRequested) { }
+        finally
+        {
+            if (warmupCancellation == cancellation) warmupCancellation = null;
+            cancellation.Dispose();
+        }
+    }
+
     void ReleaseModel(GameObject model, bool forceDestroy)
     {
         if (model == null) return;
@@ -186,6 +306,7 @@ public sealed class WorldPartyController : MonoBehaviour
     {
         // A result loaded for an older formation must never overwrite its replacement.
         switchCancellation?.Cancel();
+        warmupCancellation?.Cancel();
         reconcilePending = true;
     }
 
@@ -200,19 +321,23 @@ public sealed class WorldPartyController : MonoBehaviour
     {
         quitting = true;
         switchCancellation?.Cancel();
+        warmupCancellation?.Cancel();
     }
 
     void OnDisable()
     {
         if (teams != null) teams.Changed -= OnTeamChanged;
         switchCancellation?.Cancel();
+        warmupCancellation?.Cancel();
         if (switchParticles != null)
             switchParticles.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-        if (activeModel == null || activeModel == initialModel) return;
-        locomotion.BindAnimator(initialModel.GetComponent<Animator>());
+        locomotion.BindAnimator(null, null);
         // Never reparent world children into the pool while their scene is being destroyed.
-        ReleaseModel(activeModel, true);
+        if (activeModel != initialModel) ReleaseModel(activeModel, true);
+        foreach (var handle in motionHandles.Values)
+            if (handle.IsValid()) Addressables.Release(handle);
+        motionHandles.Clear();
         activeModel = initialModel;
-        initialModel.SetActive(true);
+        if (initialModel != null) initialModel.SetActive(true);
     }
 }

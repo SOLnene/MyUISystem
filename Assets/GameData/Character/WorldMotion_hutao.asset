@@ -1,0 +1,56 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45372b3986174d4c895515acb74e185c, type: 3}
+  m_Name: WorldMotion_hutao
+  m_EditorClassIdentifier:
+  characterKey: hutao
+  locomotion:
+  - {fileID: 7400000, guid: 17c5359119330c844b2b4c788b151d99, type: 2}
+  - {fileID: 7400000, guid: b6cbb86901ff8444081057410adeeba3, type: 2}
+  - {fileID: 7400000, guid: b83bf5c358fa5004589c4eb04fec3831, type: 2}
+  - {fileID: 7400000, guid: 200179044758a794e9afd58a9c8d757e, type: 2}
+  attacks:
+  - clip: {fileID: 7400000, guid: f320ffec3ecec09459db9f95612d1fd2, type: 2}
+    nextActionTime: 1.6200001
+  - clip: {fileID: 7400000, guid: 2c4a90850cb51db48b926e94b487917b, type: 2}
+    nextActionTime: 1.7700001
+  - clip: {fileID: 7400000, guid: 619fd2b9de6a96849a0c46d49b139a19, type: 2}
+    nextActionTime: 1.7700001
+  - clip: {fileID: 7400000, guid: 8ec80468507bef342b1f695979f42fe8, type: 2}
+    nextActionTime: 1.95
+  - clip: {fileID: 7400000, guid: 2ad5c5691b7f6ab4a95b78b28e54f727, type: 2}
+    nextActionTime: 2.32
+  - clip: {fileID: 7400000, guid: ed1fad92059954d4d832abba32216d25, type: 2}
+    nextActionTime: 2.22
+  special:
+  - {fileID: 7400000, guid: 963fd00467a71ee448a1037341e01898, type: 2}
+  - {fileID: 7400000, guid: 5fdc2a00ae7613b46b60e29b0d1698fb, type: 2}
+  - {fileID: 7400000, guid: a126bc046590c8440827a62b1e739d64, type: 2}
+  - {fileID: 7400000, guid: 052372daf1cfe444e9fd398093af8b48, type: 2}
+  - {fileID: 7400000, guid: 10c83c2c45a66fb4080b051920dd8553, type: 2}
+  - {fileID: 7400000, guid: 5d58206dc30eef14f8ff7e6854253f32, type: 2}
+  - {fileID: 7400000, guid: 67f9d752c4a8df247b40c0c6d1832d8a, type: 2}
+  - {fileID: 7400000, guid: 474dc2c56dbe5c841aa9db4829c70fe9, type: 2}
+  - {fileID: 7400000, guid: ab3cfddd01557e54c876c1a6a4b8272c, type: 2}
+  - {fileID: 7400000, guid: a303023df8a12264a9858ed25e922700, type: 2}
+  - {fileID: 7400000, guid: b7cae400e149cff4cb94c2a031519e7a, type: 2}
+  - {fileID: 7400000, guid: ad3edc6cad639be4fa468a5678829e17, type: 2}
+  - {fileID: 0}
+  - {fileID: 7400000, guid: f3c9c2af0cebb254aa27df2992881856, type: 2}
+  - {fileID: 7400000, guid: 62ae711d64671a14cbde81b736551eac, type: 2}
+  - {fileID: 7400000, guid: f595db3ed5da5ba42b34d934ccd9cd8e, type: 2}
+  - {fileID: 7400000, guid: 6cbd25987e5b1c542af59ea0c30c6191, type: 2}
+  weaponSocketPath: ModelRoot/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001
+    Spine2/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/WeaponR
+  attackRootMotion: 1
+  locomotionAuxiliary: []
+  swordTrailMaterial: {fileID: 0}

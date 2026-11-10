@@ -1,11 +1,16 @@
+using Cinemachine;
+using Cinemachine.Utility;
 using UnityEngine;
 
+[DefaultExecutionOrder(-40)]
 [DisallowMultipleComponent]
 public sealed class WorldPlayerCamera : MonoBehaviour
 {
     [SerializeField] WorldPlayerController player;
     [SerializeField] Transform followTarget;
-    [SerializeField] Camera viewCamera;
+    [SerializeField] CinemachineBrain brain;
+    [SerializeField] CinemachineVirtualCamera explorationCamera;
+    [SerializeField] Cinemachine3rdPersonFollow cameraBody;
     [SerializeField] WorldPlayerInput inputReader;
     [SerializeField, Min(.1f)] float distance = 4.5f;
     [SerializeField, Min(.1f)] float minimumDistance = 1.2f;
@@ -15,64 +20,64 @@ public sealed class WorldPlayerCamera : MonoBehaviour
     [SerializeField] float maximumPitch = 65f;
     [SerializeField, Min(0f)] float sensitivity = 3f;
     [SerializeField, Min(0f)] float zoomSpeed = 3f;
-    [SerializeField, Min(.01f)] float followSmoothTime = .07f;
-    [SerializeField, Min(.01f)] float collisionRadius = .18f;
-    [SerializeField] LayerMask obstructionMask = ~0;
+    [SerializeField, Min(0f)] float rotationDamping = .12f;
+    [SerializeField, Min(0f)] float zoomDamping = .28f;
 
-    readonly RaycastHit[] hits = new RaycastHit[32];
-    Vector3 focus, focusVelocity;
-    float yaw, currentDistance;
+    float yaw, requestedYaw, requestedPitch, requestedDistance;
+
+    internal Vector3 PlanarForward => Quaternion.AngleAxis(yaw, Vector3.up) * Vector3.forward;
 
     void OnEnable()
     {
-        yaw = player.transform.eulerAngles.y;
-        currentDistance = distance;
+        requestedYaw = yaw = player.transform.eulerAngles.y;
+        requestedPitch = pitch;
+        requestedDistance = distance;
         SnapToTarget();
     }
 
     internal void SnapToTarget()
     {
-        focus = followTarget.position;
-        focusVelocity = Vector3.zero;
-        UpdateCameraPosition(0f);
+        // The next camera update starts at the teleported target with fresh damping state.
+        explorationCamera.PreviousStateIsValid = false;
     }
 
-    void LateUpdate()
+    void Update()
     {
+        if (!inputReader.GameplayEnabled)
+        {
+            // Discard the pending motion when a menu or loss of focus takes over.
+            requestedYaw = yaw;
+            requestedPitch = pitch;
+            requestedDistance = distance;
+            return;
+        }
+
         AdvanceView(inputReader.Look.x, inputReader.Look.y, inputReader.Zoom, inputReader.OrbitHeld);
+        float deltaTime = Time.deltaTime;
+        yaw += Damper.Damp(requestedYaw - yaw, rotationDamping, deltaTime);
+        pitch += Damper.Damp(requestedPitch - pitch, rotationDamping, deltaTime);
+        distance += Damper.Damp(requestedDistance - distance, zoomDamping, deltaTime);
     }
 
     internal void AdvanceView(float horizontalLook, float verticalLook, float scroll, bool orbit)
     {
-        if (inputReader.CanControlCamera)
+        if (!inputReader.CanControlCamera) return;
+
+        if (orbit)
         {
-            if (orbit)
-            {
-                yaw += horizontalLook * sensitivity;
-                pitch = Mathf.Clamp(pitch - verticalLook * sensitivity, minimumPitch, maximumPitch);
-            }
-            distance = Mathf.Clamp(distance - scroll * zoomSpeed * .1f, minimumDistance, maximumDistance);
+            requestedYaw += horizontalLook * sensitivity;
+            requestedPitch = Mathf.Clamp(requestedPitch - verticalLook * sensitivity, minimumPitch, maximumPitch);
         }
-        focus = Vector3.SmoothDamp(focus, followTarget.position, ref focusVelocity, followSmoothTime);
-        UpdateCameraPosition(Time.deltaTime);
+        // Limit each input update so native or accumulated wheel deltas cannot skip the zoom range.
+        float scrollStep = Mathf.Clamp(scroll, -1f, 1f);
+        requestedDistance = Mathf.Clamp(requestedDistance - scrollStep * zoomSpeed * .1f, minimumDistance, maximumDistance);
     }
 
-    void UpdateCameraPosition(float deltaTime)
+    void LateUpdate()
     {
-        Quaternion rotation = Quaternion.Euler(pitch, yaw, 0f);
-        Vector3 backward = rotation * Vector3.back;
-        float allowedDistance = distance;
-        int count = Physics.SphereCastNonAlloc(focus, collisionRadius, backward, hits, distance,
-            obstructionMask, QueryTriggerInteraction.Ignore);
-        for (int i = 0; i < count; i++)
-        {
-            if (hits[i].collider.transform.IsChildOf(player.transform)) continue;
-            allowedDistance = Mathf.Min(allowedDistance, Mathf.Max(.05f, hits[i].distance - .05f));
-        }
-        // Pull in immediately at obstructions; only the return to the requested distance is smoothed.
-        currentDistance = allowedDistance < currentDistance || deltaTime == 0f
-            ? allowedDistance : Mathf.MoveTowards(currentDistance, allowedDistance, 8f * deltaTime);
-        transform.SetPositionAndRotation(focus + backward * currentDistance, rotation);
-        viewCamera.nearClipPlane = Mathf.Min(.1f, Mathf.Max(.01f, currentDistance * .25f));
+        // The target is parented to the player, so apply its world rotation after the player turns.
+        followTarget.rotation = Quaternion.Euler(pitch, yaw, 0f);
+        cameraBody.CameraDistance = distance;
+        brain.ManualUpdate();
     }
 }

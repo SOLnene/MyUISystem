@@ -7,6 +7,33 @@
             "id": "dd32bdf2-730d-4acb-a547-3a96537b7b13",
             "actions": [
                 {
+                    "name": "Skill",
+                    "type": "Button",
+                    "id": "0b7ec925-b913-420a-a94d-11a6df1e6d5e",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "Burst",
+                    "type": "Button",
+                    "id": "4b279596-d84b-433a-b419-40d504c942d5",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "NormalAttack",
+                    "type": "Button",
+                    "id": "5f77b56d-a6c7-465e-a3db-812c0450fdb7",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
                     "name": "Move",
                     "type": "Value",
                     "id": "97980cd9-caf8-412a-8be3-c2f365747e66",
@@ -98,6 +125,39 @@
                 }
             ],
             "bindings": [
+                {
+                    "name": "",
+                    "id": "518cf271-1ca7-4cc7-a899-0fcfcadb0ba6",
+                    "path": "<Keyboard>/e",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "Skill",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "5dbc4ab7-459e-4fe8-b16c-fdf54ff493c4",
+                    "path": "<Keyboard>/q",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "Burst",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a7bc4ee9-1645-4038-ac2a-b8ce8ee73bda",
+                    "path": "<Mouse>/leftButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "KeyboardMouse",
+                    "action": "NormalAttack",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
                 {
                     "name": "",
                     "id": "712483d4-320b-4b19-8313-166d099ae766",

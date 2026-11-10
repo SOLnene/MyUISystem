@@ -10,7 +10,7 @@ public sealed class WorldPlayerInput : MonoBehaviour
 
     FlowManager flow;
     Transform uiRoot;
-    InputAction move, jump, sprint, look, zoom, orbit;
+    InputAction move, jump, sprint, look, zoom, orbit, normalAttack, skill, burst;
     readonly InputAction[] switchSlots = new InputAction[TeamRepository.MemberCapacity];
 
     internal bool GameplayEnabled { get; private set; }
@@ -22,6 +22,9 @@ public sealed class WorldPlayerInput : MonoBehaviour
     internal float Zoom { get; private set; }
     internal bool SprintHeld { get; private set; }
     internal bool JumpPressed { get; private set; }
+    internal bool NormalAttackPressed { get; private set; }
+    internal bool SkillPressed { get; private set; }
+    internal bool BurstPressed { get; private set; }
     internal bool OrbitHeld { get; private set; }
     internal bool CanControlCamera => GameplayEnabled &&
         (EventSystem.current == null || !EventSystem.current.IsPointerOverGameObject());
@@ -44,6 +47,9 @@ public sealed class WorldPlayerInput : MonoBehaviour
         look = actions.FindAction("Gameplay/Look", true);
         zoom = actions.FindAction("Gameplay/Zoom", true);
         orbit = actions.FindAction("Gameplay/Orbit", true);
+        normalAttack = actions.FindAction("Gameplay/NormalAttack", true);
+        skill = actions.FindAction("Gameplay/Skill", true);
+        burst = actions.FindAction("Gameplay/Burst", true);
         for (int i = 0; i < switchSlots.Length; i++)
             switchSlots[i] = actions.FindAction($"Gameplay/SwitchSlot{i + 1}", true);
     }
@@ -68,6 +74,9 @@ public sealed class WorldPlayerInput : MonoBehaviour
         Move = move.ReadValue<Vector2>();
         SprintHeld = sprint.IsPressed();
         JumpPressed = jump.WasPressedThisFrame();
+        NormalAttackPressed = !reactivating && normalAttack.WasPressedThisFrame() && CanControlCamera;
+        SkillPressed = !reactivating && skill.WasPressedThisFrame();
+        BurstPressed = !reactivating && burst.WasPressedThisFrame();
         Look = look.ReadValue<Vector2>();
         bool gamepadLook = look.activeControl?.device is Gamepad;
         // Mouse delta is already a per-frame distance; a stick represents an angular rate instead.
@@ -103,7 +112,7 @@ public sealed class WorldPlayerInput : MonoBehaviour
         Move = Look = Vector2.zero;
         Zoom = 0f;
         SwitchSlotPressed = -1;
-        SprintHeld = JumpPressed = OrbitHeld = false;
+        SprintHeld = JumpPressed = OrbitHeld = NormalAttackPressed = SkillPressed = BurstPressed = false;
     }
 
     void OnDisable()

@@ -1,0 +1,49 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45372b3986174d4c895515acb74e185c, type: 3}
+  m_Name: WorldMotion_citlali
+  m_EditorClassIdentifier:
+  characterKey: citlali
+  locomotion:
+  - {fileID: 7400000, guid: 744479bff2d22bd43ae835c1b6f120b6, type: 2}
+  - {fileID: 7400000, guid: 5968f9100f14a00499031232775f14f7, type: 2}
+  - {fileID: 7400000, guid: d587a7123ebe77a49b5460d0c01c13d7, type: 2}
+  - {fileID: 7400000, guid: 76df324fe8786a7438f4604381875976, type: 2}
+  attacks:
+  - clip: {fileID: 7400000, guid: 8157d44863ef73a448bc3bfea885c5e0, type: 2}
+    nextActionTime: 2.0300002
+  - clip: {fileID: 7400000, guid: 5a655137a30088c4ba4a64b9d176c5e0, type: 2}
+    nextActionTime: 2.3700004
+  - clip: {fileID: 7400000, guid: 5ccce1be2caf6444aac73faf998939df, type: 2}
+    nextActionTime: 2.1100001
+  special:
+  - {fileID: 7400000, guid: a2d045921ca9f5448890b9378dc146d2, type: 2}
+  - {fileID: 7400000, guid: c516b660868f6354da60cb2405f81d58, type: 2}
+  - {fileID: 7400000, guid: fff5240492255f542a0d22af2a50ced8, type: 2}
+  - {fileID: 7400000, guid: 8322f34da2bd1fe41a59a761b062f6e0, type: 2}
+  - {fileID: 7400000, guid: bbf90cb870362e44cb36e4191673fe22, type: 2}
+  - {fileID: 7400000, guid: 8a3a5292f48cfb642a12bbaea0ea30bf, type: 2}
+  - {fileID: 7400000, guid: 39242f389ee22914a84b9d8ded7e54ca, type: 2}
+  - {fileID: 7400000, guid: e75719a981ab54d4385fdf81b3c38abd, type: 2}
+  - {fileID: 7400000, guid: a256022a3cb2d5e4cb8b12ee6204181d, type: 2}
+  - {fileID: 7400000, guid: 439c60526257a864885d2831656962b6, type: 2}
+  - {fileID: 7400000, guid: 853f44afb2f41cf49baafd10bc69baee, type: 2}
+  - {fileID: 7400000, guid: 1e71cfa49d0de604fa564511022db5b9, type: 2}
+  - {fileID: 0}
+  - {fileID: 7400000, guid: aa06910a9ec2f5d46b1c25247b3449ed, type: 2}
+  - {fileID: 7400000, guid: f8647de0cf22cf54e940c73fecf5a9e1, type: 2}
+  - {fileID: 7400000, guid: f8eebd922799c9240a64390a70c24dbd, type: 2}
+  - {fileID: 7400000, guid: edc0a5698497d884c9cece7f500b8b29, type: 2}
+  weaponSocketPath: ModelRoot/Root/CatalystL
+  attackRootMotion: 1
+  locomotionAuxiliary: []
+  swordTrailMaterial: {fileID: 0}

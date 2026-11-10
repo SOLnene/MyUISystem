@@ -1,0 +1,44 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 45372b3986174d4c895515acb74e185c, type: 3}
+  m_Name: WorldMotion_odette
+  m_EditorClassIdentifier:
+  characterKey: odette
+  locomotion:
+  - {fileID: 7400000, guid: de31121d4288bd64b83bed7b894fee46, type: 2}
+  - {fileID: 7400000, guid: 1c46b8391ba0aa34792f7556350e2eed, type: 2}
+  - {fileID: 7400000, guid: 5b2880707268f9f4a9a55e3c19289285, type: 2}
+  - {fileID: 7400000, guid: ccaae555f1bafbb4289d5e1318f78b9e, type: 2}
+  attacks: []
+  special:
+  - {fileID: 7400000, guid: 3a8b3d4408970404cb8848b54e040f11, type: 2}
+  - {fileID: 7400000, guid: b435a8820f6b20141919cfe400866818, type: 2}
+  - {fileID: 7400000, guid: b37ee0b5caca6a34ba5f48e3e6b0c57b, type: 2}
+  - {fileID: 7400000, guid: 9b88ddf51fc0ecc41b869d053165bfd4, type: 2}
+  - {fileID: 7400000, guid: dd19712a3e76d004f8f3959743dfb57e, type: 2}
+  - {fileID: 7400000, guid: e98df59dc7aad1943878a52cbc0561dc, type: 2}
+  - {fileID: 7400000, guid: 4022f23b1e132ac429e8c756b4a3765c, type: 2}
+  - {fileID: 7400000, guid: 52163d72a8e683541b6bb5ed6bea2eb4, type: 2}
+  - {fileID: 7400000, guid: 586505c549d6bd840b74fcb75e55cc60, type: 2}
+  - {fileID: 7400000, guid: 2f4e0cd24caacc740ae76c9acc83e68a, type: 2}
+  - {fileID: 7400000, guid: 12d69e014617c8949996421f95b8b7cf, type: 2}
+  - {fileID: 7400000, guid: 2578a06184c44e844be5bccb0256d5a6, type: 2}
+  - {fileID: 0}
+  - {fileID: 7400000, guid: ade868f9cfcb1bf46b2a804ea21a7596, type: 2}
+  - {fileID: 7400000, guid: 2656c7d163591d3459fcb728af11912d, type: 2}
+  - {fileID: 7400000, guid: 615564103549c894d8c3b949fce0114c, type: 2}
+  - {fileID: 7400000, guid: 7b2c50467eecec9489f8a8613059de77, type: 2}
+  weaponSocketPath: ModelRoot/Bip001/Bip001 Pelvis/Bip001 Spine/Bip001 Spine1/Bip001
+    Spine2/Bip001 R Clavicle/Bip001 R UpperArm/Bip001 R Forearm/Bip001 R Hand/WeaponR
+  attackRootMotion: 1
+  locomotionAuxiliary: []
+  swordTrailMaterial: {fileID: 0}
